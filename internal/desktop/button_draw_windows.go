@@ -33,11 +33,16 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 			return rgb(245, 194, 199), dangerColor(), rgb(127, 29, 29)
 		}
 		return rgb(253, 236, 238), dangerColor(), rgb(153, 27, 27)
+	case buttonNav:
+		if pressed {
+			return selectionColor(), panelColor(), textColor()
+		}
+		return panelColor(), panelColor(), mutedColor()
 	case buttonNavActive:
 		if pressed {
-			return accentColor(), accentStrongColor(), onAccentColor()
+			return selectionColor(), accentColor(), textColor()
 		}
-		return selectionColor(), accentColor(), textColor()
+		return selectionColor(), selectionColor(), textColor()
 	case buttonSubtle:
 		if pressed {
 			return selectionColor(), accentColor(), textColor()
@@ -48,6 +53,50 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 			return selectionColor(), accentColor(), textColor()
 		}
 		return listColor(), borderColor(), textColor()
+	}
+}
+
+func gradientVertexColor(color RGB) (r, g, b uint16) {
+	return uint16(color.R) * 257, uint16(color.G) * 257, uint16(color.B) * 257
+}
+
+func (a *app) fillAccentGradient(hdc uintptr, r rect, pressed bool) {
+	if hdc == 0 || gradientFill == nil {
+		return
+	}
+	start := premiumTheme.Accent
+	end := premiumTheme.AccentStrong
+	if activeThemeIsDark() {
+		// The approved primary action flows cyan -> electric blue -> violet.
+		end = RGB{R: 0x8B, G: 0x5C, B: 0xF6}
+	}
+	if pressed {
+		start, end = premiumTheme.AccentStrong, premiumTheme.Accent
+	}
+	r1, g1, b1 := gradientVertexColor(start)
+	r2, g2, b2 := gradientVertexColor(end)
+	vertices := [2]triVertex{
+		{X: r.Left, Y: r.Top, Red: r1, Green: g1, Blue: b1, Alpha: 0xFFFF},
+		{X: r.Right, Y: r.Bottom, Red: r2, Green: g2, Blue: b2, Alpha: 0xFFFF},
+	}
+	mesh := gradientRect{UpperLeft: 0, LowerRight: 1}
+	radius := int32(a.scale(12))
+	region, _, _ := createRoundRectRgn.Call(
+		uintptr(r.Left+1), uintptr(r.Top+1), uintptr(r.Right-1), uintptr(r.Bottom-1),
+		uintptr(radius), uintptr(radius),
+	)
+	if region != 0 {
+		selectClipRgn.Call(hdc, region)
+	}
+	gradientFill.Call(
+		hdc,
+		uintptr(unsafe.Pointer(&vertices[0])), 2,
+		uintptr(unsafe.Pointer(&mesh)), 1,
+		0,
+	)
+	if region != 0 {
+		selectClipRgn.Call(hdc, 0)
+		deleteObject.Call(region)
 	}
 }
 
@@ -75,6 +124,21 @@ func (a *app) drawButton(dis *drawItemStruct) bool {
 	}
 	if pen != 0 {
 		deleteObject.Call(pen)
+	}
+
+	if visual.Variant == buttonAccent && !disabled {
+		a.fillAccentGradient(dis.HDC, r, pressed)
+	}
+	if visual.Variant == buttonNavActive && !disabled {
+		stripe := r
+		stripe.Right = stripe.Left + int32(a.scale(3))
+		stripe.Top += int32(a.scale(7))
+		stripe.Bottom -= int32(a.scale(7))
+		stripeBrush, _, _ := createSolidBrush.Call(accentColor())
+		fillRectW.Call(dis.HDC, uintptr(unsafe.Pointer(&stripe)), stripeBrush)
+		if stripeBrush != 0 {
+			deleteObject.Call(stripeBrush)
+		}
 	}
 
 	setBkMode.Call(dis.HDC, transparentBkMode)
