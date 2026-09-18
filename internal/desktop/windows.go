@@ -39,6 +39,7 @@ type app struct {
 	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
 	status, statusVersion, transferSummary                                                                            uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
+	titleMinimize, titleMaximize, titleClose                                                                          uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
 
 	siteManagerBtn           uintptr
@@ -141,7 +142,7 @@ func Run(engine *api.Engine, version string) error {
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(wstr(brand.ProductName))),
-		wsOverlappedWindow,
+		ghostWindowStyle,
 		40, 30, 1200, 780,
 		0, 0, hinst, 0,
 	)
@@ -269,6 +270,8 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 	case wmPaint:
 		a.paintReferenceWorkspace()
 		return 0
+	case wmNcHitTest:
+		return a.chromeHitTest(lParam)
 	case wmGetMinMaxInfo:
 		if lParam != 0 {
 			info := minMaxInfoFromLParam(lParam)
@@ -297,6 +300,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 	case wmCommand:
 		id := int(wParam & 0xffff)
 		notify := int((wParam >> 16) & 0xffff)
+		if notify == bnClicked && a.windowChromeCommand(id) {
+			return 0
+		}
 		if id == idProtocol && notify == cbnSelChange {
 			a.syncDefaultPort()
 			a.updateProtocolControls()
@@ -432,6 +438,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			a.remoteNavCancel()
 			a.remoteNavCancel = nil
 		}
+		a.cleanupWindowChrome()
 		// The master rail creates native child controls lazily. Clear every
 		// per-window rail handle here so a future Run in the same process cannot
 		// inherit stale HWNDs or button metadata from a destroyed window.
