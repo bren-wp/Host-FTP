@@ -37,7 +37,7 @@ type app struct {
 	upload, download                                                                          uintptr
 	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                    uintptr
 	status, statusVersion, transferSummary                                                    uintptr
-	masterBack, masterForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore    uintptr
+	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	buttons                                                                                   map[uintptr]buttonVisual
 
 	siteManagerBtn uintptr

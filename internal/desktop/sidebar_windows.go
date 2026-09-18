@@ -24,6 +24,7 @@ const (
 var (
 	sidebarFiles           sync.Map
 	sidebarTransfers       sync.Map
+	sidebarQueue           sync.Map
 	sidebarSync            sync.Map
 	sidebarDiagnostics     sync.Map
 	sidebarBookmarks       sync.Map
@@ -68,8 +69,16 @@ func (a *app) ensureSidebarFiles() uintptr {
 }
 
 func (a *app) ensureSidebarTransfers() uintptr {
-	labels := navigationLabelsForLanguage(a.languageCode())
-	return a.ensureSidebarButton(&sidebarTransfers, idTransferQueueNav, labels.TransferQueue, iconSync)
+	label := "Transfers"
+	if a.languageCode() != "en" {
+		label = navigationLabelsForLanguage(a.languageCode()).TransferQueue
+	}
+	return a.ensureSidebarButton(&sidebarTransfers, idTransferQueueNav, label, iconUpload)
+}
+
+func (a *app) ensureSidebarQueue() uintptr {
+	label := "Queue"
+	return a.ensureSidebarButton(&sidebarQueue, idQueueNav, label, iconSync)
 }
 
 func (a *app) ensureSidebarSync() uintptr {
@@ -116,6 +125,13 @@ func (a *app) sidebarTransferButton() uintptr {
 	return sidebarControl(&sidebarTransfers, a.hwnd)
 }
 
+func (a *app) sidebarQueueButton() uintptr {
+	if a == nil {
+		return 0
+	}
+	return sidebarControl(&sidebarQueue, a.hwnd)
+}
+
 func (a *app) sidebarSyncButton() uintptr {
 	if a == nil {
 		return 0
@@ -150,7 +166,17 @@ func (a *app) updateSidebarTransferBadge() {
 	if a == nil {
 		return
 	}
-	a.setButtonBadge(a.sidebarTransferButton(), relevantTransferCount(a.transferJobs))
+	running, queued := 0, 0
+	for _, job := range a.transferJobs {
+		switch job.Status {
+		case "running":
+			running++
+		case "queued":
+			queued++
+		}
+	}
+	a.setButtonBadge(a.sidebarTransferButton(), running)
+	a.setButtonBadge(a.sidebarQueueButton(), queued)
 }
 
 func (a *app) focusFilesWorkspace() {
@@ -177,7 +203,7 @@ func (a *app) cleanupSidebarControls() {
 	if a == nil || a.hwnd == 0 {
 		return
 	}
-	for _, store := range []*sync.Map{&sidebarFiles, &sidebarTransfers, &sidebarSync, &sidebarBookmarks, &sidebarDiagnostics} {
+	for _, store := range []*sync.Map{&sidebarFiles, &sidebarTransfers, &sidebarQueue, &sidebarSync, &sidebarBookmarks, &sidebarDiagnostics} {
 		if hwnd := sidebarControl(store, a.hwnd); hwnd != 0 {
 			delete(a.buttons, hwnd)
 		}
@@ -236,7 +262,7 @@ func (a *app) resizeSidebarColumns() {
 		if ok, _, _ := getClientRect.Call(a.transferList, uintptr(unsafe.Pointer(&client))); ok != 0 {
 			width := int(client.Right - client.Left)
 			if width >= a.scale(360) {
-				parts := []int{12, 25, 25, 25, 13}
+				parts := []int{20, 11, 16, 16, 12, 15, 10}
 				for index, percent := range parts {
 					sendMessageW.Call(a.transferList, lvmSetColumnWidth, uintptr(index), uintptr(width*percent/100))
 				}
@@ -248,6 +274,7 @@ func (a *app) resizeSidebarColumns() {
 func (a *app) layoutSidebarRail(height int) {
 	files := a.ensureSidebarFiles()
 	transfers := a.ensureSidebarTransfers()
+	queue := a.ensureSidebarQueue()
 	syncButton := a.ensureSidebarSync()
 	diagnostics := a.ensureSidebarDiagnostics()
 	bookmarks := a.ensureSidebarBookmarks()
@@ -257,9 +284,10 @@ func (a *app) layoutSidebarRail(height int) {
 	if a.languageCode() == "en" {
 		sitesLabel = "Sites"
 	}
-	a.setSidebarButtonVisual(a.siteManagerBtn, iconConnect, sitesLabel, buttonDefault)
-	a.setSidebarButtonVisual(files, iconOpenLocal, labels.Files, buttonNavActive)
-	a.setSidebarButtonVisual(transfers, iconSync, labels.TransferQueue, buttonDefault)
+	a.setSidebarButtonVisual(a.siteManagerBtn, iconConnect, sitesLabel, buttonNavActive)
+	showControls(false, files)
+	a.setSidebarButtonVisual(transfers, iconUpload, "Transfers", buttonDefault)
+	a.setSidebarButtonVisual(queue, iconSync, "Queue", buttonDefault)
 	syncLabel := "Sync"
 	if a.languageCode() == "hr" {
 		syncLabel = "Sinkronizacija"
@@ -290,7 +318,7 @@ func (a *app) layoutSidebarRail(height int) {
 	showControls(true, a.brandSubtitle)
 
 	y := applicationSidebarPrimaryTop
-	for _, control := range []uintptr{a.siteManagerBtn, files, transfers, syncButton, a.settingsBtn} {
+	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
 		a.move(control, applicationSidebarX, y, applicationSidebarWidth, applicationSidebarCardH)
 		y += applicationSidebarCardH + applicationSidebarCardGap
 	}

@@ -77,28 +77,35 @@ func (a *app) refineWorkspaceLayout() {
 	a.stabilizeWorkspaceChrome()
 	a.applyApplicationSidebar()
 
-	// The supplied 0.0.8 desktop references use one compact connection row and
-	// a dedicated Back/Forward/Refresh/New Folder/Upload/Download/Bookmarks/More
-	// toolbar. Apply that canonical composition after the sidebar has established
-	// the application rail; all filter/search/comparison helpers below then derive
-	// their positions from the final pane rectangles instead of the legacy
-	// credential-heavy workspace.
-	a.layoutMasterWorkspaceChrome()
-
+	// Create maintained search/filter infrastructure before the reference layout
+	// places the remote-search affordance in the command bar.
 	a.ensureFileFilterControls()
-	a.layoutFileFilterControls()
+	a.layoutMasterWorkspaceChrome()
 	a.updateFileFilterControls()
+
+	// Recursive search is intentionally contextual. Its native controls appear
+	// only while a recursive result set is active; the normal workspace remains
+	// visually identical to the approved Local/Remote file reference.
 	a.ensureRecursiveSearchControls()
 	a.layoutRecursiveSearchControls()
 	a.updateRecursiveSearchControls()
+
+	// Directory comparison is the functional center bridge between file panes.
 	a.ensureDirectoryComparisonControls()
 	a.layoutDirectoryComparisonControls()
-	a.layoutQueuePriorityControls()
+
+	// Queue priority remains supported by the engine but is not a permanent row
+	// of toolbar buttons in the approved workspace.
+	a.ensureQueuePriorityControls()
+	showControls(false,
+		a.queuePriorityButton(idMoveQueueTop),
+		a.queuePriorityButton(idMoveQueueUp),
+		a.queuePriorityButton(idMoveQueueDown),
+		a.queuePriorityButton(idMoveQueueBottom),
+	)
+
 	applyFileColumnOrder(a.localList, false)
 	applyFileColumnOrder(a.remoteList, true)
-	// The sidebar and search/filter row change the real file-pane geometry after
-	// the top-level layout estimate has run. Refit columns from each ListView's
-	// actual client width so the final Permissions column remains visible.
 	a.fitFileColumnsToWorkspace()
 	a.resizeSidebarColumns()
 }

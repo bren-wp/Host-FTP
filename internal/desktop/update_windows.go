@@ -3,6 +3,7 @@
 package desktop
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,20 +17,42 @@ func (a *app) checkForUpdates() {
 	if a == nil || a.connectionBusy || a.profileMutationBusy {
 		return
 	}
-	a.setStatus("Updating Ghost FTP…")
+	a.setStatus("Checking update.ghostftp.com…")
 	a.goSafe(func() {
-		time.Sleep(700 * time.Millisecond)
-		result, err := updatecheck.Simulate(a.version)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		result, err := updatecheck.Check(ctx, a.version)
 		a.dispatch(func() {
 			if err != nil {
-				a.setStatus("Update simulation could not start.")
+				a.setStatus("Update check failed.")
+				platform.ErrorDialog(
+					brand.ProductName,
+					"Unable to check for updates",
+					"Ghost FTP could not reach the official update service. Check your connection and try again.\n\nUpdate service: "+brand.UpdateBaseURL,
+				)
 				return
 			}
-			a.setStatus("Ghost FTP " + result.DisplayVersion + " is updated.")
+			if !result.Available {
+				a.setStatus("Ghost FTP "+result.CurrentVersion+" is up to date.")
+				platform.InfoDialog(
+					brand.ProductName,
+					"You're up to date",
+					fmt.Sprintf("Ghost FTP %s is the latest available version.\n\nUpdates are delivered from %s", result.CurrentVersion, brand.UpdateBaseURL),
+				)
+				return
+			}
+
+			a.setStatus("Ghost FTP "+result.LatestVersion+" is available.")
 			platform.InfoDialog(
 				brand.ProductName,
-				"Update complete",
-				fmt.Sprintf("Ghost FTP %s update simulation completed. The installed signed build remains version %s until you install a newer package from ghostftp.com.", result.DisplayVersion, result.CurrentVersion),
+				"Update available",
+				fmt.Sprintf(
+					"Ghost FTP %s is available. You are currently running %s.\n\nUse Download latest to get the verified Windows package from %s",
+					result.LatestVersion,
+					result.CurrentVersion,
+					brand.UpdateBaseURL,
+				),
 			)
 		})
 	})
@@ -43,7 +66,7 @@ func (a *app) openUpdateDownload() {
 		platform.ErrorDialog(brand.ProductName, "Unable to open updates", "Open "+brand.UpdateURL+" in your browser.")
 		return
 	}
-	a.setStatus("Official Ghost FTP download page opened in your browser.")
+	a.setStatus("Official Ghost FTP update service opened in your browser.")
 }
 
 func (a *app) openPremiumDownload() {

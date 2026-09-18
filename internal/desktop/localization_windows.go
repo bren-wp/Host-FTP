@@ -354,6 +354,21 @@ func (a *app) transferStatusText(status string) string {
 	return a.tr(key)
 }
 
+func transferDisplayName(job model.TransferJob) string {
+	value := job.LocalPath
+	if job.Direction == "download" {
+		value = job.RemotePath
+	}
+	value = strings.TrimRight(value, "/\\")
+	if pos := strings.LastIndexAny(value, "/\\"); pos >= 0 && pos+1 < len(value) {
+		return value[pos+1:]
+	}
+	if value == "" {
+		return "Transfer"
+	}
+	return value
+}
+
 func (a *app) fillTransferList(list uintptr, jobs []model.TransferJob) {
 	setListRedraw(list, false)
 	defer setListRedraw(list, true)
@@ -367,10 +382,33 @@ func (a *app) fillTransferList(list uintptr, jobs []model.TransferJob) {
 		if job.Status == "running" && job.Attempts > 1 {
 			status += fmt.Sprintf(" · #%d", job.Attempts)
 		}
-		status += transferRuntimeSuffix(job)
 		if job.Error != "" {
 			status += ": " + job.Error
 		}
-		insertListRow(list, index, []string{direction, job.LocalPath, job.RemotePath, status, transferProgressText(job)})
+
+		size := "—"
+		if job.BytesTotal > 0 {
+			size = formatTransferBytes(job.BytesTransferred) + " / " + formatTransferBytes(job.BytesTotal)
+		} else if job.BytesTransferred > 0 {
+			size = formatTransferBytes(job.BytesTransferred)
+		}
+		speed := "—"
+		if job.BytesPerSecond > 0 {
+			speed = formatTransferBytes(int64(job.BytesPerSecond)) + "/s"
+		}
+		eta := "—"
+		if job.Status == "running" && job.ETASeconds > 0 {
+			eta = formatTransferETA(job.ETASeconds)
+		}
+
+		insertListRow(list, index, []string{
+			transferDisplayName(job),
+			direction,
+			transferProgressText(job),
+			size,
+			speed,
+			status,
+			eta,
+		})
 	}
 }

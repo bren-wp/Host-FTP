@@ -80,6 +80,7 @@ def make_version_info(version: tuple[int, int, int, int], original_filename: str
     descriptions = {
         "portable": ("Ghost FTP file transfer client", "GhostFTP"),
         "setup": ("Ghost FTP Setup", "GhostFTPSetup"),
+        "updater": ("Ghost FTP Update", "GhostFTPUpdate"),
     }
     description, internal_name = descriptions.get(role, descriptions["portable"])
     strings = [
@@ -108,6 +109,7 @@ def make_manifest(version: tuple[int, int, int, int], role: str, processor_archi
     identity = {
         "portable": "GhostFTP.Client",
         "setup": "GhostFTP.Setup",
+        "updater": "GhostFTP.Update",
     }.get(role, "GhostFTP.Client")
     xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
@@ -135,7 +137,7 @@ def make_manifest(version: tuple[int, int, int, int], role: str, processor_archi
     return xml.encode("utf-8")
 
 
-def parse_ico(path: Path) -> tuple[list[bytes], bytes]:
+def parse_ico(path: Path, first_resource_id: int = 1) -> tuple[list[bytes], bytes]:
     data = path.read_bytes()
     if len(data) < 6:
         raise ValueError("ICO is too short")
@@ -151,7 +153,7 @@ def parse_ico(path: Path) -> tuple[list[bytes], bytes]:
         if end > len(data):
             raise ValueError("ICO entry extends beyond the file")
         images.append(data[image_off:end])
-        group += struct.pack("<BBBBHHIH", width, height, colors, reserved2, planes, bpp, size, i + 1)
+        group += struct.pack("<BBBBHHIH", width, height, colors, reserved2, planes, bpp, size, first_resource_id + i)
     return images, bytes(group)
 
 
@@ -225,7 +227,14 @@ def build_resource_section(resources: dict[int, list[tuple[int, bytes]]], sectio
     return bytes(out)
 
 
-def patch_pe(exe: Path, ico: Path, version: tuple[int, int, int, int], role: str, original_filename: str) -> None:
+def patch_pe(
+    exe: Path,
+    ico: Path,
+    version: tuple[int, int, int, int],
+    role: str,
+    original_filename: str,
+    brand_ico: Path | None = None,
+) -> None:
     raw = bytearray(exe.read_bytes())
     if raw[:2] != b"MZ":
         raise ValueError("File is not PE/MZ")
@@ -261,10 +270,20 @@ def patch_pe(exe: Path, ico: Path, version: tuple[int, int, int, int], role: str
         vsize, vaddr, raw_size, _ = struct.unpack_from("<IIII", raw, off + 8)
         max_end_rva = max(max_end_rva, vaddr + max(vsize, raw_size))
     section_rva = align(max_end_rva, section_alignment)
-    icon_images, group_icon = parse_ico(ico)
+    icon_images, group_icon = parse_ico(ico, 1)
+    icon_resources = [(i + 1, payload) for i, payload in enumerate(icon_images)]
+    icon_groups = [(1, group_icon)]
+    if brand_ico is not None:
+        first_brand_id = len(icon_resources) + 1
+        brand_images, brand_group = parse_ico(brand_ico, first_brand_id)
+        icon_resources.extend(
+            (first_brand_id + i, payload) for i, payload in enumerate(brand_images)
+        )
+        # Group 2 is the transparent in-app mark used next to the wordmark.
+        icon_groups.append((2, brand_group))
     resources: dict[int, list[tuple[int, bytes]]] = {
-        RT_ICON: [(i + 1, payload) for i, payload in enumerate(icon_images)],
-        RT_GROUP_ICON: [(1, group_icon)],
+        RT_ICON: icon_resources,
+        RT_GROUP_ICON: icon_groups,
         RT_VERSION: [(1, make_version_info(version, original_filename, role))],
         RT_MANIFEST: [(1, make_manifest(version, role, processor_architecture))],
     }
@@ -301,11 +320,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("exe", type=Path)
     ap.add_argument("--ico", required=True, type=Path)
+    ap.add_argument("--brand-ico", type=Path)
     ap.add_argument("--version", required=True, type=parse_version)
-    ap.add_argument("--role", choices=("portable", "setup"), required=True)
+    ap.add_argument("--role", choices=("portable", "setup", "updater"), required=True)
     ap.add_argument("--original-filename", required=True)
     args = ap.parse_args()
-    patch_pe(args.exe, args.ico, args.version, args.role, args.original_filename)
+    patch_pe(args.exe, args.ico, args.version, args.role, args.original_filename, args.brand_ico)
 
 
 if __name__ == "__main__":

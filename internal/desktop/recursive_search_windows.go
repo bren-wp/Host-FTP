@@ -231,35 +231,33 @@ func (a *app) layoutRecursiveSearchControls() {
 	}
 	for _, remote := range []bool{false, true} {
 		pane := a.recursiveSearchPane(remote)
-		filterButton := a.filterButtonForPane(remote)
 		normalList := a.normalListForPane(remote)
-		if pane == nil || filterButton == 0 || normalList == 0 {
-			continue
-		}
-		filterRect, ok := recursiveSearchClientRect(a.hwnd, filterButton)
-		if !ok {
+		if pane == nil || normalList == 0 {
 			continue
 		}
 		listRect, ok := recursiveSearchClientRect(a.hwnd, normalList)
 		if !ok {
 			continue
 		}
+		if !pane.active {
+			showControls(false, pane.searchButton, pane.navigateButton, pane.list)
+			continue
+		}
 		gap := a.scale(8)
+		rowH := a.scale(30)
 		width := int(listRect.Right - listRect.Left)
 		half := (width - gap) / 2
-		y := int(filterRect.Top)
-		height := int(filterRect.Bottom - filterRect.Top)
 		left := int(listRect.Left)
-		if pane.active {
-			moveWindow.Call(pane.searchButton, uintptr(left), uintptr(y), uintptr(half), uintptr(height), 1)
-			moveWindow.Call(pane.navigateButton, uintptr(left+half+gap), uintptr(y), uintptr(half), uintptr(height), 1)
-		} else {
-			moveWindow.Call(filterButton, uintptr(left), uintptr(y), uintptr(half), uintptr(height), 1)
-			moveWindow.Call(pane.searchButton, uintptr(left+half+gap), uintptr(y), uintptr(half), uintptr(height), 1)
+		top := int(listRect.Top)
+		moveWindow.Call(pane.searchButton, uintptr(left), uintptr(top), uintptr(half), uintptr(rowH), 1)
+		moveWindow.Call(pane.navigateButton, uintptr(left+half+gap), uintptr(top), uintptr(half), uintptr(rowH), 1)
+		resultsTop := top + rowH + gap
+		resultsH := int(listRect.Bottom) - resultsTop
+		if resultsH < a.scale(80) {
+			resultsH = a.scale(80)
 		}
-		moveWindow.Call(pane.list, uintptr(listRect.Left), uintptr(listRect.Top), uintptr(listRect.Right-listRect.Left), uintptr(listRect.Bottom-listRect.Top), 1)
+		moveWindow.Call(pane.list, uintptr(left), uintptr(resultsTop), uintptr(width), uintptr(resultsH), 1)
 	}
-	a.updateRecursiveSearchControls()
 }
 
 func (a *app) updateRecursiveSearchControls() {
@@ -273,13 +271,10 @@ func (a *app) updateRecursiveSearchControls() {
 		if pane == nil || pane.searchButton == 0 {
 			continue
 		}
-		filterButton := a.filterButtonForPane(remote)
 		normalList := a.normalListForPane(remote)
 		if !pane.active {
-			a.setButtonLabel(pane.searchButton, words.Search)
-			showControls(true, filterButton, pane.searchButton, normalList)
-			showControls(false, pane.navigateButton, pane.list)
-			setControlEnabled(pane.searchButton, !a.closing && (!remote || (a.connected && !a.connectionBusy)))
+			showControls(true, normalList)
+			showControls(false, pane.searchButton, pane.navigateButton, pane.list)
 			continue
 		}
 		label := words.Close
@@ -288,7 +283,7 @@ func (a *app) updateRecursiveSearchControls() {
 		}
 		a.setButtonLabel(pane.searchButton, label)
 		a.setButtonLabel(pane.navigateButton, fmt.Sprintf("%s · %d", words.Navigate, len(pane.results)))
-		showControls(false, filterButton, normalList)
+		showControls(false, normalList)
 		showControls(true, pane.searchButton, pane.navigateButton, pane.list)
 		setControlEnabled(pane.searchButton, true)
 		setControlEnabled(pane.navigateButton, !pane.running && len(pane.results) > 0)
