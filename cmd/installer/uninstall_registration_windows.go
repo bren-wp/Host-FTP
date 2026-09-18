@@ -12,13 +12,17 @@ import (
 	"github.com/bren-wp/Host-FTP/internal/platform"
 )
 
+func integratedUninstallCommand(appPath string) string {
+	return fmt.Sprintf("\"%s\" --uninstall", filepath.Clean(appPath))
+}
+
 func registerIntegratedUninstall(appPath, currentVersion string) error {
 	digest, err := platform.VerifiedRegularFileSHA256(appPath)
 	if err != nil {
 		return fmt.Errorf("installed executable ownership digest could not be verified: %w", err)
 	}
 
-	quoted := fmt.Sprintf("\"%s\" --uninstall", appPath)
+	quoted := integratedUninstallCommand(appPath)
 	info, err := os.Stat(appPath)
 	if err != nil {
 		return fmt.Errorf("installed executable size could not be read: %w", err)
