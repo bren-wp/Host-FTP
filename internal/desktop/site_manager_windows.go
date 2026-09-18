@@ -62,6 +62,10 @@ const (
 	siteIDTitleMinimize   = 8143
 	siteIDTitleMaximize   = 8144
 	siteIDTitleClose      = 8145
+	siteIDNavSiteManager  = 8146
+	siteIDNavAutomation   = 8147
+	siteIDSavedSearch     = 8148
+	siteIDRecentClear     = 8149
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -170,8 +174,12 @@ type siteManagerState struct {
 	navSync         uintptr
 	navRemote       uintptr
 	navLocal        uintptr
+	navSiteManager  uintptr
+	navAutomation   uintptr
 	navSettings     uintptr
 	newSite         uintptr
+	savedSearch     uintptr
+	recentClear     uintptr
 	globalSearch    uintptr
 	brandIcon       uintptr
 	brandHero       uintptr
@@ -186,6 +194,8 @@ type siteManagerState struct {
 	securityLabel   uintptr
 	savedLabel      uintptr
 	recentLabel     uintptr
+	footerReady     uintptr
+	footerStats     uintptr
 	quickConnectTab uintptr
 	siteManagerTab  uintptr
 	importExportTab uintptr
@@ -312,9 +322,22 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 					state.postAction = siteIDNavLocal
 					destroyWindow.Call(hwnd)
 					return 0
+				case siteIDNavSiteManager:
+					sidebarSetFocus.Call(state.list)
+					return 0
+				case siteIDNavAutomation:
+					state.parent.openSettings()
+					state.refreshOptionsSummary()
+					return 0
 				case siteIDNavSettings:
 					state.postAction = siteIDNavSettings
 					destroyWindow.Call(hwnd)
+					return 0
+				case siteIDSavedSearch:
+					state.searchSavedSite()
+					return 0
+				case siteIDRecentClear:
+					state.clearRecentConnections()
 					return 0
 				case siteIDNewSite:
 					sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
@@ -436,8 +459,8 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 			state.cancelConnectionTest()
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
-				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
+				state.globalSearch, state.savedSearch, state.recentClear, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 				state.syncBackup, state.syncSkip, state.syncConfirm, state.testConnection,
@@ -495,6 +518,102 @@ func (state *siteManagerState) syncProtocolPort() {
 	state.syncProtocolControls()
 }
 
+func (state *siteManagerState) searchSavedSite() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	query, ok := platform.PromptDialog(
+		"Ghost FTP — Saved Sites",
+		"Search saved connections",
+		"",
+	)
+	if !ok {
+		return
+	}
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return
+	}
+	for index, profile := range state.profiles {
+		material := strings.ToLower(profile.Name + "\n" + profile.Host + "\n" + profile.Username + "\n" + profile.Protocol)
+		if strings.Contains(material, query) {
+			sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(index+1), 0)
+			state.loadSelection(index + 1)
+			sidebarSetFocus.Call(state.list)
+			state.parent.setStatus("Saved site found: " + profile.Name)
+			return
+		}
+	}
+	platform.InfoDialog(
+		"Ghost FTP — Saved Sites",
+		"No matching saved site",
+		"No saved connection matched that search. Try a profile name, host, username or protocol.",
+	)
+}
+
+func (state *siteManagerState) clearRecentConnections() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	state.parent.recentConnections = nil
+	state.refillRecentConnections()
+	state.refreshFooter()
+	state.parent.setStatus("Recent connection history cleared")
+}
+
+func siteManagerRate(bytesPerSecond float64) string {
+	if bytesPerSecond <= 0 {
+		return "0 B/s"
+	}
+	const (
+		kiB = 1024.0
+		miB = 1024.0 * 1024.0
+	)
+	switch {
+	case bytesPerSecond >= miB:
+		return fmt.Sprintf("%.1f MB/s", bytesPerSecond/miB)
+	case bytesPerSecond >= kiB:
+		return fmt.Sprintf("%.1f KB/s", bytesPerSecond/kiB)
+	default:
+		return fmt.Sprintf("%.0f B/s", bytesPerSecond)
+	}
+}
+
+func (state *siteManagerState) refreshFooter() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	active := 0
+	uploadRate := 0.0
+	downloadRate := 0.0
+	for _, job := range state.parent.transferJobs {
+		if job.Status != "running" {
+			continue
+		}
+		active++
+		if strings.EqualFold(job.Direction, "upload") {
+			uploadRate += job.BytesPerSecond
+		} else if strings.EqualFold(job.Direction, "download") {
+			downloadRate += job.BytesPerSecond
+		}
+	}
+	ready := "●  Ready"
+	if state.testing {
+		ready = "●  Testing connection…"
+	}
+	activity := "No active transfers"
+	if active == 1 {
+		activity = "1 active transfer"
+	} else if active > 1 {
+		activity = fmt.Sprintf("%d active transfers", active)
+	}
+	setText(state.footerReady, ready+"     "+activity)
+	setText(
+		state.footerStats,
+		fmt.Sprintf("%d connections saved     %d active transfers     ↓ %s     ↑ %s", len(state.profiles), active, siteManagerRate(downloadRate), siteManagerRate(uploadRate)),
+	)
+}
+
 func (state *siteManagerState) refillProfiles(selectedID string) {
 	sendMessageW.Call(state.list, siteLBResetContent, 0, 0)
 	quick := "+  " + state.parent.tr("profile.quick")
@@ -522,6 +641,7 @@ func (state *siteManagerState) refillRecentConnections() {
 		label := recentConnectionLabel(entry, now)
 		sendMessageW.Call(state.recentList, siteLBAddString, 0, uintptr(unsafe.Pointer(wstr(label))))
 	}
+	state.refreshFooter()
 }
 
 func (state *siteManagerState) loadRecentSelection() bool {
@@ -711,6 +831,7 @@ func (state *siteManagerState) setTesting(testing bool) {
 	}
 	setControlEnabled(state.connect, !testing)
 	setControlEnabled(state.save, !testing)
+	state.refreshFooter()
 }
 
 func (state *siteManagerState) finishConnectionTest(host string, err error) {
