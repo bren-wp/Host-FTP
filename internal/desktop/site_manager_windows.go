@@ -701,14 +701,21 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		return
 	}
 	if width > 0 && width < 1380 {
-		// The approved four-column view needs desktop width. On smaller work areas
-		// keep all connection editing actions reachable and collapse only the
-		// read-only transfer/safety and saved-site side cards.
-		showControls(false, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
-		state.parent.move(state.settings, 500, 690, 160, 38)
+		// Keep the connection editor complete on compact desktops and collapse the
+		// optional reference side cards instead of letting them clip off-screen.
+		showControls(false,
+			state.presetsTab, state.syncTab, state.automationTab,
+			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+			state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+		)
+		state.parent.move(state.settings, 720, 738, 160, 42)
 		return
 	}
-	showControls(true, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
+	showControls(true,
+		state.presetsTab, state.syncTab, state.automationTab,
+		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+		state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+	)
 	state.parent.move(state.settings, 926, 738, 264, 42)
 }
 
@@ -912,9 +919,23 @@ func (a *app) openSiteManager() {
 	})
 
 	logicalW, logicalH := 1590, 850
-	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
+	screenLogicalW := a.unscale(int(screenW))
+	screenLogicalH := a.unscale(int(screenH))
+	if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
+		logicalW = screenLogicalW - 24
+	}
+	if screenLogicalH > 0 && logicalH > screenLogicalH-48 {
+		logicalH = screenLogicalH - 48
+	}
+	if logicalW < 960 {
+		logicalW = 960
+	}
+	if logicalH < 700 {
+		logicalH = 700
+	}
+	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	x := (int(screenW) - pixelW) / 2
 	y := (int(screenH) - pixelH) / 2
 	if x < 0 {
