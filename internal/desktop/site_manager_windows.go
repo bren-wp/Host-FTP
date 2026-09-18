@@ -237,6 +237,43 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					state.postAction = siteIDGlobalSearch
 					destroyWindow.Call(hwnd)
 					return 0
+				case siteIDQuickConnect:
+					sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
+					state.loadSelection(0)
+					sidebarSetFocus.Call(state.host)
+					return 0
+				case siteIDSiteManagerTab:
+					sidebarSetFocus.Call(state.list)
+					return 0
+				case siteIDImportExport:
+					platform.InfoDialog(
+						"Ghost FTP — Import / Export",
+						"Secure profile portability",
+						"Saved-site portability is secret-safe: Ghost FTP never exports stored passwords or private-key passphrases in clear text. Use Duplicate and Save as Profile until encrypted profile bundles are enabled.",
+					)
+					return 0
+				case siteIDPresetsTab:
+					return 0
+				case siteIDSyncTab:
+					state.postAction = siteIDNavSync
+					destroyWindow.Call(hwnd)
+					return 0
+				case siteIDAutomationTab:
+					state.parent.openSettings()
+					state.refreshOptionsSummary()
+					return 0
+				case siteIDPresetStandard:
+					state.applyTransferPreset("standard")
+					return 0
+				case siteIDPresetWebsite:
+					state.applyTransferPreset("website")
+					return 0
+				case siteIDPresetBackup:
+					state.applyTransferPreset("backup")
+					return 0
+				case siteIDPresetMedia:
+					state.applyTransferPreset("media")
+					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
 					return 0
@@ -298,7 +335,9 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
 				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-				state.globalSearch,
+				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+				state.presetsTab, state.syncTab, state.automationTab,
+				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 			} {
 				delete(state.parent.buttons, button)
 			}
