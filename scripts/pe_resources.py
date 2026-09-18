@@ -80,6 +80,7 @@ def make_version_info(version: tuple[int, int, int, int], original_filename: str
     descriptions = {
         "portable": ("Ghost FTP file transfer client", "GhostFTP"),
         "setup": ("Ghost FTP Setup", "GhostFTPSetup"),
+        "updater": ("Ghost FTP Update", "GhostFTPUpdate"),
     }
     description, internal_name = descriptions.get(role, descriptions["portable"])
     strings = [
@@ -108,6 +109,7 @@ def make_manifest(version: tuple[int, int, int, int], role: str, processor_archi
     identity = {
         "portable": "GhostFTP.Client",
         "setup": "GhostFTP.Setup",
+        "updater": "GhostFTP.Update",
     }.get(role, "GhostFTP.Client")
     xml = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
@@ -302,7 +304,7 @@ def main() -> None:
     ap.add_argument("exe", type=Path)
     ap.add_argument("--ico", required=True, type=Path)
     ap.add_argument("--version", required=True, type=parse_version)
-    ap.add_argument("--role", choices=("portable", "setup"), required=True)
+    ap.add_argument("--role", choices=("portable", "setup", "updater"), required=True)
     ap.add_argument("--original-filename", required=True)
     args = ap.parse_args()
     patch_pe(args.exe, args.ico, args.version, args.role, args.original_filename)
