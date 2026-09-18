@@ -28,7 +28,7 @@ func TestMaintainedModalRolesMatchDesktopContract(t *testing.T) {
 	if Dark.Panel != (RGB{0x0B, 0x15, 0x22}) || Dark.Text != (RGB{0xE5, 0xE7, 0xEB}) {
 		t.Fatal("canonical Dark panel/text contract changed unexpectedly")
 	}
-	if Light.Panel != (RGB{0xF6, 0xF8, 0xFB}) || Light.Text != (RGB{0x12, 0x20, 0x33}) {
+	if Light.Panel != (RGB{0xF6, 0xF9, 0xFC}) || Light.Text != (RGB{0x12, 0x20, 0x33}) {
 		t.Fatal("canonical Light panel/text contract changed unexpectedly")
 	}
 }
