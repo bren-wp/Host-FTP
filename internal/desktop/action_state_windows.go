@@ -69,7 +69,7 @@ func (a *app) updateActionControls() {
 	}
 	setControlEnabled(a.remoteChmod, remoteMutationReady && chmodSelected > 0)
 
-	selectedTransfers := selectedIndices(a.transferList)
+	selectedTransfers := a.fullTransferSelectionIndices()
 	transferState := deriveTransferActionState(a.transferJobs, selectedTransfers, a.connected && !a.connectionBusy, a.queuePaused)
 	priorityState := deriveQueuePriorityState(a.transferJobs, selectedTransfers)
 	if a.connectionBusy {
