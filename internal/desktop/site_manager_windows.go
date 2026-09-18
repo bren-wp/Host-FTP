@@ -169,6 +169,9 @@ type siteManagerState struct {
 	newSite         uintptr
 	globalSearch    uintptr
 	brandIcon       uintptr
+	brandHero       uintptr
+	mottoPrimary    uintptr
+	mottoAccent     uintptr
 	quickConnectTab uintptr
 	siteManagerTab  uintptr
 	importExportTab uintptr
@@ -340,7 +343,13 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			}
 			return state.parent.panelBrush
 		case wmCtlColorStatic:
-			setTextColor.Call(wParam, textColor())
+			color := textColor()
+			if lParam == state.mottoPrimary {
+				color = mutedColor()
+			} else if lParam == state.mottoAccent {
+				color = accentColor()
+			}
+			setTextColor.Call(wParam, color)
 			setBkColor.Call(wParam, panelColor())
 			return state.parent.panelBrush
 		case wmCtlColorEdit, wmCtlColorBtn:
@@ -981,9 +990,20 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		parent.move(control, 28, navY, 184, 42)
 		navY += 50
 	}
-	motto := mk("STATIC", "FILES\r\nMOVE\r\nFREELY.\r\n\r\nYOU STAY\r\nIN CONTROL.", 0, 34, 610, 176, 148, 0)
-	if motto != 0 && parent.smallFont != 0 {
-		sendMessageW.Call(motto, wmSetFont, parent.smallFont, 1)
+	state.mottoPrimary = mk("STATIC", "FILES\r\nMOVE\r\nFREELY.", 0, 34, 554, 176, 76, 0)
+	state.mottoAccent = mk("STATIC", "YOU STAY\r\nIN CONTROL.", 0, 34, 640, 176, 58, 0)
+	for _, motto := range []uintptr{state.mottoPrimary, state.mottoAccent} {
+		if motto != 0 && parent.smallFont != 0 {
+			sendMessageW.Call(motto, wmSetFont, parent.smallFont, 1)
+		}
+	}
+	heroSize := parent.scale(116)
+	heroIcon, _, _ := loadImageW.Call(hinst, 2, imageIcon, uintptr(heroSize), uintptr(heroSize), lrShared)
+	if heroIcon != 0 {
+		state.brandHero = mk("STATIC", "", ssIcon, 52, 704, 116, 116, 0)
+		if state.brandHero != 0 {
+			sendMessageW.Call(state.brandHero, stmSetImage, imageIcon, heroIcon)
+		}
 	}
 
 	// Main connection card.
