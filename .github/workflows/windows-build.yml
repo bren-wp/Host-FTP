@@ -215,7 +215,7 @@ jobs:
           git config user.name 'Brendigo'
           git config user.email 'info@brendigo.com'
           git add -A
-          git commit -m 'Ghost FTP 0.1.0 Windows source and approved reference UI baseline'
+          git commit -m 'Ghost FTP 0.2.0 Windows source and approved reference UI'
           git push origin HEAD:${{ github.ref_name }}
           if ($LASTEXITCODE -ne 0) { throw 'Unable to push bootstrapped Host-FTP source.' }
           Write-Host 'SOURCE_COMMIT=PUSHED'
@@ -223,7 +223,7 @@ jobs:
       - name: Upload Windows deliverables
         uses: actions/upload-artifact@v4
         with:
-          name: ghostftp-windows-0.1.0
+          name: ghostftp-windows-0.2.0
           if-no-files-found: error
           retention-days: 30
           path: |
