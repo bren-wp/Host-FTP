@@ -396,6 +396,7 @@ func (a *app) applyProfiles(profiles []model.PublicProfile, loadErr error) {
 		a.setProfileCredentialCues(selectedProfile)
 	}
 	sendMessageW.Call(a.profilesCombo, cbSetCurSel, uintptr(selected), 0)
+	a.refreshSidebarProfileControls()
 	a.updateActionControls()
 }
 
