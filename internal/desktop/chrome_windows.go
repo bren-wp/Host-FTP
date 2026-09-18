@@ -33,7 +33,7 @@ func (a *app) ensureBrandLogo() uintptr {
 	}
 
 	hinst, _, _ := getModuleHandleW.Call(0)
-	iconSize := a.scale(32)
+	iconSize := a.scale(48)
 	icon, _, _ := loadImageW.Call(hinst, 1, imageIcon, uintptr(iconSize), uintptr(iconSize), lrShared)
 	if icon == 0 {
 		// LoadIcon returns a shared icon resource too, so neither path requires
@@ -65,7 +65,7 @@ func (a *app) refineBrandHeader() {
 	if logo == 0 {
 		return
 	}
-	a.move(logo, 14, 11, 32, 32)
+	a.move(logo, 14, 10, 48, 48)
 
 	// Reserve a fixed wordmark gutter large enough for the real Segoe UI bold
 	// rendering seen on Windows runners. Keep the subtitle responsive inside
