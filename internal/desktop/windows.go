@@ -36,6 +36,7 @@ type app struct {
 	remoteMkdir, remoteRename, remoteDelete, remoteChmod                                      uintptr
 	upload, download                                                                          uintptr
 	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                    uintptr
+	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                    uintptr
 	status, statusVersion, transferSummary                                                    uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	buttons                                                                                   map[uintptr]buttonVisual
@@ -49,6 +50,8 @@ type app struct {
 	localItems           []model.Item
 	remoteItems          []model.Item
 	transferJobs         []model.TransferJob
+	transferViewJobs     []model.TransferJob
+	transferViewFilter   string
 	profiles             []model.PublicProfile
 	settings             model.Settings
 	localCurrent         string
