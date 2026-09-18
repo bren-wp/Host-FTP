@@ -1,0 +1,445 @@
+//go:build linux
+
+package desktop
+
+import (
+	"fmt"
+
+	"github.com/bren-wp/Host-FTP/internal/config"
+	"github.com/bren-wp/Host-FTP/internal/i18n"
+	"github.com/bren-wp/Host-FTP/internal/model"
+	"github.com/bren-wp/Host-FTP/internal/usererror"
+)
+
+type linuxSettingsRects struct {
+	language                           linuxRect
+	appearance                         linuxRect
+	parallelMinus, parallelPlus        linuxRect
+	uploadMinus, uploadPlus            linuxRect
+	downloadMinus, downloadPlus        linuxRect
+	retriesMinus, retriesPlus          linuxRect
+	delayMinus, delayPlus              linuxRect
+	timeoutMinus, timeoutPlus          linuxRect
+	conflict, confirmDelete            linuxRect
+	update, download, premium, website linuxRect
+	reset, save, close                 linuxRect
+}
+
+func linuxSettingsPanelWidth(windowWidth int) int {
+	if windowWidth <= 100 {
+		return max(1, windowWidth)
+	}
+	return min(860, windowWidth-100)
+}
+
+func linuxSettingsLabelLimit(panelWidth int) int {
+	if panelWidth >= 820 {
+		return 64
+	}
+	return 48
+}
+
+func linuxSettingsChoiceWidth(panelWidth int) int {
+	if panelWidth >= 820 {
+		return 280
+	}
+	return 230
+}
+
+func (u *linuxDesktop) tr(key string, args ...any) string {
+	return i18n.T(u.language, key, args...)
+}
+
+func (u *linuxDesktop) draftTr(key string, args ...any) string {
+	language := u.language
+	if u.settingsOpen {
+		language = i18n.Normalize(u.settingsDraft.Language)
+	}
+	return i18n.T(language, key, args...)
+}
+
+func (u *linuxDesktop) openSettings() {
+	if u.busy || u.promptKind != linuxPromptNone || u.pendingFingerprint != "" {
+		return
+	}
+	settings, err := u.engine.Settings()
+	if err != nil {
+		u.setStatus(usererror.MessageFor(u.language, err, u.tr("settings.load_failed")))
+		return
+	}
+	settings.Language = i18n.Normalize(settings.Language)
+	if settings.Appearance != model.AppearanceDark && settings.Appearance != model.AppearanceLight {
+		settings.Appearance = config.DefaultSettings().Appearance
+	}
+	u.settingsDraft = settings
+	u.settingsOpen = true
+}
+
+func (u *linuxDesktop) closeSettings() {
+	u.settingsOpen = false
+	u.settingsRects = linuxSettingsRects{}
+}
+
+func clampInt(value, low, high int) int {
+	if value < low {
+		return low
+	}
+	if value > high {
+		return high
+	}
+	return value
+}
+
+func nextConflictPolicy(current string) string {
+	switch current {
+	case model.ConflictPolicySkip:
+		return model.ConflictPolicyReplace
+	case model.ConflictPolicyReplace:
+		return model.ConflictPolicyReplaceBackup
+	default:
+		return model.ConflictPolicySkip
+	}
+}
+
+func nextLinuxAppearance(current string) string {
+	if current == model.AppearanceDark {
+		return model.AppearanceLight
+	}
+	return model.AppearanceDark
+}
+
+func linuxDefaultSettingsDraft(current model.Settings) model.Settings {
+	defaults := config.DefaultSettings()
+	defaults.Language = i18n.Normalize(current.Language)
+	return defaults
+}
+
+func (u *linuxDesktop) conflictPolicyLabel(policy string) string {
+	words := conflictPolicyText(u.settingsDraft.Language)
+	switch policy {
+	case model.ConflictPolicySkip:
+		return words.Skip
+	case model.ConflictPolicyReplace:
+		return words.Replace
+	default:
+		return words.ReplaceBackup
+	}
+}
+
+func nextLanguage(code string) string {
+	languages := i18n.Languages()
+	if len(languages) == 0 {
+		return i18n.DefaultLanguage
+	}
+	code = i18n.Normalize(code)
+	for index, language := range languages {
+		if language.Code == code {
+			return languages[(index+1)%len(languages)].Code
+		}
+	}
+	return i18n.DefaultLanguage
+}
+
+func (u *linuxDesktop) saveSettings() {
+	u.settingsDraft.Language = i18n.Normalize(u.settingsDraft.Language)
+	saved, err := u.engine.SetSettings(u.settingsDraft)
+	if err != nil {
+		u.setStatus(usererror.MessageFor(u.language, err, u.tr("settings.save_failed_body")))
+		return
+	}
+	u.settingsDraft = saved
+	u.language = i18n.Normalize(saved.Language)
+	setActiveTheme(saved.Appearance)
+	u.closeSettings()
+	u.setStatus(u.tr("settings.saved", saved.Parallelism, saved.ConnectionTimeoutSeconds, linuxRetrySummary(u, saved), linuxConflictSummary(u, saved)))
+}
+
+func linuxRetrySummary(u *linuxDesktop, settings model.Settings) string {
+	if settings.AutoRetryCount <= 0 {
+		return u.tr("settings.retry_none")
+	}
+	return u.tr("settings.retry_count", settings.AutoRetryCount)
+}
+
+func linuxConflictSummary(u *linuxDesktop, settings model.Settings) string {
+	if settings.ConflictPolicy == model.ConflictPolicySkip {
+		return u.tr("settings.skip_existing")
+	}
+	return u.tr("settings.overwrite")
+}
+
+func (u *linuxDesktop) settingsStep(rectMinus, rectPlus linuxRect, x, y int, value *int, low, high, step int) bool {
+	if rectMinus.contains(x, y) {
+		*value = clampInt(*value-step, low, high)
+		return true
+	}
+	if rectPlus.contains(x, y) {
+		*value = clampInt(*value+step, low, high)
+		return true
+	}
+	return false
+}
+
+var bandwidthLimitPresets = []int{
+	0, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384,
+	32768, 65536, 131072, 262144, 524288, 1048576,
+}
+
+func stepBandwidthLimit(value int, increase bool) int {
+	if increase {
+		for _, preset := range bandwidthLimitPresets {
+			if preset > value {
+				return preset
+			}
+		}
+		return config.MaxBandwidthLimitKiBPerSecond
+	}
+	for index := len(bandwidthLimitPresets) - 1; index >= 0; index-- {
+		if bandwidthLimitPresets[index] < value {
+			return bandwidthLimitPresets[index]
+		}
+	}
+	return config.MinBandwidthLimitKiBPerSecond
+}
+
+func (u *linuxDesktop) bandwidthStep(rectMinus, rectPlus linuxRect, x, y int, value *int) bool {
+	if rectMinus.contains(x, y) {
+		*value = stepBandwidthLimit(*value, false)
+		return true
+	}
+	if rectPlus.contains(x, y) {
+		*value = stepBandwidthLimit(*value, true)
+		return true
+	}
+	return false
+}
+
+func (u *linuxDesktop) handleSettingsMouse(x, y int) bool {
+	if !u.settingsOpen {
+		return false
+	}
+	r := u.settingsRects
+	if r.language.contains(x, y) {
+		u.settingsDraft.Language = nextLanguage(u.settingsDraft.Language)
+		return true
+	}
+	if r.appearance.contains(x, y) {
+		u.settingsDraft.Appearance = nextLinuxAppearance(u.settingsDraft.Appearance)
+		return true
+	}
+	if u.settingsStep(r.parallelMinus, r.parallelPlus, x, y, &u.settingsDraft.Parallelism, config.MinParallelism, config.MaxParallelism, 1) {
+		return true
+	}
+	if u.bandwidthStep(r.uploadMinus, r.uploadPlus, x, y, &u.settingsDraft.UploadLimitKiBPerSecond) {
+		return true
+	}
+	if u.bandwidthStep(r.downloadMinus, r.downloadPlus, x, y, &u.settingsDraft.DownloadLimitKiBPerSecond) {
+		return true
+	}
+	if u.settingsStep(r.retriesMinus, r.retriesPlus, x, y, &u.settingsDraft.AutoRetryCount, config.MinAutoRetryCount, config.MaxAutoRetryCount, 1) {
+		return true
+	}
+	if u.settingsStep(r.delayMinus, r.delayPlus, x, y, &u.settingsDraft.RetryDelaySeconds, config.MinRetryDelaySeconds, config.MaxRetryDelaySeconds, 1) {
+		return true
+	}
+	if u.settingsStep(r.timeoutMinus, r.timeoutPlus, x, y, &u.settingsDraft.ConnectionTimeoutSeconds, config.MinConnectionTimeoutSeconds, config.MaxConnectionTimeoutSeconds, 5) {
+		return true
+	}
+	if r.conflict.contains(x, y) {
+		u.settingsDraft.ConflictPolicy = nextConflictPolicy(u.settingsDraft.ConflictPolicy)
+		return true
+	}
+	if r.confirmDelete.contains(x, y) {
+		u.settingsDraft.ConfirmDelete = !u.settingsDraft.ConfirmDelete
+		return true
+	}
+	if r.update.contains(x, y) {
+		u.closeSettings()
+		u.checkForUpdates()
+		return true
+	}
+	if r.download.contains(x, y) {
+		u.closeSettings()
+		u.openUpdateDownload()
+		return true
+	}
+	if r.premium.contains(x, y) {
+		u.closeSettings()
+		u.openPremiumDownload()
+		return true
+	}
+	if r.website.contains(x, y) {
+		u.closeSettings()
+		u.openOfficialWebsite()
+		return true
+	}
+	if r.reset.contains(x, y) {
+		u.settingsDraft = linuxDefaultSettingsDraft(u.settingsDraft)
+		return true
+	}
+	if r.save.contains(x, y) {
+		u.saveSettings()
+		return true
+	}
+	if r.close.contains(x, y) {
+		u.closeSettings()
+		u.setStatus(u.tr("status.ready"))
+		return true
+	}
+	return true
+}
+
+func (u *linuxDesktop) handleSettingsKey(sym uint32) bool {
+	if !u.settingsOpen {
+		return false
+	}
+	switch sym {
+	case x11KeyEscape:
+		u.closeSettings()
+		u.setStatus(u.tr("status.ready"))
+	case x11KeyReturn:
+		u.saveSettings()
+	}
+	return true
+}
+
+func (u *linuxDesktop) drawSettingStepper(label string, value int, top int, minus *linuxRect, plus *linuxRect) error {
+	width := linuxSettingsPanelWidth(u.width)
+	left := (u.width - width) / 2
+	if err := u.x.text(left+24, top+20, linuxTrimForUI(label, linuxSettingsLabelLimit(width)), premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	valueRect := linuxRectWH(left+width-210, top, 84, 30)
+	*minus = linuxRectWH(left+width-120, top, 48, 30)
+	*plus = linuxRectWH(left+width-64, top, 48, 30)
+	if err := u.x.fillRect(valueRect.left, valueRect.top, 84, 30, premiumTheme.List); err != nil {
+		return err
+	}
+	if err := u.x.strokeRect(valueRect.left, valueRect.top, 84, 30, premiumTheme.Border); err != nil {
+		return err
+	}
+	if err := u.x.text(valueRect.left+12, valueRect.top+20, fmt.Sprintf("%d", value), premiumTheme.Text, premiumTheme.List); err != nil {
+		return err
+	}
+	if err := u.drawButton(*minus, "−", true, false); err != nil {
+		return err
+	}
+	return u.drawButton(*plus, "+", true, false)
+}
+
+func (u *linuxDesktop) renderSettingsOverlay() error {
+	if !u.settingsOpen {
+		return nil
+	}
+	width := linuxSettingsPanelWidth(u.width)
+	height := 675
+	left := (u.width - width) / 2
+	top := (u.height - height) / 2
+	panel := linuxRectWH(left, top, width, height)
+	if err := u.drawPanel(panel); err != nil {
+		return err
+	}
+	if err := u.x.text(left+24, top+32, linuxTrimForUI(u.draftTr("settings.title"), 54), premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	row := top + 60
+	language := i18n.LanguageByCode(u.settingsDraft.Language)
+	if err := u.x.text(left+24, row+20, "Aa", premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	choiceWidth := linuxSettingsChoiceWidth(width)
+	u.settingsRects.language = linuxRectWH(left+width-choiceWidth-16, row, choiceWidth, 30)
+	languageLabel := language.NativeName + " (" + language.Code + ")"
+	if err := u.drawButtonWithLimit(u.settingsRects.language, languageLabel, true, false, linuxButtonLabelLimit(u.settingsRects.language)); err != nil {
+		return err
+	}
+	row += 45
+	appearance := appearanceText(u.settingsDraft.Language)
+	if err := u.x.text(left+24, row+20, linuxTrimForUI(appearance.Title, linuxSettingsLabelLimit(width)), premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	u.settingsRects.appearance = linuxRectWH(left+width-choiceWidth-16, row, choiceWidth, 30)
+	appearanceLabel := appearance.Light
+	if u.settingsDraft.Appearance == model.AppearanceDark {
+		appearanceLabel = appearance.Dark
+	}
+	if err := u.drawButtonWithLimit(u.settingsRects.appearance, appearanceLabel, true, false, linuxButtonLabelLimit(u.settingsRects.appearance)); err != nil {
+		return err
+	}
+	row += 45
+	if err := u.drawSettingStepper(u.draftTr("settings.parallel"), u.settingsDraft.Parallelism, row, &u.settingsRects.parallelMinus, &u.settingsRects.parallelPlus); err != nil {
+		return err
+	}
+	row += 45
+	bandwidth := bandwidthWordsForLanguage(u.settingsDraft.Language)
+	if err := u.drawSettingStepper(bandwidth.UploadLabel, u.settingsDraft.UploadLimitKiBPerSecond, row, &u.settingsRects.uploadMinus, &u.settingsRects.uploadPlus); err != nil {
+		return err
+	}
+	row += 45
+	if err := u.drawSettingStepper(bandwidth.DownloadLabel, u.settingsDraft.DownloadLimitKiBPerSecond, row, &u.settingsRects.downloadMinus, &u.settingsRects.downloadPlus); err != nil {
+		return err
+	}
+	row += 45
+	if err := u.drawSettingStepper(u.draftTr("settings.retries"), u.settingsDraft.AutoRetryCount, row, &u.settingsRects.retriesMinus, &u.settingsRects.retriesPlus); err != nil {
+		return err
+	}
+	row += 45
+	if err := u.drawSettingStepper(u.draftTr("settings.retry_delay"), u.settingsDraft.RetryDelaySeconds, row, &u.settingsRects.delayMinus, &u.settingsRects.delayPlus); err != nil {
+		return err
+	}
+	row += 45
+	if err := u.drawSettingStepper(u.draftTr("settings.timeout"), u.settingsDraft.ConnectionTimeoutSeconds, row, &u.settingsRects.timeoutMinus, &u.settingsRects.timeoutPlus); err != nil {
+		return err
+	}
+	row += 48
+	if err := u.x.text(left+24, row+20, linuxTrimForUI(conflictPolicyText(u.settingsDraft.Language).Title, linuxSettingsLabelLimit(width)), premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	u.settingsRects.conflict = linuxRectWH(left+width-choiceWidth-16, row, choiceWidth, 30)
+	if err := u.drawButtonWithLimit(u.settingsRects.conflict, u.conflictPolicyLabel(u.settingsDraft.ConflictPolicy), true, false, linuxButtonLabelLimit(u.settingsRects.conflict)); err != nil {
+		return err
+	}
+	row += 44
+	if err := u.x.text(left+24, row+20, linuxTrimForUI(u.draftTr("settings.confirm_delete_title"), linuxSettingsLabelLimit(width)), premiumTheme.Text, premiumTheme.Panel); err != nil {
+		return err
+	}
+	u.settingsRects.confirmDelete = linuxRectWH(left+width-156, row, 140, 30)
+	confirm := "○"
+	if u.settingsDraft.ConfirmDelete {
+		confirm = "✓"
+	}
+	if err := u.drawButton(u.settingsRects.confirmDelete, confirm, true, u.settingsDraft.ConfirmDelete); err != nil {
+		return err
+	}
+
+	utilityGap := 8
+	utilityW := (width - 48 - 3*utilityGap) / 4
+	utilityY := top + height - 92
+	u.settingsRects.update = linuxRectWH(left+24, utilityY, utilityW, 30)
+	u.settingsRects.download = linuxRectWH(u.settingsRects.update.right+utilityGap, utilityY, utilityW, 30)
+	u.settingsRects.premium = linuxRectWH(u.settingsRects.download.right+utilityGap, utilityY, utilityW, 30)
+	u.settingsRects.website = linuxRectWH(u.settingsRects.premium.right+utilityGap, utilityY, utilityW, 30)
+	if err := u.drawButtonWithLimit(u.settingsRects.update, "Update", true, true, linuxButtonLabelLimit(u.settingsRects.update)); err != nil {
+		return err
+	}
+	if err := u.drawButtonWithLimit(u.settingsRects.download, "Download latest", true, false, linuxButtonLabelLimit(u.settingsRects.download)); err != nil {
+		return err
+	}
+	if err := u.drawButtonWithLimit(u.settingsRects.premium, "Premium", true, false, linuxButtonLabelLimit(u.settingsRects.premium)); err != nil {
+		return err
+	}
+	if err := u.drawButtonWithLimit(u.settingsRects.website, "Official website", true, false, linuxButtonLabelLimit(u.settingsRects.website)); err != nil {
+		return err
+	}
+
+	u.settingsRects.reset = linuxRectWH(left+24, top+height-48, min(220, max(150, width-470)), 30)
+	u.settingsRects.save = linuxRectWH(left+width-226, top+height-48, 98, 30)
+	u.settingsRects.close = linuxRectWH(left+width-118, top+height-48, 98, 30)
+	if err := u.drawButtonWithLimit(u.settingsRects.reset, settingsResetLabel(u.settingsDraft.Language), true, false, linuxButtonLabelLimit(u.settingsRects.reset)); err != nil {
+		return err
+	}
+	if err := u.drawButton(u.settingsRects.save, "OK", true, true); err != nil {
+		return err
+	}
+	return u.drawButton(u.settingsRects.close, u.draftTr("common.cancel"), true, false)
+}

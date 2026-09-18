@@ -1,0 +1,37 @@
+# Build output
+/dist/
+/cmd/installer/payload/*.exe
+/cmd/installer/payload/payload.zip
+/ui-screenshots/
+/dev-signing/
+/macos/out/
+/macos/dist/
+
+# Generated release/package artifacts
+*.exe
+*.zip
+*.deb
+*.nupkg
+*.sha256
+
+# Signing secrets and local development identities
+*.pfx
+*.p12
+*.key
+
+# Temporary/runtime files
+*.tmp
+*.log
+*.bak
+*.part
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
