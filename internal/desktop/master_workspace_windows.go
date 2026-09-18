@@ -197,6 +197,8 @@ func (a *app) ensureMasterWorkspaceControls() {
 	if a.masterBack == 0 {
 		a.masterBack = a.ensureMasterWorkspaceButton(hinst, idWorkspaceBack, "Back", iconBack, buttonSubtle)
 		a.masterForward = a.ensureMasterWorkspaceButton(hinst, idWorkspaceForward, "Forward", iconForward, buttonSubtle)
+		a.remoteBack = a.ensureMasterWorkspaceButton(hinst, idWorkspaceBack, "Back", iconBack, buttonSubtle)
+		a.remoteForward = a.ensureMasterWorkspaceButton(hinst, idWorkspaceForward, "Forward", iconForward, buttonSubtle)
 		a.masterRefresh = a.ensureMasterWorkspaceButton(hinst, idRefreshAll, a.tr("common.refresh"), iconRefresh, buttonSubtle)
 		a.masterNewFolder = a.ensureMasterWorkspaceButton(hinst, idWorkspaceNewFolder, a.tr("common.new_folder"), iconNewFolder, buttonDefault)
 		a.masterBookmarks = a.ensureMasterWorkspaceButton(hinst, idBookmarks, bookmarkWordsForLanguage(a.languageCode()).Title, iconOpenLocal, buttonDefault)
@@ -239,8 +241,12 @@ func (a *app) updateMasterToolbarState() {
 	if a == nil {
 		return
 	}
-	setControlEnabled(a.masterBack, len(a.workspaceBackHistory) > 0 && !a.workspaceReplayActive)
-	setControlEnabled(a.masterForward, len(a.workspaceForwardHistory) > 0 && !a.workspaceReplayActive)
+	historyBack := len(a.workspaceBackHistory) > 0 && !a.workspaceReplayActive
+	historyForward := len(a.workspaceForwardHistory) > 0 && !a.workspaceReplayActive
+	setControlEnabled(a.masterBack, historyBack)
+	setControlEnabled(a.masterForward, historyForward)
+	setControlEnabled(a.remoteBack, historyBack)
+	setControlEnabled(a.remoteForward, historyForward)
 	setControlEnabled(a.masterRefresh, !a.closing)
 	setControlEnabled(a.masterNewFolder, !a.closing && !a.localMutationBusy &&
 		(!a.lastFilePaneRemote || (a.connected && !a.connectionBusy && !a.remoteMutationBusy)))
@@ -254,6 +260,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		return
 	}
 	a.ensureMasterWorkspaceControls()
+	filters := a.fileFilterState()
 
 	var client rect
 	if ok, _, _ := getClientRect.Call(a.hwnd, uintptr(unsafe.Pointer(&client))); ok == 0 {
@@ -264,43 +271,55 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	contentLeft := applicationContentLeft
 	contentRight := width - premiumOuterGap
 	contentWidth := contentRight - contentLeft
-	if contentWidth < 720 {
+	if contentWidth < 620 {
 		return
 	}
 
-	// The reference workspace keeps connection editing out of the file browser.
-	// Sites are selected from Connections; the file view stays dedicated to
-	// search, transfer actions and the two browsing panes.
+	// The file workspace follows the approved reference: connection editing stays
+	// in Connections, while this screen is dedicated to navigation and transfers.
 	showControls(false,
 		a.profilesCombo,
 		a.protocol, a.host, a.port, a.user, a.pass,
 		a.keyPath, a.chooseKey, a.passphrase,
 		a.saveProfile, a.removeProfile,
+		a.localChoose, a.localRefresh, a.remoteRefresh,
+		a.localMkdir, a.localRename, a.localDelete,
+		a.remoteMkdir, a.remoteRename, a.remoteDelete, remoteEditButton(a), a.remoteChmod,
 	)
-	showControls(true, a.connectionBadge, a.connect, a.disconnect)
+	showControls(true,
+		a.connectionBadge, a.connect, a.disconnect,
+		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward,
+		a.localUp, a.remoteUp, a.localPath, a.remotePath,
+		a.localList, a.remoteList, a.transferList,
+	)
 
-	// Global search row. The search surface is a real button into the maintained
-	// per-pane filter engine and is also accessible with Ctrl+K.
+	if a.languageCode() == "en" {
+		setText(a.sectionLocal, "Local Files")
+		setText(a.sectionRemote, "Remote Files")
+		setText(a.sectionTransfers, "Transfer Queue")
+	}
+
+	// Global search / command field.
 	searchY, searchH := 18, 40
-	badgeW := 246
+	badgeW := 230
 	searchW := contentWidth - badgeW - 18
-	if searchW < 420 {
-		searchW = 420
+	if searchW < 340 {
+		searchW = 340
 	}
 	a.move(a.masterMore, contentLeft, searchY, searchW, searchH)
-	a.move(a.connectionBadge, contentRight-badgeW, searchY+8, badgeW, 24)
+	a.move(a.connectionBadge, contentRight-badgeW, searchY+9, badgeW, 22)
 
-	// Primary action row follows the approved mockup.
-	toolbarY, toolbarH, gap := 68, 42, 9
-	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 132, 132, 138, 116, 116, 110
-	if contentWidth < 980 {
-		// Compact Windows work areas keep every reference action visible instead
-		// of clipping Refresh beyond the right edge.
+	// Primary command row. At desktop widths the right side becomes the remote
+	// file search field exactly where it appears in the approved layout.
+	toolbarY, toolbarH := 70, 40
+	gap := 8
+	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 146, 140, 132, 110, 120, 108
+	if contentWidth < 1050 {
 		gap = 6
-		connectW, disconnectW, folderW = 108, 108, 116
-		uploadW, downloadW, refreshW = 92, 92, 88
+		connectW, disconnectW, folderW = 108, 108, 112
+		uploadW, downloadW, refreshW = 88, 92, 84
 	}
-	fixed := []struct {
+	actions := []struct {
 		control uintptr
 		width   int
 	}{
@@ -312,74 +331,67 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		{a.masterRefresh, refreshW},
 	}
 	x := contentLeft
-	for _, item := range fixed {
+	for _, item := range actions {
 		a.move(item.control, x, toolbarY, item.width, toolbarH)
 		x += item.width + gap
 	}
-	// The remaining horizontal space is deliberate breathing room, matching the
-	// reference rather than stretching one action into an oversized control.
+
+	if filters != nil {
+		showControls(false, filters.localButton)
+		remoteSearchW := contentRight - x
+		if remoteSearchW >= 150 {
+			label := "Search remote files…"
+			a.setButtonLabel(filters.remoteButton, label)
+			a.registerButtonVisual(filters.remoteButton, iconSearch, label, buttonSubtle, false)
+			a.move(filters.remoteButton, x, toolbarY, remoteSearchW, toolbarH)
+			showControls(true, filters.remoteButton)
+		} else {
+			showControls(false, filters.remoteButton)
+		}
+	}
 
 	paneGap := 14
 	paneW := (contentWidth - paneGap) / 2
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
-	sectionY, pathY, actionY := 128, 158, 199
+	sectionY, pathY := 132, 162
 	a.move(a.sectionLocal, leftX+8, sectionY, paneW-16, 22)
 	a.move(a.sectionRemote, rightX+8, sectionY, paneW-16, 22)
 
-	// Local breadcrumb/navigation bar.
+	// Breadcrumb-style local path row.
 	miniW, miniGap := 38, 6
 	lx := leftX + 8
 	for _, control := range []uintptr{a.masterBack, a.masterForward, a.localUp} {
 		a.move(control, lx, pathY, miniW, 34)
 		lx += miniW + miniGap
 	}
-	chooseW := 82
-	localPathW := leftX + paneW - 8 - lx - chooseW - miniGap
+	localPathW := leftX + paneW - 8 - lx
 	if localPathW < 120 {
 		localPathW = 120
 	}
 	a.move(a.localPath, lx, pathY, localPathW, 34)
-	a.move(a.localChoose, lx+localPathW+miniGap, pathY, chooseW, 34)
-	showControls(false, a.localRefresh)
 
-	// Remote breadcrumb/navigation bar.
+	// Independent remote visual navigation controls use the same maintained
+	// cross-pane history stack, so both reference arrows remain functional.
 	rx := rightX + 8
-	a.move(a.remoteUp, rx, pathY, miniW, 34)
-	rx += miniW + miniGap
-	remoteRefreshW := 84
-	remotePathW := rightX + paneW - 8 - rx - remoteRefreshW - miniGap
-	if remotePathW < 140 {
-		remotePathW = 140
+	for _, control := range []uintptr{a.remoteBack, a.remoteForward, a.remoteUp} {
+		a.move(control, rx, pathY, miniW, 34)
+		rx += miniW + miniGap
+	}
+	remotePathW := rightX + paneW - 8 - rx
+	if remotePathW < 120 {
+		remotePathW = 120
 	}
 	a.move(a.remotePath, rx, pathY, remotePathW, 34)
-	a.move(a.remoteRefresh, rx+remotePathW+miniGap, pathY, remoteRefreshW, 34)
-
-	// Advanced operations stay present, but compact, so the polished layout does
-	// not remove Ghost FTP's real rename/delete/CHMOD/remote-edit capabilities.
-	actionGap := 6
-	localActions := []uintptr{a.localMkdir, a.localRename, a.localDelete}
-	localActionW := (paneW - 16 - actionGap*(len(localActions)-1)) / len(localActions)
-	lx = leftX + 8
-	for _, control := range localActions {
-		a.move(control, lx, actionY, localActionW, 30)
-		lx += localActionW + actionGap
-	}
-	remoteActions := []uintptr{a.remoteMkdir, a.remoteRename, a.remoteDelete, remoteEditButton(a), a.remoteChmod}
-	remoteActionW := (paneW - 16 - actionGap*(len(remoteActions)-1)) / len(remoteActions)
-	rx = rightX + 8
-	for _, control := range remoteActions {
-		a.move(control, rx, actionY, remoteActionW, 30)
-		rx += remoteActionW + actionGap
-	}
 
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 132, 188)
+	queueH := clampInt(height/5, 132, 184)
 	queueY := statusY - queueH - 10
-	queueButtonsY := queueY - 38
-	queueLabelY := queueButtonsY - 25
-	listY := actionY + 38
-	listBottom := queueLabelY - 13
+	queueToolbarY := queueY - 38
+	queueLabelY := queueToolbarY - 25
+
+	listY := pathY + 42
+	listBottom := queueLabelY - 12
 	listH := listBottom - listY
 	if listH < 150 {
 		listH = 150
@@ -387,28 +399,29 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	a.move(a.localList, leftX+8, listY, paneW-16, listH)
 	a.move(a.remoteList, rightX+8, listY, paneW-16, listH)
 
-	// Persistent queue, always visible like the reference screen.
+	// Persistent transfer queue.
 	a.move(a.sectionTransfers, contentLeft+8, queueLabelY, 180, 20)
-	a.move(a.transferSummary, contentLeft+188, queueLabelY, clampInt(contentWidth-420, 240, 620), 20)
+	a.move(a.transferSummary, contentLeft+190, queueLabelY, clampInt(contentWidth-430, 220, 620), 20)
+
 	queueControls := []struct {
 		control uintptr
 		width   int
 	}{
-		{a.pauseQueue, 104},
-		{a.resumeQueue, 104},
-		{a.cancelJob, 98},
-		{a.retryJob, 98},
-		{a.clearQueue, 144},
+		{a.pauseQueue, 94},
+		{a.resumeQueue, 94},
+		{a.cancelJob, 90},
+		{a.retryJob, 86},
+		{a.clearQueue, 136},
 	}
 	qx := contentRight - 8
 	for i := len(queueControls) - 1; i >= 0; i-- {
 		qx -= queueControls[i].width
-		a.move(queueControls[i].control, qx, queueButtonsY, queueControls[i].width, 31)
-		qx -= 7
+		a.move(queueControls[i].control, qx, queueToolbarY, queueControls[i].width, 31)
+		qx -= 6
 	}
 	a.move(a.transferList, contentLeft+8, queueY, contentWidth-16, queueH)
-	a.move(a.status, contentLeft+8, statusY, contentWidth-280, statusBandHeight)
-	a.move(a.statusVersion, contentRight-258, statusY, 250, statusBandHeight)
+	a.move(a.status, contentLeft+8, statusY, contentWidth-310, statusBandHeight)
+	a.move(a.statusVersion, contentRight-288, statusY, 280, statusBandHeight)
 
 	a.updateMasterToolbarState()
 }
@@ -418,7 +431,7 @@ func (a *app) cleanupMasterWorkspaceControls() {
 		return
 	}
 	for _, control := range []uintptr{
-		a.masterBack, a.masterForward, a.masterRefresh,
+		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward, a.masterRefresh,
 		a.masterNewFolder, a.masterBookmarks, a.masterMore,
 	} {
 		delete(a.buttons, control)
