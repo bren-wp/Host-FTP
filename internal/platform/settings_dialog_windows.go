@@ -24,7 +24,6 @@ const (
 	settingsIDError      = 4124
 	settingsIDUpdate     = 4125
 	settingsIDDownload   = 4126
-	settingsIDPremium    = 4127
 	settingsIDWebsite    = 4128
 
 	settingsCBAdd       = 0x0143
@@ -82,7 +81,6 @@ type SettingsDialogConfig struct {
 	ResetLabel             string
 	UpdateLabel            string
 	DownloadLabel          string
-	PremiumLabel           string
 	WebsiteLabel           string
 	DefaultLanguageIndex   int
 	DefaultAppearanceIndex int
@@ -152,10 +150,6 @@ func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintp
 				return 0
 			case settingsIDDownload:
 				state.result.Action = "download"
-				promptDestroyWindow.Call(hwnd)
-				return 0
-			case settingsIDPremium:
-				state.result.Action = "premium"
 				promptDestroyWindow.Call(hwnd)
 				return 0
 			case settingsIDWebsite:
