@@ -217,7 +217,7 @@ func (a *app) preferredWindowBounds() (x, y, width, height int) {
 	if maxW := screenW - 48; maxW > 0 && width > maxW {
 		width = maxW
 	}
-	if maxH := screenH - 72; maxH > 0 && height > maxH {
+	if maxH := screenH - 24; maxH > 0 && height > maxH {
 		height = maxH
 	}
 	if width < premiumMinWidth {
