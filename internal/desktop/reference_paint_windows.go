@@ -61,7 +61,7 @@ func (a *app) paintReferenceWorkspace() {
 	// Integrated application rail.
 	a.drawReferenceCard(
 		hdc,
-		10, 10,
+		14, 10,
 		applicationSidebarWidth+18,
 		height-20,
 		18,
