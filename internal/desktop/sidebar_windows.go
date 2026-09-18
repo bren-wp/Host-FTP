@@ -262,7 +262,7 @@ func (a *app) resizeSidebarColumns() {
 		if ok, _, _ := getClientRect.Call(a.transferList, uintptr(unsafe.Pointer(&client))); ok != 0 {
 			width := int(client.Right - client.Left)
 			if width >= a.scale(360) {
-				parts := []int{12, 25, 25, 25, 13}
+				parts := []int{20, 11, 16, 16, 12, 15, 10}
 				for index, percent := range parts {
 					sendMessageW.Call(a.transferList, lvmSetColumnWidth, uintptr(index), uintptr(width*percent/100))
 				}
