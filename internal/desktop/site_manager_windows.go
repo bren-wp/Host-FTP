@@ -52,6 +52,7 @@ const (
 	siteIDPresetWebsite  = 8135
 	siteIDPresetBackup   = 8136
 	siteIDPresetMedia    = 8137
+	siteIDRecentList     = 8138
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -125,6 +126,7 @@ type siteManagerState struct {
 	parent          *app
 	hwnd            uintptr
 	list            uintptr
+	recentList      uintptr
 	listBrush       uintptr
 	name            uintptr
 	protocol        uintptr
@@ -196,6 +198,13 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			if id == siteIDList && (notify == siteLBNSelChange || notify == siteLBNDblClk) {
 				state.loadCurrentSelection()
 				if notify == siteLBNDblClk && state.selected > 0 {
+					state.connectAfter = true
+					destroyWindow.Call(hwnd)
+				}
+				return 0
+			}
+			if id == siteIDRecentList && (notify == siteLBNSelChange || notify == siteLBNDblClk) {
+				if state.loadRecentSelection() && notify == siteLBNDblClk && state.selected > 0 {
 					state.connectAfter = true
 					destroyWindow.Call(hwnd)
 				}
@@ -706,7 +715,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		showControls(false,
 			state.presetsTab, state.syncTab, state.automationTab,
 			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
-			state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 		)
 		state.parent.move(state.settings, 720, 738, 160, 42)
 		return
@@ -714,7 +723,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	showControls(true,
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
-		state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+		state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 	)
 	state.parent.move(state.settings, 926, 738, 264, 42)
 }
