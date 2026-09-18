@@ -29,7 +29,7 @@ func fileColumnWidths(listWidth int, remote bool) []int {
 		if nameW < 1 {
 			nameW = 1
 		}
-		return []int{nameW, typeW, sizeW, modifiedW, permissionsW}
+		return []int{nameW, sizeW, typeW, modifiedW, permissionsW}
 	}
 
 	typeW, sizeW, modifiedW := 82, 92, 132
@@ -41,5 +41,5 @@ func fileColumnWidths(listWidth int, remote bool) []int {
 	if nameW < 1 {
 		nameW = 1
 	}
-	return []int{nameW, typeW, sizeW, modifiedW}
+	return []int{nameW, sizeW, typeW, modifiedW}
 }
