@@ -143,22 +143,10 @@ func (a *app) layoutQueuePriorityControls() {
 }
 
 func (a *app) moveSelectedTransfer(action queuePriorityAction) {
-	selectedView := selectedIndices(a.transferList)
-	if len(selectedView) != 1 || selectedView[0] < 0 || selectedView[0] >= len(a.transferViewJobs) {
+	selected := a.fullTransferSelectionIndices()
+	if len(selected) != 1 {
 		return
 	}
-	selectedID := a.transferViewJobs[selectedView[0]].ID
-	fullIndex := -1
-	for index, job := range a.transferJobs {
-		if job.ID == selectedID {
-			fullIndex = index
-			break
-		}
-	}
-	if fullIndex < 0 {
-		return
-	}
-	selected := []int{fullIndex}
 	state := deriveQueuePriorityState(a.transferJobs, selected)
 	allowed := false
 	switch action {
