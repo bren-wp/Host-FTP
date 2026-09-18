@@ -98,7 +98,20 @@ function Save-Window {
 
 $exe = (Resolve-Path -LiteralPath $Executable).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$process = Start-Process -FilePath $exe -PassThru
+
+# Use a deterministic, branded workspace for release screenshots so repository
+# imagery never exposes hosted-runner account names or CI-specific home paths.
+$previewRoot = 'C:\GhostFTP\Workspace'
+New-Item -ItemType Directory -Force -Path $previewRoot | Out-Null
+foreach ($name in @('Projects','Uploads','Downloads','Backups','Documents')) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $previewRoot $name) | Out-Null
+}
+Set-Content -LiteralPath (Join-Path $previewRoot 'README.txt') -Value 'Ghost FTP workspace' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $previewRoot 'transfer-notes.txt') -Value 'Secure transfers. Without a trace.' -Encoding utf8
+$env:USERPROFILE = $previewRoot
+$env:HOME = $previewRoot
+
+$process = Start-Process -FilePath $exe -WorkingDirectory $previewRoot -PassThru
 try {
     $main = Wait-MainWindow $process
     [GhostReferenceCapture]::MoveWindow($main, 0, 0, 1600, 900, $true) | Out-Null
