@@ -326,13 +326,16 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	settingsOnce.Do(func() {
 		cursor, _, _ := promptLoadCursorW.Call(0, 32512)
+		icon := premiumDialogIcon(hinst)
 		wc := promptWndClassEx{
 			CbSize:     uint32(unsafe.Sizeof(promptWndClassEx{})),
 			WndProc:    settingsProc,
 			Instance:   hinst,
 			Cursor:     cursor,
+			Icon:       icon,
 			Background: premiumDialogBackgroundBrush(),
 			ClassName:  promptWstr(settingsClass),
+			IconSm:     icon,
 		}
 		promptRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 	})
