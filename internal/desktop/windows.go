@@ -40,7 +40,9 @@ type app struct {
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	buttons                                                                                   map[uintptr]buttonVisual
 
-	siteManagerBtn uintptr
+	siteManagerBtn          uintptr
+	sidebarBookmarkHeading uintptr
+	sidebarProfileButtons  []uintptr
 
 	mu                   sync.Mutex
 	dispatchQ            []func()
