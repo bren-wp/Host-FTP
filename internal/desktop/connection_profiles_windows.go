@@ -253,6 +253,9 @@ func (a *app) onConnected(host string, diagnostics remote.ConnectionDiagnostics)
 	setText(a.passphrase, "")
 	a.queuePaused = false
 	a.setConnectionUI(true)
+	if a.languageCode() == "en" {
+		setText(a.connectionBadge, "●  Connected\r\n"+host)
+	}
 	a.setStatus(a.connectionDiagnosticStatus(host, diagnostics))
 	remoteStart := "/"
 	if a.protocolValue() == "sftp" {
