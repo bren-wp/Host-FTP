@@ -122,12 +122,17 @@ func (state *siteManagerState) paintReferenceConnections() {
 		deleteObject.Call(background)
 	}
 
-	// Approved Connections composition: product rail, connection editor,
-	// transfer/safety options, and saved sites.
+	// Approved Connections composition: product rail and connection editor are
+	// always present. Optional reference side cards render only when the logical
+	// client width can contain them without clipping.
 	state.parent.drawReferenceCard(hdc, 12, 12, 220, 818, 18, panelColor(), borderColor())
 	state.parent.drawReferenceCard(hdc, 244, 44, 654, 770, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 908, 44, 300, 510, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 1222, 516, 354, 298, 16, panelColor(), borderColor())
+
+	logicalWidth := state.parent.unscale(int(client.Right - client.Left))
+	if logicalWidth >= 1580 {
+		state.parent.drawReferenceCard(hdc, 908, 44, 300, 510, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1222, 516, 354, 298, 16, panelColor(), borderColor())
+	}
 }
