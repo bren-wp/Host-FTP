@@ -425,8 +425,8 @@ func (a *app) layoutSidebarRail(height int) {
 	}
 	profileY := bookmarkY + 28
 	a.refreshSidebarProfileControls()
-	for _, hwnd := range a.sidebarProfileButtons {
-		if hwnd == 0 {
+	for index, hwnd := range a.sidebarProfileButtons {
+		if hwnd == 0 || index >= len(a.profiles) {
 			continue
 		}
 		a.move(hwnd, applicationSidebarX, profileY, applicationSidebarWidth, 36)
