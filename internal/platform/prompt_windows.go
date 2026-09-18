@@ -149,13 +149,16 @@ func PromptDialogWithLabels(title, instruction, defaultValue, okLabel, cancelLab
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	promptOnce.Do(func() {
 		cursor, _, _ := promptLoadCursorW.Call(0, 32512)
+		icon := premiumDialogIcon(hinst)
 		wc := promptWndClassEx{
 			CbSize:     uint32(unsafe.Sizeof(promptWndClassEx{})),
 			WndProc:    promptProc,
 			Instance:   hinst,
 			Cursor:     cursor,
+			Icon:       icon,
 			Background: premiumDialogBackgroundBrush(),
 			ClassName:  promptWstr(promptClass),
+			IconSm:     icon,
 		}
 		promptRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 	})
