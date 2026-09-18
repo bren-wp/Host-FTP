@@ -221,7 +221,7 @@ func (a *app) applyLanguage(code string) {
 	a.applyColumnLanguage()
 	a.fillItemList(a.localList, a.localItems)
 	a.fillItemList(a.remoteList, a.remoteItems)
-	a.fillTransferList(a.transferList, a.transferJobs)
+	a.rebuildTransferView()
 	a.updateTransferSummary()
 	var client rect
 	if r, _, _ := getClientRect.Call(a.hwnd, uintptr(unsafe.Pointer(&client))); r != 0 {
