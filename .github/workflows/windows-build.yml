@@ -1,0 +1,232 @@
+name: Ghost FTP Windows Build
+
+on:
+  push:
+    branches:
+      - main
+      - 'work/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: host-ftp-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Host-FTP
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap maintained Ghost FTP source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path go.mod) {
+            Write-Host 'SOURCE_BOOTSTRAP=SKIP'
+            exit 0
+          }
+
+          $source = Join-Path $env:RUNNER_TEMP 'ghostftp-source'
+          Remove-Item -LiteralPath $source -Recurse -Force -ErrorAction SilentlyContinue
+          git clone --depth 1 --branch work/reference-ui-1to1 https://github.com/bren-wp/Ghost-FTP.git $source
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to clone Ghost FTP source baseline.' }
+
+          foreach ($name in @('cmd','internal','scripts','build')) {
+            Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $env:GITHUB_WORKSPACE $name) -Recurse -Force
+          }
+          foreach ($name in @('go.mod','.editorconfig','.gitattributes','.gitignore')) {
+            Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $env:GITHUB_WORKSPACE $name) -Force
+          }
+
+          $textExtensions = @('.go','.py','.ps1','.sh','.md','.txt','.json','.yml','.yaml','.toml')
+          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Recurse -File |
+            Where-Object { $_.Extension -in $textExtensions -and $_.FullName -notmatch '\\.git\\' } |
+            ForEach-Object {
+              $content = [IO.File]::ReadAllText($_.FullName)
+              $updated = $content.Replace('github.com/bren-wp/Ghost-FTP','github.com/bren-wp/Host-FTP')
+              if ($updated -ne $content) {
+                [IO.File]::WriteAllText($_.FullName, $updated, [Text.UTF8Encoding]::new($false))
+              }
+            }
+
+          Set-Content -LiteralPath VERSION -Value '0.1.0' -Encoding ascii
+
+          @'
+          # Ghost FTP
+
+          Ghost FTP is a privacy-first Windows FTP, FTPS and SFTP desktop client maintained in the **bren-wp/Host-FTP** repository.
+
+          ## Current build
+
+          Version: **0.1.0**
+
+          The Windows product uses the approved premium dark Ghost FTP interface:
+          - wide application rail
+          - Connections / Files / Transfers / Sync / Settings navigation
+          - Local Files and Remote Files dual-pane workspace
+          - persistent transfer queue
+          - cyan / electric-blue / violet product accents
+          - native Windows Setup and Portable executables
+
+          ## Functional scope
+
+          The application source includes real local/remote navigation, FTP/FTPS/SFTP connection handling, upload/download queues, retry/cancel/pause lifecycle, bookmarks, file filtering/search, remote edit, directory comparison, rename/delete/create-directory operations and CHMOD where supported.
+
+          ## Build
+
+          GitHub Actions and the repository source produce:
+          - `Ghost-FTP-0.1.0-Setup.exe`
+          - `Ghost-FTP-0.1.0-Portable.exe`
+          - `Ghost-FTP-0.1.0-Source.zip`
+          - `SHA256.txt`
+
+          ## Privacy
+
+          Ghost FTP does not require a Ghost FTP account and the maintained client does not add advertising or product telemetry.
+
+          ## License
+
+          This repository is distributed under **GNU GPL-3.0**. See `LICENSE`.
+
+          ---
+          Ghost FTP 0.1.0 — Windows production baseline.
+          '@ | Set-Content -LiteralPath README.md -Encoding utf8
+
+          @'
+          # Third-party and source notice
+
+          Ghost FTP 0.1.0 in this repository is maintained as GPL-3.0 source.
+
+          The Windows client uses the Go standard library and operating-system facilities. Remote protocol execution follows the maintained Ghost FTP engine source included in this repository.
+
+          The source baseline was migrated by the repository owner from the maintained Ghost FTP codebase and adapted for the Host-FTP repository and approved Ghost FTP interface.
+          '@ | Set-Content -LiteralPath THIRD_PARTY_NOTICES.md -Encoding utf8
+
+          Write-Host 'SOURCE_BOOTSTRAP=PASS'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate canonical Ghost FTP brand assets
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go telemetry off
+          python .\scripts\generate_brand_assets.py --materialize
+          if ($LASTEXITCODE -ne 0) { throw 'Brand asset generation failed.' }
+
+      - name: Build Portable.exe and Setup.exe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path cmd\installer\payload | Out-Null
+
+          $env:CGO_ENABLED = '0'
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:GOAMD64 = 'v1'
+          $env:GOTOOLCHAIN = 'local'
+
+          $portable = "dist\Ghost-FTP-$version-Portable.exe"
+          $setup = "dist\Ghost-FTP-$version-Setup.exe"
+          $payload = 'cmd\installer\payload\payload.zip'
+          $ldflags = "-s -w -H=windowsgui -X main.version=$version"
+
+          go build -trimpath -buildvcs=false -ldflags $ldflags -o $portable .\cmd\ghostftp
+          if ($LASTEXITCODE -ne 0) { throw 'Portable.exe build failed.' }
+
+          python .\scripts\pe_resources.py $portable --ico .\build\icon.ico --version $version --role portable --original-filename "Ghost-FTP-$version-Portable.exe"
+          if ($LASTEXITCODE -ne 0) { throw 'Portable PE resource step failed.' }
+
+          python .\scripts\make_payload.py --app $portable --output $payload
+          if ($LASTEXITCODE -ne 0) { throw 'Installer payload generation failed.' }
+
+          try {
+            go build -trimpath -buildvcs=false -ldflags $ldflags -o $setup .\cmd\installer
+            if ($LASTEXITCODE -ne 0) { throw 'Setup.exe build failed.' }
+          }
+          finally {
+            Remove-Item -LiteralPath $payload -Force -ErrorAction SilentlyContinue
+          }
+
+          python .\scripts\pe_resources.py $setup --ico .\build\icon.ico --version $version --role setup --original-filename "Ghost-FTP-$version-Setup.exe"
+          if ($LASTEXITCODE -ne 0) { throw 'Setup PE resource step failed.' }
+
+          foreach ($path in @($portable,$setup)) {
+            if (-not (Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -lt 100000) {
+              throw "Invalid Windows artifact: $path"
+            }
+          }
+
+          Get-FileHash $portable,$setup -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -LiteralPath dist\SHA256.txt -Encoding ascii
+
+      - name: Package exact source tree
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          $stage = Join-Path $env:RUNNER_TEMP "Ghost-FTP-$version-Source"
+          Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          foreach ($name in @('cmd','internal','scripts','build','.github')) {
+            if (Test-Path $name) { Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Recurse -Force }
+          }
+          foreach ($name in @('go.mod','VERSION','README.md','LICENSE','THIRD_PARTY_NOTICES.md','.gitignore','.editorconfig','.gitattributes')) {
+            if (Test-Path $name) { Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Force }
+          }
+
+          $zip = "dist\Ghost-FTP-$version-Source.zip"
+          Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal
+          if (-not (Test-Path $zip -PathType Leaf) -or (Get-Item $zip).Length -lt 50000) {
+            throw 'Source ZIP is missing or unexpectedly small.'
+          }
+          $hash = Get-FileHash $zip -Algorithm SHA256
+          Add-Content -LiteralPath dist\SHA256.txt -Value "$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($zip))" -Encoding ascii
+
+      - name: Persist bootstrapped source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace((git status --porcelain))) {
+            Write-Host 'SOURCE_COMMIT=UNCHANGED'
+            exit 0
+          }
+          git config user.name 'Brendigo'
+          git config user.email 'info@brendigo.com'
+          git add -A
+          git commit -m 'Ghost FTP 0.1.0 Windows source and approved reference UI baseline'
+          git push origin HEAD:${{ github.ref_name }}
+          Write-Host 'SOURCE_COMMIT=PUSHED'
+
+      - name: Upload Windows deliverables
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostftp-windows-0.1.0
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            dist/Ghost-FTP-*-Setup.exe
+            dist/Ghost-FTP-*-Portable.exe
+            dist/Ghost-FTP-*-Source.zip
+            dist/SHA256.txt
