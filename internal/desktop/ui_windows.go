@@ -4,22 +4,29 @@ package desktop
 
 import (
 	"fmt"
-	"github.com/bren-wp/Host-FTP/internal/brand"
 	"syscall"
 	"unsafe"
 )
+
+func createNamedUIFont(name string, height int32, weight uint32, italic bool) uintptr {
+	italicValue := uintptr(0)
+	if italic {
+		italicValue = 1
+	}
+	fontName := wstr(name)
+	font, _, _ := createFontW.Call(
+		uintptr(uint32(height)), 0, 0, 0, uintptr(weight), italicValue, 0, 0,
+		1, 0, 0, 5, 0, uintptr(unsafe.Pointer(fontName)),
+	)
+	return font
+}
 
 func createUIFont(height int32, weight uint32) uintptr {
 	name := "Segoe UI"
 	if windowsBuildNumber() >= 22000 {
 		name = "Segoe UI Variable Text"
 	}
-	fontName := wstr(name)
-	font, _, _ := createFontW.Call(
-		uintptr(uint32(height)), 0, 0, 0, uintptr(weight), 0, 0, 0,
-		1, 0, 0, 5, 0, uintptr(unsafe.Pointer(fontName)),
-	)
-	return font
+	return createNamedUIFont(name, height, weight, false)
 }
 
 func (a *app) createControls(hinst uintptr) error {
@@ -148,7 +155,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.clearQueue = mkButton(a.tr("transfer.clear"), iconClear, buttonSubtle, idClearQueue)
 	a.transferList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
 	a.status = mk("STATIC", "", 0, idStatus)
-	a.statusVersion = mk("STATIC", brand.ProductName+" "+a.version+"  •  FTP • FTPS • SFTP", 0, 0)
+	a.statusVersion = mk("STATIC", "∞  MORE ACCESS. A BRIGHTER TOMORROW.", 0, 0)
 	a.transferSummary = mk("STATIC", a.tr("transfer.summary", 0, 0, 0), 0, 0)
 	setFont(a.status, a.smallFont)
 	setFont(a.statusVersion, a.smallFont)
@@ -235,6 +242,7 @@ func (a *app) createFonts() {
 	a.titleFont = createUIFont(int32(-a.scale(27)), 700)
 	a.smallFont = createUIFont(int32(-a.scale(13)), 400)
 	a.iconFont = createIconFont(int32(-a.scale(16)))
+	a.scriptFont = createNamedUIFont("Segoe Script", int32(-a.scale(24)), 400, true)
 }
 
 func (a *app) applyDPI(dpi uint32) {
@@ -244,7 +252,7 @@ func (a *app) applyDPI(dpi uint32) {
 	if a.dpi == dpi {
 		return
 	}
-	oldFonts := []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont}
+	oldFonts := []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont}
 	a.dpi = dpi
 	a.createFonts()
 	for _, h := range a.defaultFontControls() {
@@ -316,7 +324,7 @@ func (a *app) resizeListColumns() {
 	if localNameW < 120 {
 		localNameW = 120
 	}
-	for i, width := range []int{localNameW, typeW, sizeW, modifiedW} {
+	for i, width := range []int{localNameW, sizeW, typeW, modifiedW} {
 		if a.localList != 0 {
 			sendMessageW.Call(a.localList, lvmSetColumnWidth, uintptr(i), uintptr(a.scale(width)))
 		}
@@ -327,7 +335,7 @@ func (a *app) resizeListColumns() {
 	if remoteNameW < 100 {
 		remoteNameW = 100
 	}
-	for i, width := range []int{remoteNameW, typeW, sizeW, modifiedW, permissionsW} {
+	for i, width := range []int{remoteNameW, sizeW, typeW, modifiedW, permissionsW} {
 		if a.remoteList != 0 {
 			sendMessageW.Call(a.remoteList, lvmSetColumnWidth, uintptr(i), uintptr(a.scale(width)))
 		}

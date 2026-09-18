@@ -83,6 +83,13 @@ jobs:
           go test ./...
           if ($LASTEXITCODE -ne 0) { throw 'Windows test suite failed.' }
 
+      - name: Audit production UI copy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python .\scripts\audit_product_copy.py
+          if ($LASTEXITCODE -ne 0) { throw 'Production UI copy audit failed.' }
+
       - name: Generate canonical Ghost FTP brand assets
         shell: pwsh
         run: |
@@ -151,6 +158,22 @@ jobs:
           $version = (Get-Content VERSION -Raw).Trim()
           .\scripts\capture_reference_windows.ps1 -Executable "dist\Ghost-FTP-$version-Portable.exe" -OutputDirectory ui-screenshots
 
+      - name: Refresh README screenshots from the real Windows build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path docs\screenshots | Out-Null
+          Copy-Item -LiteralPath ui-screenshots\Ghost-FTP-main-reference.png -Destination docs\screenshots\Ghost-FTP-main-reference.png -Force
+          Copy-Item -LiteralPath ui-screenshots\Ghost-FTP-connections-reference.png -Destination docs\screenshots\Ghost-FTP-connections-reference.png -Force
+          foreach ($path in @(
+            'docs\screenshots\Ghost-FTP-main-reference.png',
+            'docs\screenshots\Ghost-FTP-connections-reference.png'
+          )) {
+            if (-not (Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -lt 4096) {
+              throw "README screenshot is missing or unexpectedly small: $path"
+            }
+          }
+
       - name: Package exact source tree
         shell: pwsh
         run: |
@@ -160,7 +183,7 @@ jobs:
           Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-          foreach ($name in @('cmd','internal','scripts','build','.github')) {
+          foreach ($name in @('cmd','internal','scripts','build','docs','.github')) {
             if (Test-Path $name) {
               Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Recurse -Force
             }

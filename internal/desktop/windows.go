@@ -18,12 +18,12 @@ import (
 )
 
 type app struct {
-	hwnd                                 uintptr
-	engine                               *api.Engine
-	version                              string
-	font, titleFont, smallFont, iconFont uintptr
-	dpi                                  uint32
-	brush, panelBrush                    uintptr
+	hwnd                                             uintptr
+	engine                                           *api.Engine
+	version                                          string
+	font, titleFont, smallFont, iconFont, scriptFont uintptr
+	dpi                                              uint32
+	brush, panelBrush                                uintptr
 
 	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers               uintptr
 	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn                                   uintptr
@@ -43,6 +43,7 @@ type app struct {
 
 	siteManagerBtn         uintptr
 	sidebarBookmarkHeading uintptr
+	sidebarMotto           uintptr
 	sidebarProfileButtons  []uintptr
 
 	mu                   sync.Mutex
@@ -53,6 +54,7 @@ type app struct {
 	transferViewJobs     []model.TransferJob
 	transferViewFilter   string
 	profiles             []model.PublicProfile
+	recentConnections    []recentConnectionEntry
 	settings             model.Settings
 	localCurrent         string
 	remoteCurrent        string
@@ -137,7 +139,7 @@ func Run(engine *api.Engine, version string) error {
 	hwnd, _, err := createWindowExW.Call(
 		0,
 		uintptr(unsafe.Pointer(className)),
-		uintptr(unsafe.Pointer(wstr(brand.ProductName+" "+version))),
+		uintptr(unsafe.Pointer(wstr(brand.ProductName))),
 		wsOverlappedWindow,
 		40, 30, 1200, 780,
 		0, 0, hinst, 0,
@@ -160,7 +162,7 @@ func Run(engine *api.Engine, version string) error {
 	if err := a.createControls(hinst); err != nil {
 		apps.Delete(hwnd)
 		destroyWindow.Call(hwnd)
-		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont} {
+		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
 			if f != 0 {
 				deleteObject.Call(f)
 			}
@@ -225,7 +227,7 @@ func Run(engine *api.Engine, version string) error {
 		dispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
 	apps.Delete(hwnd)
-	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont} {
+	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
 		if f != 0 {
 			deleteObject.Call(f)
 		}
@@ -362,7 +364,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			color = textColor()
 		} else if lParam == a.brandFTP {
 			color = accentStrongColor()
-		} else if lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
+		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
 		} else if lParam == a.connectionBadge {
 			if a.connected {

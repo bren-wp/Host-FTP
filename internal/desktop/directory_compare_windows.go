@@ -94,7 +94,7 @@ func (a *app) createDirectoryComparisonButton(hinst uintptr, id int, label strin
 		sendMessageW.Call(hwnd, wmSetFont, a.font, 1)
 	}
 	applyDarkControl(hwnd, "BUTTON")
-	variant := buttonSubtle
+	variant := buttonBridge
 	if accent {
 		variant = buttonAccent
 	}

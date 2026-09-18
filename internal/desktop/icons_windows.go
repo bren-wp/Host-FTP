@@ -43,6 +43,7 @@ const (
 	buttonSubtle
 	buttonAccent
 	buttonDanger
+	buttonBridge
 	buttonNav
 	buttonNavActive
 )

@@ -20,6 +20,7 @@ var premiumAdjustWindowRectEx = user32.NewProc("AdjustWindowRectEx")
 var premiumAdjustWindowRectExForDpi = user32.NewProc("AdjustWindowRectExForDpi")
 var premiumEnableWindow = user32.NewProc("EnableWindow")
 var premiumSetActiveWindow = user32.NewProc("SetActiveWindow")
+var premiumLoadIconW = user32.NewProc("LoadIconW")
 var premiumShowWindow = user32.NewProc("ShowWindow")
 var premiumIsIconic = user32.NewProc("IsIconic")
 var premiumIsWindow = user32.NewProc("IsWindow")
@@ -155,6 +156,14 @@ func applyPremiumDialogControl(hwnd uintptr, class string) {
 	if theme != "" {
 		premiumSetWindowTheme.Call(hwnd, uintptr(unsafe.Pointer(promptWstr(theme))), 0)
 	}
+}
+
+func premiumDialogIcon(instance uintptr) uintptr {
+	if instance == 0 {
+		return 0
+	}
+	icon, _, _ := premiumLoadIconW.Call(instance, 1)
+	return icon
 }
 
 func premiumDialogOwner() uintptr {
@@ -304,7 +313,7 @@ func premiumDialogFontForDPI(height int32, dpi uint32, weight uintptr) uintptr {
 		weight,
 		0, 0, 0,
 		1, 0, 0, 5, 0,
-		uintptr(unsafe.Pointer(promptWstr("Segoe UI"))),
+		uintptr(unsafe.Pointer(promptWstr("Segoe UI Variable Text"))),
 	)
 	return font
 }
@@ -322,6 +331,9 @@ func applyPremiumDialogWindow(hwnd uintptr) {
 	const (
 		dwmUseImmersiveDarkMode   = 20
 		dwmWindowCornerPreference = 33
+		dwmBorderColor            = 34
+		dwmCaptionColor           = 35
+		dwmTextColor              = 36
 		dwmWindowCornerRound      = 2
 	)
 	dark := int32(0)
@@ -340,5 +352,31 @@ func applyPremiumDialogWindow(hwnd uintptr) {
 		dwmWindowCornerPreference,
 		uintptr(unsafe.Pointer(&corner)),
 		unsafe.Sizeof(corner),
+	)
+
+	// Keep every application-owned popup inside the same Ghost FTP visual
+	// system as the main window: charcoal/slate chrome, mist text and a restrained
+	// blue border. Unsupported DWM attributes are intentionally best-effort.
+	theme := premiumDialogTheme()
+	border := uint32(premiumPaletteColor(theme.Border))
+	caption := uint32(premiumPaletteColor(theme.Window))
+	captionText := uint32(premiumPaletteColor(theme.Text))
+	premiumDwmSetAttribute.Call(
+		hwnd,
+		dwmBorderColor,
+		uintptr(unsafe.Pointer(&border)),
+		unsafe.Sizeof(border),
+	)
+	premiumDwmSetAttribute.Call(
+		hwnd,
+		dwmCaptionColor,
+		uintptr(unsafe.Pointer(&caption)),
+		unsafe.Sizeof(caption),
+	)
+	premiumDwmSetAttribute.Call(
+		hwnd,
+		dwmTextColor,
+		uintptr(unsafe.Pointer(&captionText)),
+		unsafe.Sizeof(captionText),
 	)
 }

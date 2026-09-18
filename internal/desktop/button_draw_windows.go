@@ -22,6 +22,11 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 			return accentColor(), accentColor(), textColor()
 		}
 		return accentStrongColor(), accentColor(), textColor()
+	case buttonBridge:
+		if pressed {
+			return selectionColor(), accentColor(), accentColor()
+		}
+		return panelColor(), accentStrongColor(), accentColor()
 	case buttonDanger:
 		if activeThemeIsDark() {
 			if pressed {
@@ -116,7 +121,16 @@ func (a *app) drawButton(dis *drawItemStruct) bool {
 	oldBrush, _, _ := selectObject.Call(dis.HDC, brush)
 	oldPen, _, _ := selectObject.Call(dis.HDC, pen)
 	r := dis.RcItem
-	roundRect.Call(dis.HDC, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom), uintptr(a.scale(12)), uintptr(a.scale(12)))
+	radius := a.scale(12)
+	if visual.Variant == buttonBridge {
+		w := int(r.Right - r.Left)
+		h := int(r.Bottom - r.Top)
+		if h < w {
+			w = h
+		}
+		radius = w
+	}
+	roundRect.Call(dis.HDC, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom), uintptr(radius), uintptr(radius))
 	selectObject.Call(dis.HDC, oldBrush)
 	selectObject.Call(dis.HDC, oldPen)
 	if brush != 0 {

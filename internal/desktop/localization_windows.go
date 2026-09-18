@@ -181,7 +181,7 @@ func (a *app) applyLanguage(code string) {
 	a.settings.Language = i18n.Normalize(code)
 	a.populateLanguageCombo()
 	setText(a.brandSubtitle, a.workspaceSubtitle())
-	setText(a.statusVersion, brand.ProductName+" "+a.version)
+	setText(a.statusVersion, "∞  MORE ACCESS. A BRIGHTER TOMORROW.")
 	if a.connected {
 		setText(a.connectionBadge, a.tr("badge.connected"))
 	} else {

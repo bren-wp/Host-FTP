@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/bren-wp/Host-FTP/internal/i18n"
@@ -52,6 +53,10 @@ const (
 	siteIDPresetWebsite  = 8135
 	siteIDPresetBackup   = 8136
 	siteIDPresetMedia    = 8137
+	siteIDRecentList     = 8138
+	siteIDSyncBackup     = 8139
+	siteIDSyncSkip       = 8140
+	siteIDSyncConfirm    = 8141
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -62,6 +67,10 @@ const (
 	siteLBNSelChange        = 1
 	siteLBNDblClk           = 2
 	siteBSDefPushButton     = 0x00000001
+	siteBSAutoCheckBox      = 0x00000003
+	siteBMGetCheck          = 0x00F0
+	siteBMSetCheck          = 0x00F1
+	siteBSTChecked          = 1
 	siteWindowStyle         = 0x00C80000 // WS_CAPTION | WS_SYSMENU
 	siteWMCtlColorListBox   = 0x0134
 )
@@ -125,6 +134,7 @@ type siteManagerState struct {
 	parent          *app
 	hwnd            uintptr
 	list            uintptr
+	recentList      uintptr
 	listBrush       uintptr
 	name            uintptr
 	protocol        uintptr
@@ -159,6 +169,18 @@ type siteManagerState struct {
 	newSite         uintptr
 	globalSearch    uintptr
 	brandIcon       uintptr
+	brandHero       uintptr
+	mottoPrimary    uintptr
+	mottoAccent     uintptr
+	privacyLabel    uintptr
+	transferHeading uintptr
+	syncHeading     uintptr
+	savedHeading    uintptr
+	recentHeading   uintptr
+	activeLabel     uintptr
+	securityLabel   uintptr
+	savedLabel      uintptr
+	recentLabel     uintptr
 	quickConnectTab uintptr
 	siteManagerTab  uintptr
 	importExportTab uintptr
@@ -169,6 +191,9 @@ type siteManagerState struct {
 	presetWebsite   uintptr
 	presetBackup    uintptr
 	presetMedia     uintptr
+	syncBackup      uintptr
+	syncSkip        uintptr
+	syncConfirm     uintptr
 }
 
 var (
@@ -196,6 +221,13 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			if id == siteIDList && (notify == siteLBNSelChange || notify == siteLBNDblClk) {
 				state.loadCurrentSelection()
 				if notify == siteLBNDblClk && state.selected > 0 {
+					state.connectAfter = true
+					destroyWindow.Call(hwnd)
+				}
+				return 0
+			}
+			if id == siteIDRecentList && (notify == siteLBNSelChange || notify == siteLBNDblClk) {
+				if state.loadRecentSelection() && notify == siteLBNDblClk && state.selected > 0 {
 					state.connectAfter = true
 					destroyWindow.Call(hwnd)
 				}
@@ -246,11 +278,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					sidebarSetFocus.Call(state.list)
 					return 0
 				case siteIDImportExport:
-					platform.InfoDialog(
-						"Ghost FTP — Import / Export",
-						"Secure profile portability",
-						"Saved-site portability is secret-safe: Ghost FTP never exports stored passwords or private-key passphrases in clear text. Use Duplicate and Save as Profile until encrypted profile bundles are enabled.",
-					)
+					state.importExportProfiles()
 					return 0
 				case siteIDPresetsTab:
 					return 0
@@ -273,6 +301,9 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					return 0
 				case siteIDPresetMedia:
 					state.applyTransferPreset("media")
+					return 0
+				case siteIDSyncBackup, siteIDSyncSkip, siteIDSyncConfirm:
+					state.saveSyncOptions()
 					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
@@ -321,7 +352,13 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			}
 			return state.parent.panelBrush
 		case wmCtlColorStatic:
-			setTextColor.Call(wParam, textColor())
+			color := textColor()
+			if lParam == state.mottoPrimary {
+				color = mutedColor()
+			} else if lParam == state.mottoAccent {
+				color = accentColor()
+			}
+			setTextColor.Call(wParam, color)
 			setBkColor.Call(wParam, panelColor())
 			return state.parent.panelBrush
 		case wmCtlColorEdit, wmCtlColorBtn:
@@ -338,6 +375,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+				state.syncBackup, state.syncSkip, state.syncConfirm,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -406,6 +444,59 @@ func (state *siteManagerState) refillProfiles(selectedID string) {
 	state.selected = selected
 	sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(selected), 0)
 	state.loadSelection(selected)
+}
+
+func (state *siteManagerState) refillRecentConnections() {
+	if state == nil || state.recentList == 0 || state.parent == nil {
+		return
+	}
+	sendMessageW.Call(state.recentList, siteLBResetContent, 0, 0)
+	now := time.Now()
+	for _, entry := range state.parent.recentConnections {
+		label := recentConnectionLabel(entry, now)
+		sendMessageW.Call(state.recentList, siteLBAddString, 0, uintptr(unsafe.Pointer(wstr(label))))
+	}
+}
+
+func (state *siteManagerState) loadRecentSelection() bool {
+	if state == nil || state.recentList == 0 || state.parent == nil {
+		return false
+	}
+	index, _, _ := sendMessageW.Call(state.recentList, siteLBGetCurSel, 0, 0)
+	if int32(index) < 0 || int(index) >= len(state.parent.recentConnections) {
+		return false
+	}
+	entry := state.parent.recentConnections[int(index)]
+	if entry.ProfileID != "" {
+		for profileIndex, profile := range state.profiles {
+			if profile.ID == entry.ProfileID {
+				sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(profileIndex+1), 0)
+				state.loadSelection(profileIndex + 1)
+				return true
+			}
+		}
+	}
+
+	state.selected = 0
+	sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
+	setText(state.name, entry.Name)
+	state.setProtocol(entry.Protocol)
+	setText(state.host, entry.Host)
+	if entry.Port > 0 {
+		setText(state.port, strconv.Itoa(entry.Port))
+	} else {
+		setText(state.port, protocolSpecs[protocolIndex(entry.Protocol)].Port)
+	}
+	setText(state.user, entry.Username)
+	setText(state.password, "")
+	setText(state.passphrase, "")
+	setText(state.localPath, state.parent.localCurrent)
+	setText(state.remotePath, "/")
+	setText(state.keyPath, "")
+	setText(state.security, "Recent session · credentials are never stored in recent history")
+	setControlEnabled(state.duplicate, false)
+	setControlEnabled(state.delete, false)
+	return true
 }
 
 func (state *siteManagerState) loadCurrentSelection() {
@@ -499,6 +590,73 @@ func (state *siteManagerState) profileInput() (model.ProfileInput, error) {
 		LocalPath:      getText(state.localPath),
 		RemotePath:     remotePath,
 	}, nil
+}
+
+func (state *siteManagerState) importExportProfiles() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	export, chosen := platform.ChoiceDialog(
+		"Ghost FTP — Sites",
+		"Import or export saved sites",
+		"Export creates a metadata-only Ghost FTP site bundle. Stored passwords, private-key passphrases and trusted host fingerprints are never written to the bundle. Import adds valid sites without importing secrets.",
+		"Export",
+		"Import",
+	)
+	if !chosen {
+		return
+	}
+
+	if export {
+		path, err := platform.ChooseProfileExportFile()
+		if err != nil {
+			platform.ErrorDialog("Ghost FTP — Sites", "Export failed", state.parent.userMessage(err, "error.generic"))
+			return
+		}
+		if strings.TrimSpace(path) == "" {
+			return
+		}
+		count, err := state.parent.engine.ExportProfiles(path)
+		if err != nil {
+			platform.ErrorDialog("Ghost FTP — Sites", "Export failed", state.parent.userMessage(err, "error.generic"))
+			return
+		}
+		state.parent.setStatus(fmt.Sprintf("Exported %d saved sites", count))
+		platform.InfoDialog(
+			"Ghost FTP — Sites",
+			"Saved sites exported",
+			fmt.Sprintf("%d saved sites were exported without stored passwords, passphrases or trusted host fingerprints.", count),
+		)
+		return
+	}
+
+	path, err := platform.ChooseProfileImportFile()
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", "Import failed", state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	if strings.TrimSpace(path) == "" {
+		return
+	}
+	result, err := state.parent.engine.ImportProfiles(path)
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", "Import failed", state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	profiles, err := state.parent.engine.Profiles()
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", state.parent.tr("profile.load_failed"), state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	state.profiles = profiles
+	state.parent.applyProfiles(profiles, nil)
+	state.refillProfiles(state.parent.selectedProfileID)
+	state.parent.setStatus(fmt.Sprintf("Imported %d saved sites · %d already present", result.Imported, result.Skipped))
+	platform.InfoDialog(
+		"Ghost FTP — Sites",
+		"Site import complete",
+		fmt.Sprintf("%d sites imported. %d matching sites were already present. Credentials must be entered or saved again on this Windows account.", result.Imported, result.Skipped),
+	)
 }
 
 func (state *siteManagerState) duplicateCurrent() {
@@ -663,7 +821,56 @@ func (state *siteManagerState) applyTransferPreset(name string) {
 	}
 	state.parent.settings = saved
 	state.refreshOptionsSummary()
+	state.refreshSyncOptions()
 	state.parent.setStatus("Transfer preset applied: " + label)
+}
+
+func siteChecked(hwnd uintptr) bool {
+	if hwnd == 0 {
+		return false
+	}
+	checked, _, _ := sendMessageW.Call(hwnd, siteBMGetCheck, 0, 0)
+	return checked == siteBSTChecked
+}
+
+func siteSetChecked(hwnd uintptr, checked bool) {
+	if hwnd == 0 {
+		return
+	}
+	value := uintptr(0)
+	if checked {
+		value = siteBSTChecked
+	}
+	sendMessageW.Call(hwnd, siteBMSetCheck, value, 0)
+}
+
+func (state *siteManagerState) refreshSyncOptions() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	settings := state.parent.settings
+	siteSetChecked(state.syncBackup, settings.BackupBeforeOverwrite)
+	siteSetChecked(state.syncSkip, settings.SkipExisting)
+	siteSetChecked(state.syncConfirm, settings.ConfirmDelete)
+}
+
+func (state *siteManagerState) saveSyncOptions() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	next := state.parent.settings
+	next.BackupBeforeOverwrite = siteChecked(state.syncBackup)
+	next.SkipExisting = siteChecked(state.syncSkip)
+	next.ConfirmDelete = siteChecked(state.syncConfirm)
+	saved, err := state.parent.engine.SetSettings(next)
+	if err != nil {
+		state.refreshSyncOptions()
+		platform.ErrorDialog("Ghost FTP", "Sync Options", state.parent.userMessage(err, "settings.save_failed_body"))
+		return
+	}
+	state.parent.settings = saved
+	state.refreshOptionsSummary()
+	state.parent.setStatus("Sync options updated")
 }
 
 func (state *siteManagerState) refreshOptionsSummary() {
@@ -684,7 +891,7 @@ func (state *siteManagerState) refreshOptionsSummary() {
 		confirmDelete = "Off"
 	}
 	text := fmt.Sprintf(
-		"Parallel transfers\r\n%d simultaneous jobs\r\n\r\nUpload limit\r\n%s\r\n\r\nDownload limit\r\n%s\r\n\r\nRetry policy\r\n%d retries · %ds delay\r\n\r\nConflict policy\r\n%s\r\n\r\nDelete confirmation\r\n%s",
+		"Parallel %d · Upload %s · Download %s\r\nRetry %d × %ds · Conflict %s · Delete confirm %s",
 		settings.Parallelism,
 		siteManagerLimitText(settings.UploadLimitKiBPerSecond),
 		siteManagerLimitText(settings.DownloadLimitKiBPerSecond),
@@ -700,23 +907,62 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	if state == nil || state.parent == nil {
 		return
 	}
-	if width > 0 && width < 1380 {
-		// Keep the connection editor complete on compact desktops and collapse the
-		// optional reference side cards instead of letting them clip off-screen.
+	var client rect
+	height := 0
+	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
+		height = state.parent.unscale(int(client.Bottom - client.Top))
+	}
+
+	const (
+		fullReferenceWidth  = 1580
+		fullReferenceHeight = 820
+	)
+	compact := (width > 0 && width < fullReferenceWidth) || (height > 0 && height < fullReferenceHeight)
+	if compact {
+		// Preserve a complete, usable connection editor on smaller displays. Every
+		// optional side-card control and heading is hidden together so no orphaned
+		// labels, overlapping buttons or clipped reference chrome remain visible.
 		showControls(false,
+			state.privacyLabel, state.brandHero, state.settings,
+			state.transferHeading, state.syncHeading, state.savedHeading, state.recentHeading,
+			state.activeLabel, state.securityLabel, state.savedLabel, state.recentLabel,
 			state.presetsTab, state.syncTab, state.automationTab,
 			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
-			state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+			state.syncBackup, state.syncSkip, state.syncConfirm,
+			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 		)
-		state.parent.move(state.settings, 720, 738, 160, 42)
+		state.parent.move(state.globalSearch, 560, 18, 320, 38)
+		actionY := 738
+		if height > 0 {
+			actionY = height - 54
+			if actionY < 690 {
+				actionY = 690
+			}
+			if actionY > 738 {
+				actionY = 738
+			}
+		}
+		state.parent.move(state.save, 262, actionY, 160, 42)
+		state.parent.move(state.close, 500, actionY, 132, 42)
+		state.parent.move(state.connect, 646, actionY, 234, 42)
+		invalidateRect.Call(state.hwnd, 0, 1)
 		return
 	}
 	showControls(true,
+		state.privacyLabel, state.brandHero, state.settings,
+		state.transferHeading, state.syncHeading, state.savedHeading, state.recentHeading,
+		state.activeLabel, state.securityLabel, state.savedLabel, state.recentLabel,
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
-		state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+		state.syncBackup, state.syncSkip, state.syncConfirm,
+		state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 	)
+	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 738, 264, 42)
+	state.parent.move(state.save, 262, 738, 160, 42)
+	state.parent.move(state.close, 500, 738, 132, 42)
+	state.parent.move(state.connect, 646, 738, 234, 42)
+	invalidateRect.Call(state.hwnd, 0, 1)
 }
 
 func (state *siteManagerState) createControls(hinst uintptr) error {
@@ -778,7 +1024,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		mk("BUTTON", "Search sites, history, or files…    Ctrl+K", wsTabStop|bsOwnerDraw, 560, 18, 494, 38, siteIDGlobalSearch),
 		iconSearch, "Search sites, history, or files…    Ctrl+K", buttonSubtle,
 	)
-	mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
+	state.privacyLabel = mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
 	state.navSync = nav(siteIDNavSync, "Synchronize", iconSync, false)
@@ -790,9 +1036,20 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		parent.move(control, 28, navY, 184, 42)
 		navY += 50
 	}
-	motto := mk("STATIC", "FILES\r\nMOVE\r\nFREELY.\r\n\r\nYOU STAY\r\nIN CONTROL.", 0, 34, 610, 176, 148, 0)
-	if motto != 0 && parent.smallFont != 0 {
-		sendMessageW.Call(motto, wmSetFont, parent.smallFont, 1)
+	state.mottoPrimary = mk("STATIC", "FILES\r\nMOVE\r\nFREELY.", 0, 34, 554, 176, 76, 0)
+	state.mottoAccent = mk("STATIC", "YOU STAY\r\nIN CONTROL.", 0, 34, 640, 176, 58, 0)
+	for _, motto := range []uintptr{state.mottoPrimary, state.mottoAccent} {
+		if motto != 0 && parent.smallFont != 0 {
+			sendMessageW.Call(motto, wmSetFont, parent.smallFont, 1)
+		}
+	}
+	heroSize := parent.scale(116)
+	heroIcon, _, _ := loadImageW.Call(hinst, 2, imageIcon, uintptr(heroSize), uintptr(heroSize), lrShared)
+	if heroIcon != 0 {
+		state.brandHero = mk("STATIC", "", ssIcon, 52, 704, 116, 116, 0)
+		if state.brandHero != 0 {
+			sendMessageW.Call(state.brandHero, stmSetImage, imageIcon, heroIcon)
+		}
 	}
 
 	// Main connection card.
@@ -841,7 +1098,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 738, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
-	heading("Transfer & Sync Options", 924, 54, 270)
+	state.transferHeading = heading("Transfer & Sync Options", 924, 54, 270)
 	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 96, 86, 38, siteIDPresetsTab), iconSave, "Presets", buttonNavActive)
 	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 96, 82, 38, siteIDSyncTab), iconSync, "Sync", buttonNav)
 	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 96, 84, 38, siteIDAutomationTab), iconSettings, "Automation", buttonNav)
@@ -849,33 +1106,45 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.presetWebsite = parent.registerButton(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 216, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", buttonNav)
 	state.presetBackup = parent.registerButton(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 282, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", buttonNav)
 	state.presetMedia = parent.registerButton(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 348, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", buttonNav)
-	label("ACTIVE TRANSFER SETTINGS", 926, 422, 262)
-	state.options = mk("STATIC", "", wsBorder, 926, 446, 264, 178, 0)
-	label("SECURITY", 926, 638, 264)
-	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain in the protected Windows credential layer."
-	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 662, 264, 62, 0)
+	state.syncHeading = heading("Sync Options", 926, 422, 264)
+	state.syncBackup = mk("BUTTON", "Backup before overwrite", wsTabStop|siteBSAutoCheckBox, 926, 458, 264, 28, siteIDSyncBackup)
+	state.syncSkip = mk("BUTTON", "Skip existing files", wsTabStop|siteBSAutoCheckBox, 926, 492, 264, 28, siteIDSyncSkip)
+	state.syncConfirm = mk("BUTTON", "Confirm destructive actions", wsTabStop|siteBSAutoCheckBox, 926, 526, 264, 28, siteIDSyncConfirm)
+	state.activeLabel = label("ACTIVE TRANSFER SETTINGS", 926, 568, 262)
+	state.options = mk("STATIC", "", wsBorder, 926, 592, 264, 72, 0)
+	state.securityLabel = label("SECURITY", 926, 674, 264)
+	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain protected by Windows."
+	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 696, 264, 34, 0)
 	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
-	// Saved Sites card on the right, matching the approved reference.
-	heading("Saved Sites", 1240, 54, 190)
+	// Saved Sites and private session history share the right reference column.
+	state.savedHeading = heading("Saved Sites", 1240, 54, 190)
 	state.newSite = parent.registerButton(mk("BUTTON", "New Site", wsTabStop|bsOwnerDraw, 1460, 50, 104, 38, siteIDNewSite), iconNewFolder, "New Site", buttonAccent)
-	label("SAVED CONNECTIONS", 1240, 100, 300)
-	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 514, siteIDList)
+	state.savedLabel = label("SAVED CONNECTIONS", 1240, 100, 300)
+	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 314, siteIDList)
 	if state.list != 0 {
 		applySiteManagerNavigationTheme(state.list)
 		state.listBrush, _, _ = createSolidBrush.Call(listColor())
 	}
 	duplicateLabel := siteManagerDuplicateLabel(parent.languageCode())
-	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 650, 154, 38, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
-	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 650, 160, 38, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
+	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 450, 154, 36, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
+	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 450, 160, 36, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
+
+	state.recentHeading = heading("Recent Connections", 1240, 514, 250)
+	state.recentLabel = label("SESSION HISTORY · NO PASSWORDS", 1240, 550, 310)
+	state.recentList = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight, 1240, 576, 324, 148, siteIDRecentList)
+	if state.recentList != 0 {
+		applySiteManagerNavigationTheme(state.recentList)
+	}
 
 	for _, control := range []uintptr{
-		state.list, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
+		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+		state.syncBackup, state.syncSkip, state.syncConfirm,
 	} {
 		if control == 0 {
 			return fmt.Errorf("Connections control initialization failed")
@@ -890,10 +1159,12 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	limitEdit(state.remotePath, 4096)
 	limitEdit(state.keyPath, 32767)
 	limitEdit(state.passphrase, 8192)
-	cue(state.host, "example.com")
+	cue(state.host, "server.yourdomain.com")
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
+	state.refreshSyncOptions()
+	state.refillRecentConnections()
 	return nil
 }
 
@@ -968,8 +1239,13 @@ func (a *app) openSiteManager() {
 	}
 	selectedID := a.selectedProfileID
 	state.refillProfiles(selectedID)
+	state.refillRecentConnections()
 	enableWindow.Call(a.hwnd, 0)
 	showWindow.Call(hwnd, swShow)
+	var siteClient rect
+	if ok, _, _ := getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&siteClient))); ok != 0 {
+		state.layoutResponsive(a.unscale(int(siteClient.Right - siteClient.Left)))
+	}
 	updateWindow.Call(hwnd)
 
 	var message msg

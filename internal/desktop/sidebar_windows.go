@@ -104,6 +104,20 @@ func (a *app) ensureSidebarProfileControls() {
 		return
 	}
 	hinst, _, _ := getModuleHandleW.Call(0)
+	if a.sidebarMotto == 0 {
+		motto, _, _ := createWindowExW.Call(
+			0,
+			uintptr(unsafe.Pointer(wstr("STATIC"))),
+			uintptr(unsafe.Pointer(wstr("Move More\r\nDo More"))),
+			uintptr(wsChild|wsVisible),
+			0, 0, 1, 1,
+			a.hwnd, 0, hinst, 0,
+		)
+		if motto != 0 && a.scriptFont != 0 {
+			sendMessageW.Call(motto, wmSetFont, a.scriptFont, 1)
+		}
+		a.sidebarMotto = motto
+	}
 	if a.sidebarBookmarkHeading == 0 {
 		heading, _, _ := createWindowExW.Call(
 			0,
@@ -296,6 +310,7 @@ func (a *app) cleanupSidebarControls() {
 	}
 	a.sidebarProfileButtons = nil
 	a.sidebarBookmarkHeading = 0
+	a.sidebarMotto = 0
 }
 
 func (a *app) sidebarLogicalRect(hwnd uintptr) (rect, bool) {
@@ -410,8 +425,8 @@ func (a *app) layoutSidebarRail(height int) {
 	}
 	profileY := bookmarkY + 28
 	a.refreshSidebarProfileControls()
-	for _, hwnd := range a.sidebarProfileButtons {
-		if hwnd == 0 {
+	for index, hwnd := range a.sidebarProfileButtons {
+		if hwnd == 0 || index >= len(a.profiles) {
 			continue
 		}
 		a.move(hwnd, applicationSidebarX, profileY, applicationSidebarWidth, 36)
@@ -422,11 +437,21 @@ func (a *app) layoutSidebarRail(height int) {
 	if a.smallFont != 0 {
 		sendMessageW.Call(a.brandSubtitle, wmSetFont, a.smallFont, 1)
 	}
-	mottoY := height - applicationSidebarBottomInset - 62
-	if mottoY < profileY+10 {
-		mottoY = profileY + 10
+	footerY := height - applicationSidebarBottomInset - 58
+	mottoY := footerY - 104
+	if a.sidebarMotto != 0 && mottoY >= profileY+8 {
+		if a.scriptFont != 0 {
+			sendMessageW.Call(a.sidebarMotto, wmSetFont, a.scriptFont, 1)
+		}
+		a.move(a.sidebarMotto, applicationSidebarX+18, mottoY, applicationSidebarWidth-36, 86)
+		showControls(true, a.sidebarMotto)
+	} else {
+		showControls(false, a.sidebarMotto)
 	}
-	a.move(a.brandSubtitle, applicationSidebarX+10, mottoY, applicationSidebarWidth-20, 48)
+	if footerY < profileY+10 {
+		footerY = profileY + 10
+	}
+	a.move(a.brandSubtitle, applicationSidebarX+10, footerY, applicationSidebarWidth-20, 48)
 	showControls(true, a.brandSubtitle)
 	showControls(false, a.languageCombo)
 }

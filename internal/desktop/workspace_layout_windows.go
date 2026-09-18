@@ -33,11 +33,11 @@ func applyFileColumnOrder(list uintptr, remote bool) {
 		return
 	}
 	if remote {
-		order := [5]int32{0, 2, 1, 3, 4}
+		order := [5]int32{0, 1, 2, 3, 4}
 		sendMessageW.Call(list, workspaceLVMSetColumnOrderArray, uintptr(len(order)), uintptr(unsafe.Pointer(&order[0])))
 		return
 	}
-	order := [4]int32{0, 2, 1, 3}
+	order := [4]int32{0, 1, 2, 3}
 	sendMessageW.Call(list, workspaceLVMSetColumnOrderArray, uintptr(len(order)), uintptr(unsafe.Pointer(&order[0])))
 }
 

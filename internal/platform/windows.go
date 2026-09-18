@@ -16,6 +16,7 @@ var (
 	messageBox             = user32.NewProc("MessageBoxW")
 	comdlg32               = syscall.NewLazyDLL("comdlg32.dll")
 	getOpenFile            = comdlg32.NewProc("GetOpenFileNameW")
+	getSaveFile            = comdlg32.NewProc("GetSaveFileNameW")
 	shell32                = syscall.NewLazyDLL("shell32.dll")
 	browseFolder           = shell32.NewProc("SHBrowseForFolderW")
 	getPathID              = shell32.NewProc("SHGetPathFromIDListW")
@@ -38,6 +39,7 @@ const (
 	ofnPathMustExist   = 0x00000800
 	ofnNoChangeDir     = 0x00000008
 	ofnDontAddToRecent = 0x02000000
+	ofnOverwritePrompt = 0x00000002
 	bifReturnOnlyFS    = 0x00000001
 	bifNewDialogStyle  = 0x00000040
 )
@@ -225,6 +227,51 @@ func ChoosePrivateKey() (string, error) {
 	return syscall.UTF16ToString(buf), nil
 }
 
+func ChooseProfileImportFile() (string, error) {
+	buf := make([]uint16, 32768)
+	filter := multiString("Ghost FTP site bundles|*.ghostftp.json;*.json|JSON files|*.json|All files|*.*")
+	title, _ := syscall.UTF16PtrFromString("Import Ghost FTP Sites")
+	of := openFileName{
+		Owner:       premiumDialogOwner(),
+		File:        &buf[0],
+		MaxFile:     uint32(len(buf)),
+		Filter:      &filter[0],
+		FilterIndex: 1,
+		Title:       title,
+		Flags:       ofnExplorer | ofnFileMustExist | ofnPathMustExist | ofnNoChangeDir | ofnDontAddToRecent,
+	}
+	of.StructSize = uint32(unsafe.Sizeof(of))
+	r, _, _ := getOpenFile.Call(uintptr(unsafe.Pointer(&of)))
+	if r == 0 {
+		return "", nil
+	}
+	return syscall.UTF16ToString(buf), nil
+}
+
+func ChooseProfileExportFile() (string, error) {
+	buf := make([]uint16, 32768)
+	copy(buf, syscall.StringToUTF16("Ghost-FTP-Sites.ghostftp.json"))
+	filter := multiString("Ghost FTP site bundles|*.ghostftp.json|JSON files|*.json|All files|*.*")
+	title, _ := syscall.UTF16PtrFromString("Export Ghost FTP Sites")
+	defExt, _ := syscall.UTF16PtrFromString("ghostftp.json")
+	of := openFileName{
+		Owner:       premiumDialogOwner(),
+		File:        &buf[0],
+		MaxFile:     uint32(len(buf)),
+		Filter:      &filter[0],
+		FilterIndex: 1,
+		Title:       title,
+		DefExt:      defExt,
+		Flags:       ofnExplorer | ofnPathMustExist | ofnNoChangeDir | ofnDontAddToRecent | ofnOverwritePrompt,
+	}
+	of.StructSize = uint32(unsafe.Sizeof(of))
+	r, _, _ := getSaveFile.Call(uintptr(unsafe.Pointer(&of)))
+	if r == 0 {
+		return "", nil
+	}
+	return syscall.UTF16ToString(buf), nil
+}
+
 func ChooseDirectory() (string, error) {
 	display := make([]uint16, 260)
 	_, _, _, directoryTitle := resolvedPickerLabels()
@@ -268,6 +315,30 @@ func taskDialogCall(title, instruction, content string, buttons uintptr) (int, b
 		return 0, false
 	}
 	return int(pressed), true
+}
+
+// ChoiceDialog presents a branded two-action decision surface. It is used when
+// the actions are verbs such as Import/Export rather than generic Yes/No.
+func ChoiceDialog(title, instruction, content, primaryLabel, secondaryLabel string) (primary bool, chosen bool) {
+	pressed, ok := decisionCardDialogWithLabels(
+		title,
+		instruction,
+		content,
+		decisionCardKindConfirm,
+		primaryLabel,
+		secondaryLabel,
+	)
+	if ok {
+		switch pressed {
+		case decisionIDYes:
+			return true, true
+		case decisionIDNo:
+			return false, true
+		default:
+			return false, false
+		}
+	}
+	return ConfirmDialog(title, instruction, content), true
 }
 
 func ConfirmDialog(title, instruction, content string) bool {

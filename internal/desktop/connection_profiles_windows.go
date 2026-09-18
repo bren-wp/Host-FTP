@@ -257,6 +257,7 @@ func (a *app) onConnected(host string, diagnostics remote.ConnectionDiagnostics)
 		setText(a.connectionBadge, "●  Connected\r\n"+host)
 	}
 	a.setStatus(a.connectionDiagnosticStatus(host, diagnostics))
+	a.rememberRecentConnection(host)
 	remoteStart := "/"
 	if a.protocolValue() == "sftp" {
 		remoteStart = "."

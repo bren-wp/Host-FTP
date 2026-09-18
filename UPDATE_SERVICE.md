@@ -17,12 +17,12 @@ Example for the current source version:
 ```json
 {
   "schema": 1,
-  "version": "0.4.0",
-  "setup_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.4.0-Setup.exe",
+  "version": "0.5.0",
+  "setup_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.5.0-Setup.exe",
   "setup_sha256": "<64 lowercase hex characters>",
-  "portable_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.4.0-Portable.exe",
+  "portable_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.5.0-Portable.exe",
   "portable_sha256": "<64 lowercase hex characters>",
-  "updater_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.4.0-Update.exe",
+  "updater_url": "https://update.ghostftp.com/windows/Ghost-FTP-0.5.0-Update.exe",
   "updater_sha256": "<64 lowercase hex characters>"
 }
 ```
