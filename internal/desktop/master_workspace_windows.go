@@ -279,6 +279,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	contentLeft := applicationContentLeft
 	contentRight := width - premiumOuterGap
 	contentWidth := contentRight - contentLeft
+	a.layoutWindowChrome(width)
 	if contentWidth < 620 {
 		return
 	}
@@ -310,10 +311,10 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Global search / command field.
 	searchY, searchH := 18, 40
-	badgeW := 230
+	badgeW := 214
 	searchW := contentWidth - badgeW - 18
-	if searchW > 650 {
-		searchW = 650
+	if searchW > 640 {
+		searchW = 640
 	}
 	if searchW < 340 {
 		searchW = 340
