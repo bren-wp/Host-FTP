@@ -2,9 +2,20 @@
 
 package desktop
 
-import "unsafe"
+import (
+	"os"
+	"unsafe"
+)
 
-const monitorDefaultToNearest = 2
+const (
+	monitorDefaultToNearest = 2
+	referenceCaptureWidth    = 1672
+	referenceCaptureHeight   = 941
+)
+
+func referenceCaptureMode() bool {
+	return os.Getenv("GHOSTFTP_REFERENCE_CAPTURE") == "1"
+}
 
 type responsiveMonitorInfo struct {
 	Size    uint32
@@ -48,6 +59,9 @@ func (a *app) monitorWorkAreaLogical() (x, y, width, height int, ok bool) {
 }
 
 func (a *app) responsiveWindowBounds() (x, y, width, height int) {
+	if referenceCaptureMode() {
+		return 0, 0, referenceCaptureWidth, referenceCaptureHeight
+	}
 	workX, workY, workWidth, workHeight, ok := a.monitorWorkAreaLogical()
 	if !ok {
 		screenWRaw, _, _ := getSystemMetrics.Call(smCxScreen)
@@ -78,7 +92,7 @@ func (a *app) responsiveMinTrackSize() (width, height int) {
 }
 
 func (a *app) clampSuggestedWindowRectToWorkArea(value rect) rect {
-	if a == nil {
+	if a == nil || referenceCaptureMode() {
 		return value
 	}
 	// WM_DPICHANGED supplies a rectangle for the destination monitor. Resolve

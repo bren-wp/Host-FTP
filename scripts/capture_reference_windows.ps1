@@ -68,6 +68,23 @@ function Find-Window {
     throw "Timed out waiting for window containing '$TitleContains'."
 }
 
+function Set-ReferenceWindowBounds {
+    param([IntPtr]$Window, [int]$Width, [int]$Height, [string]$Name)
+    if (-not [GhostReferenceCapture]::MoveWindow($Window, 0, 0, $Width, $Height, $true)) {
+        throw "MoveWindow failed for $Name."
+    }
+    Start-Sleep -Milliseconds 350
+    $rect = New-Object GhostReferenceCapture+RECT
+    if (-not [GhostReferenceCapture]::GetWindowRect($Window, [ref]$rect)) {
+        throw "GetWindowRect failed for $Name."
+    }
+    $actualWidth = $rect.Right - $rect.Left
+    $actualHeight = $rect.Bottom - $rect.Top
+    if ($actualWidth -ne $Width -or $actualHeight -ne $Height) {
+        throw "$Name did not reach the required reference canvas. Expected ${Width}x${Height}, got ${actualWidth}x${actualHeight}."
+    }
+}
+
 function Save-Window {
     param([IntPtr]$Window, [string]$Path)
     $rect = New-Object GhostReferenceCapture+RECT
@@ -98,19 +115,25 @@ function Save-Window {
 
 $exe = (Resolve-Path -LiteralPath $Executable).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$process = Start-Process -FilePath $exe -PassThru
+$previousReferenceCapture = $env:GHOSTFTP_REFERENCE_CAPTURE
+$env:GHOSTFTP_REFERENCE_CAPTURE = "1"
+try {
+    $process = Start-Process -FilePath $exe -PassThru
+} finally {
+    $env:GHOSTFTP_REFERENCE_CAPTURE = $previousReferenceCapture
+}
 try {
     $main = Wait-MainWindow $process
-    [GhostReferenceCapture]::MoveWindow($main, 0, 0, 1664, 960, $true) | Out-Null
-    Start-Sleep -Milliseconds 900
+    Set-ReferenceWindowBounds $main 1672 941 "Main workspace"
+    Start-Sleep -Milliseconds 550
     Save-Window $main (Join-Path $OutputDirectory "Ghost-FTP-main-reference.png")
 
     if (-not [GhostReferenceCapture]::PostMessage($main, 0x0111, [IntPtr]701, [IntPtr]::Zero)) {
         throw "Could not open Connections."
     }
     $connections = Find-Window $process.Id "Connections"
-    [GhostReferenceCapture]::MoveWindow($connections, 0, 0, 1590, 880, $true) | Out-Null
-    Start-Sleep -Milliseconds 700
+    Set-ReferenceWindowBounds $connections 1672 941 "Connections"
+    Start-Sleep -Milliseconds 500
     Save-Window $connections (Join-Path $OutputDirectory "Ghost-FTP-connections-reference.png")
     [GhostReferenceCapture]::PostMessage($connections, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
     Start-Sleep -Milliseconds 350

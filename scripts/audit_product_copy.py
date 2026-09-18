@@ -13,6 +13,7 @@ SOURCE_DIRS = [ROOT / "internal" / "desktop", ROOT / "internal" / "platform", RO
 
 BANNED = {
     "example.com": "reserved sample host",
+    "yourdomain.com": "placeholder host",
     "runneradmin": "CI account name",
     "john doe": "sample persona",
     "pro plan": "sample subscription label",

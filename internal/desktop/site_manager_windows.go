@@ -256,6 +256,14 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 				return htCaption
 			}
 			return htClient
+		case wmGetMinMaxInfo:
+			if lParam != 0 && referenceCaptureMode() {
+				info := minMaxInfoFromLParam(lParam)
+				info.MaxTrackSize.X = int32(state.parent.scale(referenceCaptureWidth))
+				info.MaxTrackSize.Y = int32(state.parent.scale(referenceCaptureHeight))
+				minMaxInfoToLParam(lParam, info)
+			}
+			return 0
 		case wmSize:
 			width := state.parent.unscale(int(lParam & 0xffff))
 			state.layoutResponsive(width)
@@ -1581,7 +1589,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	limitEdit(state.remotePath, 4096)
 	limitEdit(state.keyPath, 32767)
 	limitEdit(state.passphrase, 8192)
-	cue(state.host, "server.yourdomain.com")
+	cue(state.host, "Host or address")
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
@@ -1613,21 +1621,26 @@ func (a *app) openSiteManager() {
 	})
 
 	logicalW, logicalH := 1590, 880
+	if referenceCaptureMode() {
+		logicalW, logicalH = referenceCaptureWidth, referenceCaptureHeight
+	}
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
-	screenLogicalW := a.unscale(int(screenW))
-	screenLogicalH := a.unscale(int(screenH))
-	if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
-		logicalW = screenLogicalW - 24
-	}
-	if screenLogicalH > 0 && logicalH > screenLogicalH-16 {
-		logicalH = screenLogicalH - 16
-	}
-	if logicalW < 960 {
-		logicalW = 960
-	}
-	if logicalH < 700 {
-		logicalH = 700
+	if !referenceCaptureMode() {
+		screenLogicalW := a.unscale(int(screenW))
+		screenLogicalH := a.unscale(int(screenH))
+		if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
+			logicalW = screenLogicalW - 24
+		}
+		if screenLogicalH > 0 && logicalH > screenLogicalH-16 {
+			logicalH = screenLogicalH - 16
+		}
+		if logicalW < 960 {
+			logicalW = 960
+		}
+		if logicalH < 700 {
+			logicalH = 700
+		}
 	}
 	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	x := (int(screenW) - pixelW) / 2

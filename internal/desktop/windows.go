@@ -203,7 +203,13 @@ func Run(engine *api.Engine, version string) error {
 	} else {
 		a.loadSettings()
 	}
-	a.refreshLocal("")
+	initialLocalPath := ""
+	if referenceCaptureMode() {
+		// Reference captures must exercise the real local file manager without
+		// leaking the hosted runner account or its temporary working directory.
+		initialLocalPath = `C:\\`
+	}
+	a.refreshLocal(initialLocalPath)
 	if settingsErr == nil {
 		a.setStatus(a.tr("status.ready"))
 	}
@@ -278,6 +284,10 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			minWidth, minHeight := a.responsiveMinTrackSize()
 			info.MinTrackSize.X = int32(a.scale(minWidth))
 			info.MinTrackSize.Y = int32(a.scale(minHeight))
+			if referenceCaptureMode() {
+				info.MaxTrackSize.X = int32(a.scale(referenceCaptureWidth))
+				info.MaxTrackSize.Y = int32(a.scale(referenceCaptureHeight))
+			}
 			minMaxInfoToLParam(lParam, info)
 		}
 		return 0
