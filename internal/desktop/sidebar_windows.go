@@ -99,6 +99,88 @@ func (a *app) ensureSidebarBookmarks() uintptr {
 	return a.ensureSidebarButton(&sidebarBookmarks, idBookmarks, label, iconOpenLocal)
 }
 
+func (a *app) ensureSidebarProfileControls() {
+	if a == nil || a.hwnd == 0 {
+		return
+	}
+	hinst, _, _ := getModuleHandleW.Call(0)
+	if a.sidebarBookmarkHeading == 0 {
+		heading, _, _ := createWindowExW.Call(
+			0,
+			uintptr(unsafe.Pointer(wstr("STATIC"))),
+			uintptr(unsafe.Pointer(wstr("Bookmarks"))),
+			uintptr(wsChild|wsVisible),
+			0, 0, 1, 1,
+			a.hwnd, 0, hinst, 0,
+		)
+		if heading != 0 && a.smallFont != 0 {
+			sendMessageW.Call(heading, wmSetFont, a.smallFont, 1)
+		}
+		a.sidebarBookmarkHeading = heading
+	}
+	for len(a.sidebarProfileButtons) < maxSidebarProfiles {
+		index := len(a.sidebarProfileButtons)
+		id := idSidebarProfileBase + index
+		hwnd, _, _ := createWindowExW.Call(
+			0,
+			uintptr(unsafe.Pointer(wstr("BUTTON"))),
+			uintptr(unsafe.Pointer(wstr(""))),
+			uintptr(wsChild|wsVisible|wsTabStop|bsOwnerDraw),
+			0, 0, 1, 1,
+			a.hwnd, uintptr(id), hinst, 0,
+		)
+		if hwnd == 0 {
+			break
+		}
+		if a.font != 0 {
+			sendMessageW.Call(hwnd, wmSetFont, a.font, 1)
+		}
+		applyDarkControl(hwnd, "BUTTON")
+		a.registerButton(hwnd, iconOpenLocal, "", buttonNav)
+		a.sidebarProfileButtons = append(a.sidebarProfileButtons, hwnd)
+	}
+}
+
+func (a *app) refreshSidebarProfileControls() {
+	if a == nil {
+		return
+	}
+	a.ensureSidebarProfileControls()
+	setText(a.sidebarBookmarkHeading, "Bookmarks")
+	for index, hwnd := range a.sidebarProfileButtons {
+		if index >= len(a.profiles) {
+			showControls(false, hwnd)
+			continue
+		}
+		profile := a.profiles[index]
+		label := profile.Name
+		if label == "" {
+			label = profile.Host
+		}
+		variant := buttonNav
+		if profile.ID != "" && profile.ID == a.selectedProfileID {
+			variant = buttonNavActive
+		}
+		a.setSidebarButtonVisual(hwnd, iconOpenLocal, label, variant)
+		setControlEnabled(hwnd, !a.connected && !a.connectionBusy && !a.profileMutationBusy)
+		showControls(true, hwnd)
+	}
+}
+
+func (a *app) selectSidebarProfile(index int) {
+	if a == nil || index < 0 || index >= len(a.profiles) || index >= maxSidebarProfiles {
+		return
+	}
+	if a.connected || a.connectionBusy || a.profileMutationBusy {
+		a.openSiteManager()
+		return
+	}
+	sendMessageW.Call(a.profilesCombo, cbSetCurSel, uintptr(index+1), 0)
+	a.selectProfile()
+	a.refreshSidebarProfileControls()
+	a.setStatus("Selected site: " + a.profiles[index].Name)
+}
+
 func sidebarControl(store *sync.Map, owner uintptr) uintptr {
 	if store == nil || owner == 0 {
 		return 0
@@ -209,6 +291,11 @@ func (a *app) cleanupSidebarControls() {
 		}
 		store.Delete(a.hwnd)
 	}
+	for _, hwnd := range a.sidebarProfileButtons {
+		delete(a.buttons, hwnd)
+	}
+	a.sidebarProfileButtons = nil
+	a.sidebarBookmarkHeading = 0
 }
 
 func (a *app) sidebarLogicalRect(hwnd uintptr) (rect, bool) {
@@ -279,6 +366,7 @@ func (a *app) layoutSidebarRail(height int) {
 	diagnostics := a.ensureSidebarDiagnostics()
 	bookmarks := a.ensureSidebarBookmarks()
 	labels := navigationLabelsForLanguage(a.languageCode())
+	a.ensureSidebarProfileControls()
 
 	sitesLabel := labels.Connections
 	if a.languageCode() == "en" {
@@ -286,53 +374,60 @@ func (a *app) layoutSidebarRail(height int) {
 	}
 	a.setSidebarButtonVisual(a.siteManagerBtn, iconConnect, sitesLabel, buttonNavActive)
 	showControls(false, files)
-	a.setSidebarButtonVisual(transfers, iconUpload, "Transfers", buttonDefault)
-	a.setSidebarButtonVisual(queue, iconSync, "Queue", buttonDefault)
+	a.setSidebarButtonVisual(transfers, iconUpload, "Transfers", buttonNav)
+	a.setSidebarButtonVisual(queue, iconSync, "Queue", buttonNav)
 	syncLabel := "Sync"
 	if a.languageCode() == "hr" {
 		syncLabel = "Sinkronizacija"
 	}
-	a.setSidebarButtonVisual(syncButton, iconSync, syncLabel, buttonDefault)
-	a.setSidebarButtonVisual(a.settingsBtn, iconSettings, a.tr("common.settings"), buttonDefault)
-	a.setSidebarButtonVisual(bookmarks, iconOpenLocal, bookmarkWordsForLanguage(a.languageCode()).Title, buttonSubtle)
-	a.setSidebarButtonVisual(diagnostics, iconDiagnostics, labels.Diagnostics, buttonSubtle)
-	a.setSidebarButtonVisual(a.aboutBtn, iconInfo, a.tr("common.about"), buttonSubtle)
+	a.setSidebarButtonVisual(syncButton, iconSync, syncLabel, buttonNav)
+	a.setSidebarButtonVisual(a.settingsBtn, iconSettings, a.tr("common.settings"), buttonNav)
+	showControls(false, bookmarks, diagnostics, a.aboutBtn)
 	a.updateSidebarTransferBadge()
 
 	logo := a.ensureBrandLogo()
 	if logo != 0 {
-		a.move(logo, applicationSidebarX+2, 16, applicationSidebarBrandIcon, applicationSidebarBrandIcon)
+		a.move(logo, applicationSidebarX+4, 15, applicationSidebarBrandIcon, applicationSidebarBrandIcon)
 	}
-	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 2
-	// The approved rail uses the logo as a true wordmark lockup rather than a
-	// tiny toolbar icon. There is enough width for the bold product title at all
-	// supported DPI values.
 	if a.titleFont != 0 {
 		sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
+		sendMessageW.Call(a.brandFTP, wmSetFont, a.titleFont, 1)
 	}
-	a.move(a.brandTitle, titleX, 19, applicationSidebarWidth-(titleX-applicationSidebarX), 38)
+	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 4
+	a.move(a.brandTitle, titleX, 20, 92, 36)
+	a.move(a.brandFTP, titleX+92, 20, 52, 36)
+
+	y := applicationSidebarPrimaryTop
+	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
+		a.move(control, applicationSidebarX, y, applicationSidebarWidth, 44)
+		y += 52
+	}
+
+	bookmarkY := y + 12
+	if a.sidebarBookmarkHeading != 0 {
+		a.move(a.sidebarBookmarkHeading, applicationSidebarX+10, bookmarkY, applicationSidebarWidth-20, 22)
+		showControls(true, a.sidebarBookmarkHeading)
+	}
+	profileY := bookmarkY + 28
+	a.refreshSidebarProfileControls()
+	for _, hwnd := range a.sidebarProfileButtons {
+		if hwnd == 0 {
+			continue
+		}
+		a.move(hwnd, applicationSidebarX, profileY, applicationSidebarWidth, 36)
+		profileY += 42
+	}
+
 	setText(a.brandSubtitle, "SECURE TRANSFERS.\r\nWITHOUT A TRACE.")
 	if a.smallFont != 0 {
 		sendMessageW.Call(a.brandSubtitle, wmSetFont, a.smallFont, 1)
 	}
+	mottoY := height - applicationSidebarBottomInset - 62
+	if mottoY < profileY+10 {
+		mottoY = profileY + 10
+	}
+	a.move(a.brandSubtitle, applicationSidebarX+10, mottoY, applicationSidebarWidth-20, 48)
 	showControls(true, a.brandSubtitle)
-
-	y := applicationSidebarPrimaryTop
-	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
-		a.move(control, applicationSidebarX, y, applicationSidebarWidth, applicationSidebarCardH)
-		y += applicationSidebarCardH + applicationSidebarCardGap
-	}
-
-	utilityY := y + 14
-	for _, control := range []uintptr{bookmarks, diagnostics, a.aboutBtn} {
-		a.move(control, applicationSidebarX, utilityY, applicationSidebarWidth, applicationSidebarUtilityH)
-		utilityY += applicationSidebarUtilityH + applicationSidebarUtilityGap
-	}
-	mottoY := height - applicationSidebarBottomInset - 70
-	if mottoY < utilityY+16 {
-		mottoY = utilityY + 16
-	}
-	a.move(a.brandSubtitle, applicationSidebarX+10, mottoY, applicationSidebarWidth-20, 52)
 	showControls(false, a.languageCombo)
 }
 

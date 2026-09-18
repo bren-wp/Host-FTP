@@ -3,15 +3,21 @@
 package desktop
 
 const (
-	idFilesNav           = 700
-	idSiteManager        = 701
-	idTransferQueueNav   = 702
-	idDiagnostics        = 703
-	idWorkspaceBack      = 704
-	idWorkspaceForward   = 705
-	idWorkspaceNewFolder = 706
-	idWorkspaceMore      = 707
-	idQueueNav           = 708
+	idFilesNav             = 700
+	idSiteManager          = 701
+	idTransferQueueNav     = 702
+	idDiagnostics          = 703
+	idWorkspaceBack        = 704
+	idWorkspaceForward     = 705
+	idWorkspaceNewFolder   = 706
+	idWorkspaceMore        = 707
+	idQueueNav             = 708
+	idSidebarProfileBase   = 9200
+	maxSidebarProfiles     = 5
+	idTransferTabAll       = 9310
+	idTransferTabUploading = 9311
+	idTransferTabDownload  = 9312
+	idTransferTabCompleted = 9313
 )
 
 // nativeMenuWords remains as a narrow compatibility shim for one localization

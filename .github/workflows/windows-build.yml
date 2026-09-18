@@ -71,11 +71,15 @@ jobs:
           "value=$version" >> $env:GITHUB_OUTPUT
           Write-Host "GHOST_FTP_VERSION=$version"
 
-      - name: Run Windows test suite
+      - name: Format, vet and test Windows source
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           go telemetry off
+          gofmt -w .\cmd .\internal
+          if ($LASTEXITCODE -ne 0) { throw 'gofmt failed.' }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { throw 'go vet failed.' }
           go test ./...
           if ($LASTEXITCODE -ne 0) { throw 'Windows test suite failed.' }
 

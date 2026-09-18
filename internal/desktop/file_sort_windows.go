@@ -37,9 +37,9 @@ func fileSortField(column int, remote bool) (itemlist.Field, bool) {
 	case 0:
 		return itemlist.FieldName, true
 	case 1:
-		return itemlist.FieldType, true
-	case 2:
 		return itemlist.FieldSize, true
+	case 2:
+		return itemlist.FieldType, true
 	case 3:
 		return itemlist.FieldModified, true
 	case 4:

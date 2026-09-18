@@ -16,23 +16,23 @@ import (
 )
 
 const (
-	siteIDList       = 8101
-	siteIDName       = 8102
-	siteIDProtocol   = 8103
-	siteIDHost       = 8104
-	siteIDPort       = 8105
-	siteIDUser       = 8106
-	siteIDLocal      = 8107
-	siteIDRemote     = 8108
-	siteIDKey        = 8109
-	siteIDSecurity   = 8110
-	siteIDSave       = 8111
-	siteIDDelete     = 8112
-	siteIDConnect    = 8113
-	siteIDClose      = 8114
-	siteIDPassword   = 8115
-	siteIDPassphrase = 8116
-	siteIDDuplicate  = 8117
+	siteIDList           = 8101
+	siteIDName           = 8102
+	siteIDProtocol       = 8103
+	siteIDHost           = 8104
+	siteIDPort           = 8105
+	siteIDUser           = 8106
+	siteIDLocal          = 8107
+	siteIDRemote         = 8108
+	siteIDKey            = 8109
+	siteIDSecurity       = 8110
+	siteIDSave           = 8111
+	siteIDDelete         = 8112
+	siteIDConnect        = 8113
+	siteIDClose          = 8114
+	siteIDPassword       = 8115
+	siteIDPassphrase     = 8116
+	siteIDDuplicate      = 8117
 	siteIDSettings       = 8118
 	siteIDNavConnections = 8120
 	siteIDNavTransfers   = 8121
@@ -42,6 +42,16 @@ const (
 	siteIDNavSettings    = 8125
 	siteIDNewSite        = 8126
 	siteIDGlobalSearch   = 8127
+	siteIDQuickConnect   = 8128
+	siteIDSiteManagerTab = 8129
+	siteIDImportExport   = 8130
+	siteIDPresetsTab     = 8131
+	siteIDSyncTab        = 8132
+	siteIDAutomationTab  = 8133
+	siteIDPresetStandard = 8134
+	siteIDPresetWebsite  = 8135
+	siteIDPresetBackup   = 8136
+	siteIDPresetMedia    = 8137
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -112,43 +122,53 @@ func cleanConnectionSecurityTitle(value string) string {
 }
 
 type siteManagerState struct {
-	parent       *app
-	hwnd         uintptr
-	list         uintptr
-	listBrush    uintptr
-	name         uintptr
-	protocol     uintptr
-	host         uintptr
-	port         uintptr
-	user         uintptr
-	password     uintptr
-	localPath    uintptr
-	remotePath   uintptr
-	keyPath      uintptr
-	passphrase   uintptr
-	security     uintptr
-	options      uintptr
-	securityInfo uintptr
-	settings     uintptr
-	duplicate    uintptr
-	save         uintptr
-	delete       uintptr
-	connect      uintptr
-	close        uintptr
-	profiles     []model.PublicProfile
-	selected     int
-	closed       bool
-	connectAfter  bool
-	postAction    int
-	navConnections uintptr
-	navTransfers   uintptr
-	navSync        uintptr
-	navRemote      uintptr
-	navLocal       uintptr
-	navSettings    uintptr
-	newSite        uintptr
-	globalSearch   uintptr
-	brandIcon      uintptr
+	parent          *app
+	hwnd            uintptr
+	list            uintptr
+	listBrush       uintptr
+	name            uintptr
+	protocol        uintptr
+	host            uintptr
+	port            uintptr
+	user            uintptr
+	password        uintptr
+	localPath       uintptr
+	remotePath      uintptr
+	keyPath         uintptr
+	passphrase      uintptr
+	security        uintptr
+	options         uintptr
+	securityInfo    uintptr
+	settings        uintptr
+	duplicate       uintptr
+	save            uintptr
+	delete          uintptr
+	connect         uintptr
+	close           uintptr
+	profiles        []model.PublicProfile
+	selected        int
+	closed          bool
+	connectAfter    bool
+	postAction      int
+	navConnections  uintptr
+	navTransfers    uintptr
+	navSync         uintptr
+	navRemote       uintptr
+	navLocal        uintptr
+	navSettings     uintptr
+	newSite         uintptr
+	globalSearch    uintptr
+	brandIcon       uintptr
+	quickConnectTab uintptr
+	siteManagerTab  uintptr
+	importExportTab uintptr
+	presetsTab      uintptr
+	syncTab         uintptr
+	automationTab   uintptr
+	presetStandard  uintptr
+	presetWebsite   uintptr
+	presetBackup    uintptr
+	presetMedia     uintptr
 }
 
 var (
@@ -217,6 +237,43 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					state.postAction = siteIDGlobalSearch
 					destroyWindow.Call(hwnd)
 					return 0
+				case siteIDQuickConnect:
+					sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
+					state.loadSelection(0)
+					sidebarSetFocus.Call(state.host)
+					return 0
+				case siteIDSiteManagerTab:
+					sidebarSetFocus.Call(state.list)
+					return 0
+				case siteIDImportExport:
+					platform.InfoDialog(
+						"Ghost FTP — Import / Export",
+						"Secure profile portability",
+						"Saved-site portability is secret-safe: Ghost FTP never exports stored passwords or private-key passphrases in clear text. Use Duplicate and Save as Profile until encrypted profile bundles are enabled.",
+					)
+					return 0
+				case siteIDPresetsTab:
+					return 0
+				case siteIDSyncTab:
+					state.postAction = siteIDNavSync
+					destroyWindow.Call(hwnd)
+					return 0
+				case siteIDAutomationTab:
+					state.parent.openSettings()
+					state.refreshOptionsSummary()
+					return 0
+				case siteIDPresetStandard:
+					state.applyTransferPreset("standard")
+					return 0
+				case siteIDPresetWebsite:
+					state.applyTransferPreset("website")
+					return 0
+				case siteIDPresetBackup:
+					state.applyTransferPreset("backup")
+					return 0
+				case siteIDPresetMedia:
+					state.applyTransferPreset("media")
+					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
 					return 0
@@ -278,7 +335,9 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
 				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-				state.globalSearch,
+				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+				state.presetsTab, state.syncTab, state.automationTab,
+				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -552,6 +611,61 @@ func siteManagerLimitText(value int) string {
 	return fmt.Sprintf("%d KiB/s", value)
 }
 
+func (state *siteManagerState) applyTransferPreset(name string) {
+	if state == nil || state.parent == nil {
+		return
+	}
+	next := state.parent.settings
+	label := "Standard Upload"
+	switch name {
+	case "website":
+		label = "Website Deployment"
+		next.Parallelism = 4
+		next.ConflictPolicy = model.ConflictPolicyReplaceBackup
+		next.BackupBeforeOverwrite = true
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 2
+		next.RetryDelaySeconds = 3
+	case "backup":
+		label = "Backup (Incremental)"
+		next.Parallelism = 2
+		next.ConflictPolicy = model.ConflictPolicySkip
+		next.BackupBeforeOverwrite = true
+		next.SkipExisting = true
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 2
+		next.RetryDelaySeconds = 5
+	case "media":
+		label = "Media Transfer"
+		next.Parallelism = 2
+		next.ConflictPolicy = model.ConflictPolicyReplace
+		next.BackupBeforeOverwrite = false
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 1
+		next.RetryDelaySeconds = 3
+	default:
+		next.Parallelism = 3
+		next.ConflictPolicy = model.ConflictPolicyReplace
+		next.BackupBeforeOverwrite = false
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 1
+		next.RetryDelaySeconds = 3
+	}
+	next.UploadLimitKiBPerSecond = 0
+	next.DownloadLimitKiBPerSecond = 0
+	saved, err := state.parent.engine.SetSettings(next)
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP", "Transfer preset", state.parent.userMessage(err, "settings.save_failed_body"))
+		return
+	}
+	state.parent.settings = saved
+	state.refreshOptionsSummary()
+	state.parent.setStatus("Transfer preset applied: " + label)
+}
+
 func (state *siteManagerState) refreshOptionsSummary() {
 	if state == nil || state.parent == nil || state.options == 0 {
 		return
@@ -587,14 +701,21 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		return
 	}
 	if width > 0 && width < 1380 {
-		// The approved four-column view needs desktop width. On smaller work areas
-		// keep all connection editing actions reachable and collapse only the
-		// read-only transfer/safety and saved-site side cards.
-		showControls(false, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
-		state.parent.move(state.settings, 500, 690, 160, 38)
+		// Keep the connection editor complete on compact desktops and collapse the
+		// optional reference side cards instead of letting them clip off-screen.
+		showControls(false,
+			state.presetsTab, state.syncTab, state.automationTab,
+			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+			state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+		)
+		state.parent.move(state.settings, 720, 738, 160, 42)
 		return
 	}
-	showControls(true, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
+	showControls(true,
+		state.presetsTab, state.syncTab, state.automationTab,
+		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+		state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete,
+	)
 	state.parent.move(state.settings, 926, 738, 264, 42)
 }
 
@@ -632,7 +753,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		return hwnd
 	}
 	nav := func(id int, text, icon string, active bool) uintptr {
-		variant := buttonSubtle
+		variant := buttonNav
 		if active {
 			variant = buttonNavActive
 		}
@@ -676,52 +797,63 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 
 	// Main connection card.
 	heading("New Connection", 262, 54, 420)
-	label("Connection Name", 262, 98, 220)
-	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 120, 618, 34, siteIDName)
+	state.quickConnectTab = parent.registerButton(mk("BUTTON", "Quick Connect", wsTabStop|bsOwnerDraw, 262, 96, 150, 40, siteIDQuickConnect), iconConnect, "Quick Connect", buttonNavActive)
+	state.siteManagerTab = parent.registerButton(mk("BUTTON", "Site Manager", wsTabStop|bsOwnerDraw, 420, 96, 150, 40, siteIDSiteManagerTab), iconOpenLocal, "Site Manager", buttonNav)
+	state.importExportTab = parent.registerButton(mk("BUTTON", "Import / Export", wsTabStop|bsOwnerDraw, 578, 96, 164, 40, siteIDImportExport), iconUpload, "Import / Export", buttonNav)
 
-	label(parent.tr("terminal.protocol"), 262, 170, 150)
-	label("Host / Address", 502, 170, 190)
-	label(parent.tr("terminal.port"), 796, 170, 70)
-	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 192, 224, 240, siteIDProtocol)
+	label("Connection Name", 262, 148, 220)
+	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 170, 618, 34, siteIDName)
+
+	label(parent.tr("terminal.protocol"), 262, 216, 150)
+	label("Host / Address", 502, 216, 190)
+	label(parent.tr("terminal.port"), 796, 216, 70)
+	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 238, 224, 240, siteIDProtocol)
 	for _, spec := range protocolSpecs {
 		sendMessageW.Call(state.protocol, cbAddString, 0, uintptr(unsafe.Pointer(wstr(protocolLabel(parent.languageCode(), spec.Value)))))
 	}
-	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 192, 278, 34, siteIDHost)
-	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 192, 84, 34, siteIDPort)
+	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 238, 278, 34, siteIDHost)
+	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 238, 84, 34, siteIDPort)
 
-	label(parent.tr("terminal.username"), 262, 244, 260)
-	label(parent.tr("terminal.password"), 578, 244, 260)
-	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 266, 300, 34, siteIDUser)
-	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 266, 302, 34, siteIDPassword)
+	label(parent.tr("terminal.username"), 262, 290, 260)
+	label(parent.tr("terminal.password"), 578, 290, 260)
+	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 312, 300, 34, siteIDUser)
+	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 312, 302, 34, siteIDPassword)
 
-	label(sitePathLabel(parent.languageCode(), false), 262, 318, 260)
-	label(sitePathLabel(parent.languageCode(), true), 578, 318, 260)
-	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 340, 300, 34, siteIDLocal)
-	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 340, 302, 34, siteIDRemote)
+	label(sitePathLabel(parent.languageCode(), false), 262, 364, 260)
+	label(sitePathLabel(parent.languageCode(), true), 578, 364, 260)
+	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 386, 300, 34, siteIDLocal)
+	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 386, 302, 34, siteIDRemote)
 
-	label(parent.tr("terminal.private_key"), 262, 392, 260)
-	label(parent.tr("cue.passphrase"), 646, 392, 210)
-	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 414, 368, 34, siteIDKey)
-	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 414, 234, 34, siteIDPassphrase)
+	label(parent.tr("terminal.private_key"), 262, 438, 260)
+	label(parent.tr("cue.passphrase"), 646, 438, 210)
+	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 460, 368, 34, siteIDKey)
+	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 460, 234, 34, siteIDPassphrase)
 
-	label(cleanConnectionSecurityTitle(parent.tr("sftp.security")), 262, 466, 618)
-	state.security = mk("STATIC", "", wsBorder, 262, 488, 618, 82, siteIDSecurity)
+	label(cleanConnectionSecurityTitle(parent.tr("sftp.security")), 262, 512, 618)
+	state.security = mk("STATIC", "", wsBorder, 262, 534, 618, 72, siteIDSecurity)
 
-	label("PROFILE BEHAVIOR", 262, 590, 618)
+	label("PROFILE BEHAVIOR", 262, 618, 618)
 	profileNote := "Quick Connect uses credentials only for this session. Saving a profile asks before secrets are stored in the protected Windows credential layer."
-	mk("STATIC", profileNote, 0, 262, 614, 618, 52, 0)
+	mk("STATIC", profileNote, 0, 262, 642, 618, 48, 0)
 
 	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 262, 738, 160, 42, siteIDSave), iconSave, "Save as Profile", buttonDefault)
 	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 738, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
 	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 738, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
 
-	// Transfer & Sync settings card uses real persisted settings.
+	// Transfer & Sync settings card uses real persisted settings and real presets.
 	heading("Transfer & Sync Options", 924, 54, 270)
-	label("ACTIVE TRANSFER SETTINGS", 926, 100, 262)
-	state.options = mk("STATIC", "", wsBorder, 926, 124, 264, 330, 0)
-	label("SECURITY", 926, 472, 264)
-	securityText := "SFTP host-key verification and FTPS certificate verification are enforced by the protocol engine. Saved secrets use the protected Windows credential layer."
-	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 496, 264, 142, 0)
+	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 96, 86, 38, siteIDPresetsTab), iconSave, "Presets", buttonNavActive)
+	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 96, 82, 38, siteIDSyncTab), iconSync, "Sync", buttonNav)
+	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 96, 84, 38, siteIDAutomationTab), iconSettings, "Automation", buttonNav)
+	state.presetStandard = parent.registerButton(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 150, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", buttonNavActive)
+	state.presetWebsite = parent.registerButton(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 216, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", buttonNav)
+	state.presetBackup = parent.registerButton(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 282, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", buttonNav)
+	state.presetMedia = parent.registerButton(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 348, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", buttonNav)
+	label("ACTIVE TRANSFER SETTINGS", 926, 422, 262)
+	state.options = mk("STATIC", "", wsBorder, 926, 446, 264, 178, 0)
+	label("SECURITY", 926, 638, 264)
+	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain in the protected Windows credential layer."
+	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 662, 264, 62, 0)
 	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
 	// Saved Sites card on the right, matching the approved reference.
@@ -742,7 +874,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-		state.globalSearch,
+		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 	} {
 		if control == 0 {
 			return fmt.Errorf("Connections control initialization failed")
@@ -786,9 +919,23 @@ func (a *app) openSiteManager() {
 	})
 
 	logicalW, logicalH := 1590, 850
-	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
+	screenLogicalW := a.unscale(int(screenW))
+	screenLogicalH := a.unscale(int(screenH))
+	if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
+		logicalW = screenLogicalW - 24
+	}
+	if screenLogicalH > 0 && logicalH > screenLogicalH-48 {
+		logicalH = screenLogicalH - 48
+	}
+	if logicalW < 960 {
+		logicalW = 960
+	}
+	if logicalH < 700 {
+		logicalH = 700
+	}
+	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	x := (int(screenW) - pixelW) / 2
 	y := (int(screenH) - pixelH) / 2
 	if x < 0 {

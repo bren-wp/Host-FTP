@@ -34,7 +34,7 @@ func (a *app) checkForUpdates() {
 				return
 			}
 			if !result.Available {
-				a.setStatus("Ghost FTP "+result.CurrentVersion+" is up to date.")
+				a.setStatus("Ghost FTP " + result.CurrentVersion + " is up to date.")
 				platform.InfoDialog(
 					brand.ProductName,
 					"You're up to date",
@@ -43,7 +43,7 @@ func (a *app) checkForUpdates() {
 				return
 			}
 
-			a.setStatus("Ghost FTP "+result.LatestVersion+" is available.")
+			a.setStatus("Ghost FTP " + result.LatestVersion + " is available.")
 			platform.InfoDialog(
 				brand.ProductName,
 				"Update available",

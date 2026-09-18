@@ -143,11 +143,11 @@ func (a *app) layoutQueuePriorityControls() {
 }
 
 func (a *app) moveSelectedTransfer(action queuePriorityAction) {
-	selected := selectedIndices(a.transferList)
-	state := deriveQueuePriorityState(a.transferJobs, selected)
+	selected := a.fullTransferSelectionIndices()
 	if len(selected) != 1 {
 		return
 	}
+	state := deriveQueuePriorityState(a.transferJobs, selected)
 	allowed := false
 	switch action {
 	case queuePriorityTop:

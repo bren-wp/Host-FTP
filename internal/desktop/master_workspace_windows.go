@@ -203,12 +203,20 @@ func (a *app) ensureMasterWorkspaceControls() {
 		a.masterNewFolder = a.ensureMasterWorkspaceButton(hinst, idWorkspaceNewFolder, a.tr("common.new_folder"), iconNewFolder, buttonDefault)
 		a.masterBookmarks = a.ensureMasterWorkspaceButton(hinst, idBookmarks, bookmarkWordsForLanguage(a.languageCode()).Title, iconOpenLocal, buttonDefault)
 		a.masterMore = a.ensureMasterWorkspaceButton(hinst, idWorkspaceMore, "Search files, folders, or sites…    Ctrl+K", iconSearch, buttonSubtle)
+		a.queueTabAll = a.ensureMasterWorkspaceButton(hinst, idTransferTabAll, "All (0)", "", buttonNavActive)
+		a.queueTabUploading = a.ensureMasterWorkspaceButton(hinst, idTransferTabUploading, "Uploading (0)", "", buttonNav)
+		a.queueTabDownloading = a.ensureMasterWorkspaceButton(hinst, idTransferTabDownload, "Downloading (0)", "", buttonNav)
+		a.queueTabCompleted = a.ensureMasterWorkspaceButton(hinst, idTransferTabCompleted, "Completed (0)", "", buttonNav)
 	}
 	a.setButtonLabel(a.masterRefresh, a.tr("common.refresh"))
 	a.setButtonLabel(a.masterNewFolder, a.tr("common.new_folder"))
 	a.setButtonLabel(a.masterBookmarks, bookmarkWordsForLanguage(a.languageCode()).Title)
 	a.setButtonLabel(a.masterMore, "Search files, folders, or sites…    Ctrl+K")
 	a.registerButtonVisual(a.masterMore, iconSearch, "Search files, folders, or sites…    Ctrl+K", buttonSubtle, false)
+	if a.transferViewFilter == "" {
+		a.transferViewFilter = "all"
+	}
+	a.updateTransferTabLabels()
 	a.updateMasterToolbarState()
 }
 
@@ -291,6 +299,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward,
 		a.localUp, a.remoteUp, a.localPath, a.remotePath,
 		a.localList, a.remoteList, a.transferList,
+		a.queueTabAll, a.queueTabUploading, a.queueTabDownloading, a.queueTabCompleted,
 	)
 
 	if a.languageCode() == "en" {
@@ -303,11 +312,14 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	searchY, searchH := 18, 40
 	badgeW := 230
 	searchW := contentWidth - badgeW - 18
+	if searchW > 650 {
+		searchW = 650
+	}
 	if searchW < 340 {
 		searchW = 340
 	}
 	a.move(a.masterMore, contentLeft, searchY, searchW, searchH)
-	a.move(a.connectionBadge, contentRight-badgeW, searchY+9, badgeW, 22)
+	a.move(a.connectionBadge, contentRight-badgeW, searchY+3, badgeW, 34)
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
@@ -399,9 +411,26 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	a.move(a.localList, leftX+8, listY, paneW-16, listH)
 	a.move(a.remoteList, rightX+8, listY, paneW-16, listH)
 
-	// Persistent transfer queue.
-	a.move(a.sectionTransfers, contentLeft+8, queueLabelY, 180, 20)
-	a.move(a.transferSummary, contentLeft+190, queueLabelY, clampInt(contentWidth-430, 220, 620), 20)
+	// Persistent transfer queue. Filter tabs mirror the approved All /
+	// Uploading / Downloading / Completed row and filter the real queue model.
+	a.move(a.sectionTransfers, contentLeft+8, queueLabelY, 150, 20)
+	tabY := queueLabelY - 5
+	tabX := contentLeft + 158
+	tabGap := 4
+	tabWidths := []int{82, 112, 128, 118}
+	for index, control := range []uintptr{a.queueTabAll, a.queueTabUploading, a.queueTabDownloading, a.queueTabCompleted} {
+		a.move(control, tabX, tabY, tabWidths[index], 30)
+		tabX += tabWidths[index] + tabGap
+	}
+	summaryX := tabX + 8
+	summaryW := contentRight - summaryX - 8
+	if summaryW > 360 {
+		summaryW = 360
+	}
+	if summaryW < 80 {
+		summaryW = 80
+	}
+	a.move(a.transferSummary, summaryX, queueLabelY, summaryW, 20)
 
 	queueControls := []struct {
 		control uintptr
@@ -433,6 +462,7 @@ func (a *app) cleanupMasterWorkspaceControls() {
 	for _, control := range []uintptr{
 		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward, a.masterRefresh,
 		a.masterNewFolder, a.masterBookmarks, a.masterMore,
+		a.queueTabAll, a.queueTabUploading, a.queueTabDownloading, a.queueTabCompleted,
 	} {
 		delete(a.buttons, control)
 	}

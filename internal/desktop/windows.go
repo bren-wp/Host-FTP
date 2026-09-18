@@ -25,28 +25,33 @@ type app struct {
 	dpi                                  uint32
 	brush, panelBrush                    uintptr
 
-	brandTitle, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers uintptr
-	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn           uintptr
-	protocol, host, port, user, pass                                                          uintptr
-	keyPath, chooseKey, passphrase                                                            uintptr
-	connect, disconnect                                                                       uintptr
-	localPath, localUp, localRefresh, localChoose, localList                                  uintptr
-	localMkdir, localRename, localDelete                                                      uintptr
-	remotePath, remoteUp, remoteRefresh, remoteList                                           uintptr
-	remoteMkdir, remoteRename, remoteDelete, remoteChmod                                      uintptr
-	upload, download                                                                          uintptr
-	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                    uintptr
-	status, statusVersion, transferSummary                                                    uintptr
+	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers               uintptr
+	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn                                   uintptr
+	protocol, host, port, user, pass                                                                                  uintptr
+	keyPath, chooseKey, passphrase                                                                                    uintptr
+	connect, disconnect                                                                                               uintptr
+	localPath, localUp, localRefresh, localChoose, localList                                                          uintptr
+	localMkdir, localRename, localDelete                                                                              uintptr
+	remotePath, remoteUp, remoteRefresh, remoteList                                                                   uintptr
+	remoteMkdir, remoteRename, remoteDelete, remoteChmod                                                              uintptr
+	upload, download                                                                                                  uintptr
+	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                                            uintptr
+	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
+	status, statusVersion, transferSummary                                                                            uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
-	buttons                                                                                   map[uintptr]buttonVisual
+	buttons                                                                                                           map[uintptr]buttonVisual
 
-	siteManagerBtn uintptr
+	siteManagerBtn         uintptr
+	sidebarBookmarkHeading uintptr
+	sidebarProfileButtons  []uintptr
 
 	mu                   sync.Mutex
 	dispatchQ            []func()
 	localItems           []model.Item
 	remoteItems          []model.Item
 	transferJobs         []model.TransferJob
+	transferViewJobs     []model.TransferJob
+	transferViewFilter   string
 	profiles             []model.PublicProfile
 	settings             model.Settings
 	localCurrent         string
@@ -355,7 +360,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		color := textColor()
 		if lParam == a.brandTitle {
 			color = textColor()
-		} else if lParam == a.brandSubtitle || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
+		} else if lParam == a.brandFTP {
+			color = accentStrongColor()
+		} else if lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
 		} else if lParam == a.connectionBadge {
 			if a.connected {

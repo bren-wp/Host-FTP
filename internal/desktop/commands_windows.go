@@ -15,6 +15,11 @@ func (a *app) command(id int) {
 	// instead of falling back to English (for example Croatian "Otkaži").
 	platform.SetDialogActionLabels(okLabel(a.languageCode()), a.tr("common.cancel"))
 
+	if id >= idSidebarProfileBase && id < idSidebarProfileBase+maxSidebarProfiles {
+		a.selectSidebarProfile(id - idSidebarProfileBase)
+		return
+	}
+
 	switch id {
 	case idFilesNav:
 		a.focusFilesWorkspace()
@@ -120,6 +125,14 @@ func (a *app) command(id int) {
 		a.retrySelectedTransfer()
 	case idClearQueue:
 		a.clearFinishedTransfers()
+	case idTransferTabAll:
+		a.setTransferViewFilter("all")
+	case idTransferTabUploading:
+		a.setTransferViewFilter("uploading")
+	case idTransferTabDownload:
+		a.setTransferViewFilter("downloading")
+	case idTransferTabCompleted:
+		a.setTransferViewFilter("completed")
 	case idMoveQueueTop:
 		a.moveSelectedTransfer(queuePriorityTop)
 	case idMoveQueueUp:

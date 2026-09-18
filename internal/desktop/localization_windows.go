@@ -155,13 +155,22 @@ func (a *app) setColumnTitle(list uintptr, index int, title string) {
 func (a *app) applyColumnLanguage() {
 	for _, list := range []uintptr{a.localList, a.remoteList} {
 		a.setColumnTitle(list, 0, a.tr("column.name"))
-		a.setColumnTitle(list, 1, a.tr("column.type"))
-		a.setColumnTitle(list, 2, a.tr("column.size"))
+		a.setColumnTitle(list, 1, a.tr("column.size"))
+		a.setColumnTitle(list, 2, a.tr("column.type"))
 		a.setColumnTitle(list, 3, a.tr("column.modified"))
 	}
 	a.setColumnTitle(a.remoteList, 4, a.tr("common.permissions"))
-	for index, key := range []string{"column.direction", "column.local", "column.remote", "column.status", "column.progress"} {
-		a.setColumnTitle(a.transferList, index, a.tr(key))
+	transferColumns := []string{
+		a.tr("column.name"),
+		a.tr("column.direction"),
+		a.tr("column.progress"),
+		a.tr("column.size"),
+		"Speed",
+		a.tr("column.status"),
+		"Time Remaining",
+	}
+	for index, title := range transferColumns {
+		a.setColumnTitle(a.transferList, index, title)
 	}
 }
 
@@ -212,7 +221,7 @@ func (a *app) applyLanguage(code string) {
 	a.applyColumnLanguage()
 	a.fillItemList(a.localList, a.localItems)
 	a.fillItemList(a.remoteList, a.remoteItems)
-	a.fillTransferList(a.transferList, a.transferJobs)
+	a.rebuildTransferView()
 	a.updateTransferSummary()
 	var client rect
 	if r, _, _ := getClientRect.Call(a.hwnd, uintptr(unsafe.Pointer(&client))); r != 0 {
@@ -335,7 +344,7 @@ func (a *app) fillItemList(list uintptr, items []model.Item) {
 		if item.IsDirectory {
 			size = a.tr("type.folder")
 		}
-		columns := []string{item.Name, a.localizedItemType(item), size, formatTime(item.Modified)}
+		columns := []string{item.Name, size, a.localizedItemType(item), formatTime(item.Modified)}
 		if list == a.remoteList {
 			columns = append(columns, item.Permissions)
 		}

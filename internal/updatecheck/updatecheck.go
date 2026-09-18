@@ -210,14 +210,22 @@ func (v version) String() string {
 
 func (v version) compare(other version) int {
 	if v.major != other.major {
-		if v.major < other.major { return -1 }
+		if v.major < other.major {
+			return -1
+		}
 		return 1
 	}
 	if v.minor != other.minor {
-		if v.minor < other.minor { return -1 }
+		if v.minor < other.minor {
+			return -1
+		}
 		return 1
 	}
-	if v.patch < other.patch { return -1 }
-	if v.patch > other.patch { return 1 }
+	if v.patch < other.patch {
+		return -1
+	}
+	if v.patch > other.patch {
+		return 1
+	}
 	return 0
 }

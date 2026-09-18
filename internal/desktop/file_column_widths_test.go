@@ -49,11 +49,11 @@ func TestCompactLocalColumnsFitActualPane(t *testing.T) {
 
 func TestWidePaneRetainsDetailedColumnWidths(t *testing.T) {
 	remote := fileColumnWidths(720, true)
-	if remote[1] != 82 || remote[2] != 92 || remote[3] != 132 || remote[4] != 112 {
+	if remote[1] != 92 || remote[2] != 82 || remote[3] != 132 || remote[4] != 112 {
 		t.Fatalf("wide remote widths drifted: %v", remote)
 	}
 	local := fileColumnWidths(720, false)
-	if local[1] != 82 || local[2] != 92 || local[3] != 132 {
+	if local[1] != 92 || local[2] != 82 || local[3] != 132 {
 		t.Fatalf("wide local widths drifted: %v", local)
 	}
 }
