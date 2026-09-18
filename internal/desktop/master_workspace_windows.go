@@ -200,11 +200,13 @@ func (a *app) ensureMasterWorkspaceControls() {
 		a.masterRefresh = a.ensureMasterWorkspaceButton(hinst, idRefreshAll, a.tr("common.refresh"), iconRefresh, buttonSubtle)
 		a.masterNewFolder = a.ensureMasterWorkspaceButton(hinst, idWorkspaceNewFolder, a.tr("common.new_folder"), iconNewFolder, buttonDefault)
 		a.masterBookmarks = a.ensureMasterWorkspaceButton(hinst, idBookmarks, bookmarkWordsForLanguage(a.languageCode()).Title, iconOpenLocal, buttonDefault)
-		a.masterMore = a.ensureMasterWorkspaceButton(hinst, idWorkspaceMore, "Search", iconSearch, buttonSubtle)
+		a.masterMore = a.ensureMasterWorkspaceButton(hinst, idWorkspaceMore, "Search files, folders, or sites…    Ctrl+K", iconSearch, buttonSubtle)
 	}
 	a.setButtonLabel(a.masterRefresh, a.tr("common.refresh"))
 	a.setButtonLabel(a.masterNewFolder, a.tr("common.new_folder"))
 	a.setButtonLabel(a.masterBookmarks, bookmarkWordsForLanguage(a.languageCode()).Title)
+	a.setButtonLabel(a.masterMore, "Search files, folders, or sites…    Ctrl+K")
+	a.registerButtonVisual(a.masterMore, iconSearch, "Search files, folders, or sites…    Ctrl+K", buttonSubtle, false)
 	a.updateMasterToolbarState()
 }
 
@@ -266,72 +268,66 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		return
 	}
 
-	// Credentials are edited in Connections. The main workspace follows the
-	// approved reference: one compact site/status strip, a dedicated action bar,
-	// two equal file panes and a persistent transfer queue.
+	// The reference workspace keeps connection editing out of the file browser.
+	// Sites are selected from Connections; the file view stays dedicated to
+	// search, transfer actions and the two browsing panes.
 	showControls(false,
+		a.profilesCombo,
 		a.protocol, a.host, a.port, a.user, a.pass,
 		a.keyPath, a.chooseKey, a.passphrase,
 		a.saveProfile, a.removeProfile,
 	)
-	showControls(true, a.profilesCombo, a.connectionBadge, a.connect, a.disconnect)
+	showControls(true, a.connectionBadge, a.connect, a.disconnect)
 
-	// Top site/status strip.
-	topY, topH := 14, 36
-	badgeW := 176
-	profileW := contentWidth - badgeW - 12
-	if profileW > 720 {
-		profileW = 720
+	// Global search row. The search surface is a real button into the maintained
+	// per-pane filter engine and is also accessible with Ctrl+K.
+	searchY, searchH := 18, 40
+	badgeW := 246
+	searchW := contentWidth - badgeW - 18
+	if searchW < 420 {
+		searchW = 420
 	}
-	if profileW < 300 {
-		profileW = 300
-	}
-	a.move(a.profilesCombo, contentLeft, topY, profileW, topH)
-	a.move(a.connectionBadge, contentRight-badgeW, topY+7, badgeW, 22)
+	a.move(a.masterMore, contentLeft, searchY, searchW, searchH)
+	a.move(a.connectionBadge, contentRight-badgeW, searchY+8, badgeW, 24)
 
-	// Primary action bar mirrors the approved mockup: Connect, Disconnect,
-	// New Folder, Upload, Download, Refresh and Search.
-	toolbarY, toolbarH, gap := 62, 40, 8
+	// Primary action row follows the approved mockup.
+	toolbarY, toolbarH, gap := 68, 42, 9
 	fixed := []struct {
 		control uintptr
 		width   int
 	}{
-		{a.connect, 118},
-		{a.disconnect, 118},
-		{a.masterNewFolder, 126},
-		{a.upload, 108},
-		{a.download, 108},
-		{a.masterRefresh, 104},
+		{a.connect, 132},
+		{a.disconnect, 132},
+		{a.masterNewFolder, 138},
+		{a.upload, 116},
+		{a.download, 116},
+		{a.masterRefresh, 110},
 	}
 	x := contentLeft
 	for _, item := range fixed {
 		a.move(item.control, x, toolbarY, item.width, toolbarH)
 		x += item.width + gap
 	}
-	searchW := contentRight - x
-	if searchW < 150 {
-		searchW = 150
-	}
-	a.move(a.masterMore, x, toolbarY, searchW, toolbarH)
+	// The remaining horizontal space is deliberate breathing room, matching the
+	// reference rather than stretching one action into an oversized control.
 
-	// Main file area.
 	paneGap := 14
 	paneW := (contentWidth - paneGap) / 2
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
-	sectionY, pathY, actionY := 120, 148, 190
-	a.move(a.sectionLocal, leftX, sectionY, paneW, 22)
-	a.move(a.sectionRemote, rightX, sectionY, paneW, 22)
+	sectionY, pathY, actionY := 128, 158, 199
+	a.move(a.sectionLocal, leftX+8, sectionY, paneW-16, 22)
+	a.move(a.sectionRemote, rightX+8, sectionY, paneW-16, 22)
 
-	// Local breadcrumb controls: back / forward / up / path / choose.
-	miniW, miniGap := 36, 6
-	lx := leftX
+	// Local breadcrumb/navigation bar.
+	miniW, miniGap := 38, 6
+	lx := leftX + 8
 	for _, control := range []uintptr{a.masterBack, a.masterForward, a.localUp} {
 		a.move(control, lx, pathY, miniW, 34)
 		lx += miniW + miniGap
 	}
-	chooseW := 76
-	localPathW := leftX + paneW - lx - chooseW - miniGap
+	chooseW := 82
+	localPathW := leftX + paneW - 8 - lx - chooseW - miniGap
 	if localPathW < 120 {
 		localPathW = 120
 	}
@@ -339,52 +335,53 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	a.move(a.localChoose, lx+localPathW+miniGap, pathY, chooseW, 34)
 	showControls(false, a.localRefresh)
 
-	// Remote breadcrumb controls: up / path / refresh.
-	rx := rightX
+	// Remote breadcrumb/navigation bar.
+	rx := rightX + 8
 	a.move(a.remoteUp, rx, pathY, miniW, 34)
 	rx += miniW + miniGap
-	remoteRefreshW := 78
-	remotePathW := rightX + paneW - rx - remoteRefreshW - miniGap
+	remoteRefreshW := 84
+	remotePathW := rightX + paneW - 8 - rx - remoteRefreshW - miniGap
 	if remotePathW < 140 {
 		remotePathW = 140
 	}
 	a.move(a.remotePath, rx, pathY, remotePathW, 34)
 	a.move(a.remoteRefresh, rx+remotePathW+miniGap, pathY, remoteRefreshW, 34)
 
-	// Keep advanced real file operations visible in a compact utility row.
+	// Advanced operations stay present, but compact, so the polished layout does
+	// not remove Ghost FTP's real rename/delete/CHMOD/remote-edit capabilities.
 	actionGap := 6
 	localActions := []uintptr{a.localMkdir, a.localRename, a.localDelete}
-	localActionW := (paneW - actionGap*(len(localActions)-1)) / len(localActions)
-	lx = leftX
+	localActionW := (paneW - 16 - actionGap*(len(localActions)-1)) / len(localActions)
+	lx = leftX + 8
 	for _, control := range localActions {
 		a.move(control, lx, actionY, localActionW, 30)
 		lx += localActionW + actionGap
 	}
 	remoteActions := []uintptr{a.remoteMkdir, a.remoteRename, a.remoteDelete, remoteEditButton(a), a.remoteChmod}
-	remoteActionW := (paneW - actionGap*(len(remoteActions)-1)) / len(remoteActions)
-	rx = rightX
+	remoteActionW := (paneW - 16 - actionGap*(len(remoteActions)-1)) / len(remoteActions)
+	rx = rightX + 8
 	for _, control := range remoteActions {
 		a.move(control, rx, actionY, remoteActionW, 30)
 		rx += remoteActionW + actionGap
 	}
 
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 128, 184)
+	queueH := clampInt(height/5, 132, 188)
 	queueY := statusY - queueH - 10
 	queueButtonsY := queueY - 38
 	queueLabelY := queueButtonsY - 25
-	listY := actionY + 36
-	listBottom := queueLabelY - 12
+	listY := actionY + 38
+	listBottom := queueLabelY - 13
 	listH := listBottom - listY
 	if listH < 150 {
 		listH = 150
 	}
-	a.move(a.localList, leftX, listY, paneW, listH)
-	a.move(a.remoteList, rightX, listY, paneW, listH)
+	a.move(a.localList, leftX+8, listY, paneW-16, listH)
+	a.move(a.remoteList, rightX+8, listY, paneW-16, listH)
 
-	// Persistent transfer queue with real lifecycle actions.
-	a.move(a.sectionTransfers, contentLeft, queueLabelY, 190, 20)
-	a.move(a.transferSummary, contentLeft+190, queueLabelY, clampInt(contentWidth-190, 260, 620), 20)
+	// Persistent queue, always visible like the reference screen.
+	a.move(a.sectionTransfers, contentLeft+8, queueLabelY, 180, 20)
+	a.move(a.transferSummary, contentLeft+188, queueLabelY, clampInt(contentWidth-420, 240, 620), 20)
 	queueControls := []struct {
 		control uintptr
 		width   int
@@ -393,17 +390,17 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		{a.resumeQueue, 104},
 		{a.cancelJob, 98},
 		{a.retryJob, 98},
-		{a.clearQueue, 142},
+		{a.clearQueue, 144},
 	}
-	qx := contentRight
+	qx := contentRight - 8
 	for i := len(queueControls) - 1; i >= 0; i-- {
 		qx -= queueControls[i].width
 		a.move(queueControls[i].control, qx, queueButtonsY, queueControls[i].width, 31)
 		qx -= 7
 	}
-	a.move(a.transferList, contentLeft, queueY, contentWidth, queueH)
-	a.move(a.status, contentLeft, statusY, contentWidth-265, statusBandHeight)
-	a.move(a.statusVersion, contentRight-250, statusY, 250, statusBandHeight)
+	a.move(a.transferList, contentLeft+8, queueY, contentWidth-16, queueH)
+	a.move(a.status, contentLeft+8, statusY, contentWidth-280, statusBandHeight)
+	a.move(a.statusVersion, contentRight-258, statusY, 250, statusBandHeight)
 
 	a.updateMasterToolbarState()
 }
