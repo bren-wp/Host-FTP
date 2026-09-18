@@ -15,6 +15,11 @@ func (a *app) command(id int) {
 	// instead of falling back to English (for example Croatian "Otkaži").
 	platform.SetDialogActionLabels(okLabel(a.languageCode()), a.tr("common.cancel"))
 
+	if id >= idSidebarProfileBase && id < idSidebarProfileBase+maxSidebarProfiles {
+		a.selectSidebarProfile(id - idSidebarProfileBase)
+		return
+	}
+
 	switch id {
 	case idFilesNav:
 		a.focusFilesWorkspace()
