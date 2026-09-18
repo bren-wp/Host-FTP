@@ -171,8 +171,8 @@ func PromptDialogWithLabels(title, instruction, defaultValue, okLabel, cancelLab
 		wsBorder        = 0x00800000
 		bsDefPushButton = 0x00000001
 		ssEtchedHorz    = 0x00000010
-		clientWidth     = 600
-		clientHeight    = 210
+		clientWidth     = 640
+		clientHeight    = 242
 	)
 	owner := premiumDialogOwner()
 	dpi := premiumDialogDPI(owner)
@@ -201,6 +201,10 @@ func PromptDialogWithLabels(title, instruction, defaultValue, okLabel, cancelLab
 	if font != 0 {
 		defer promptDeleteObject.Call(font)
 	}
+	headingFont := premiumDialogFontForDPI(-20, dpi, 600)
+	if headingFont != 0 {
+		defer promptDeleteObject.Call(headingFont)
+	}
 
 	scale := func(value int) uintptr { return uintptr(premiumScale(value, dpi)) }
 	mk := func(class, text string, style uint32, x, y, w, h, id int, controlFont uintptr) uintptr {
@@ -221,14 +225,14 @@ func PromptDialogWithLabels(title, instruction, defaultValue, okLabel, cancelLab
 		return ch
 	}
 
-	mk("STATIC", instruction, 0, 28, 22, 544, 42, 0, font)
-	state.edit = mk("EDIT", defaultValue, wsBorder|wsTabStop|0x0080, 28, 72, 544, 32, promptIDEdit, font)
+	mk("STATIC", instruction, 0, 32, 24, 576, 52, 0, headingFont)
+	state.edit = mk("EDIT", defaultValue, wsBorder|wsTabStop|0x0080, 32, 92, 576, 36, promptIDEdit, font)
 	if state.edit != 0 {
 		promptSendMessageW.Call(state.edit, promptEMSetLimitText, 1024, 0)
 	}
-	mk("STATIC", "", ssEtchedHorz, 28, 120, 544, 2, 0, font)
-	mk("BUTTON", okLabel, wsTabStop|bsDefPushButton, 374, 140, 94, 36, promptIDOK, font)
-	mk("BUTTON", cancelLabel, wsTabStop, 478, 140, 94, 36, promptIDCancel, font)
+	mk("STATIC", "", ssEtchedHorz, 32, 150, 576, 2, 0, font)
+	mk("BUTTON", okLabel, wsTabStop|bsDefPushButton, 398, 172, 100, 38, promptIDOK, font)
+	mk("BUTTON", cancelLabel, wsTabStop, 508, 172, 100, 38, promptIDCancel, font)
 
 	promptSetFocus.Call(state.edit)
 	promptShowWindow.Call(hwnd, 5)
