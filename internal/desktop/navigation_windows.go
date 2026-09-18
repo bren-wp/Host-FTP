@@ -1,0 +1,27 @@
+//go:build windows
+
+package desktop
+
+const (
+	idFilesNav           = 700
+	idSiteManager        = 701
+	idTransferQueueNav   = 702
+	idDiagnostics        = 703
+	idWorkspaceBack      = 704
+	idWorkspaceForward   = 705
+	idWorkspaceNewFolder = 706
+	idWorkspaceMore      = 707
+)
+
+// nativeMenuWords remains as a narrow compatibility shim for one localization
+// call site. The native menu itself and its unused translated nouns are gone;
+// only the canonical connection-manager and diagnostics nouns are populated.
+// Internal Site Manager IDs/classes remain compatibility details; visible UI uses
+// the same Connections noun as the application rail.
+func nativeMenuWords(language string) [9]string {
+	labels := navigationLabelsForLanguage(language)
+	var words [9]string
+	words[5] = labels.Connections
+	words[8] = labels.Diagnostics
+	return words
+}

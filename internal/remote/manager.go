@@ -1,0 +1,588 @@
+package remote
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/bren-wp/Host-FTP/internal/config"
+	"github.com/bren-wp/Host-FTP/internal/model"
+	"github.com/bren-wp/Host-FTP/internal/profilebinding"
+	"github.com/bren-wp/Host-FTP/internal/security"
+)
+
+var (
+	ErrSessionClosing    = errors.New("prethodna veza se još sigurno zatvara")
+	ErrDisconnectTimeout = errors.New("sigurno zatvaranje veze još traje")
+)
+
+func nonNilContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
+
+func probePathForSession(s Session) string {
+	if s != nil && s.Protocol() == "sftp" {
+		return "."
+	}
+	return "/"
+}
+
+type sessionCloseState struct {
+	done chan struct{}
+	err  error
+}
+
+type Manager struct {
+	mu            sync.RWMutex
+	opMu          sync.Mutex
+	activeOps     sync.WaitGroup
+	session       Session
+	sessionCtx    context.Context
+	sessionCancel context.CancelFunc
+	closing       *sessionCloseState
+	cfg           model.ConnectionConfig
+	profiles      *config.Profiles
+	settings      *config.SettingsStore
+	dataDir       string
+	exePath       string
+	pendingTrust  pendingTrustState
+}
+
+type pendingTrustState struct {
+	endpointKey                          string
+	username                             string
+	keyPath                              string
+	fingerprint                          string
+	passwordBlob, passphraseBlob         string
+	ownsPasswordBlob, ownsPassphraseBlob bool
+	expires                              time.Time
+}
+
+func (p *pendingTrustState) forgetOwnedSecrets() {
+	if p == nil {
+		return
+	}
+	if p.ownsPasswordBlob {
+		security.ForgetProtectedSecret(p.passwordBlob)
+	}
+	if p.ownsPassphraseBlob {
+		security.ForgetProtectedSecret(p.passphraseBlob)
+	}
+	p.passwordBlob = ""
+	p.passphraseBlob = ""
+	p.ownsPasswordBlob = false
+	p.ownsPassphraseBlob = false
+}
+
+func NewManager(p *config.Profiles, settings *config.SettingsStore, dataDir, exePath string) *Manager {
+	return &Manager{profiles: p, settings: settings, dataDir: dataDir, exePath: exePath}
+}
+
+type resolvedConnection struct {
+	Config                               model.ConnectionConfig
+	PasswordBlob, PassphraseBlob         string
+	ownsPasswordBlob, ownsPassphraseBlob bool
+}
+
+func (r *resolvedConnection) forgetOwnedSecrets() {
+	if r == nil {
+		return
+	}
+	if r.ownsPasswordBlob {
+		security.ForgetProtectedSecret(r.PasswordBlob)
+		r.PasswordBlob = ""
+	}
+	if r.ownsPassphraseBlob {
+		security.ForgetProtectedSecret(r.PassphraseBlob)
+		r.PassphraseBlob = ""
+	}
+	r.ownsPasswordBlob = false
+	r.ownsPassphraseBlob = false
+}
+
+// transferResolvedSecretOwnershipToSFTP moves only process-owned protected
+// secret handles whose exact blob was accepted by the constructed SFTP session.
+// Borrowed profile blobs deliberately remain profile-owned.
+func transferResolvedSecretOwnershipToSFTP(resolved *resolvedConnection, s *SFTP) {
+	if resolved == nil || s == nil {
+		return
+	}
+	if resolved.ownsPasswordBlob && resolved.PasswordBlob != "" && s.passwordBlob == resolved.PasswordBlob {
+		s.ownsPasswordBlob = true
+		resolved.ownsPasswordBlob = false
+	}
+	if resolved.ownsPassphraseBlob && resolved.PassphraseBlob != "" && s.passphraseBlob == resolved.PassphraseBlob {
+		s.ownsPassphraseBlob = true
+		resolved.ownsPassphraseBlob = false
+	}
+}
+
+func transferResolvedSecretOwnershipToCurl(resolved *resolvedConnection, s *CurlFTP) {
+	if resolved == nil || s == nil {
+		return
+	}
+	if resolved.ownsPasswordBlob && resolved.PasswordBlob != "" && s.passwordBlob == resolved.PasswordBlob {
+		s.ownsPasswordBlob = true
+		resolved.ownsPasswordBlob = false
+	}
+}
+
+// sanitizeProtocolState removes fields that have no meaning outside SFTP.
+// Keeping dead key/trust state on FTP/FTPS connections can otherwise leak into
+// public runtime config and create false connection-identity boundaries.
+func sanitizeProtocolState(cfg model.ConnectionConfig) model.ConnectionConfig {
+	if !strings.EqualFold(strings.TrimSpace(cfg.Protocol), "sftp") {
+		cfg.PrivateKeyPath = ""
+		cfg.Passphrase = ""
+		cfg.Fingerprint = ""
+	}
+	return cfg
+}
+
+// mergeConnection koristi spremljeni profil samo kao početne connection podatke.
+// Polje privatnog ključa je autoritativno iz aktualnog UI unosa: prazna
+// vrijednost znači "bez privatnog ključa" i ne smije vratiti stari ključ.
+// Fingerprint je trust pin i obrađuje se zasebno prema identitetu endpointa.
+func mergeConnection(base model.ConnectionConfig, override model.ConnectionConfig) model.ConnectionConfig {
+	if override.Protocol != "" {
+		base.Protocol = override.Protocol
+	}
+	if override.Host != "" {
+		base.Host = override.Host
+	}
+	if override.Port != 0 {
+		base.Port = override.Port
+	}
+	if override.Username != "" {
+		base.Username = override.Username
+	}
+	base.PrivateKeyPath = override.PrivateKeyPath
+	base.Fingerprint = override.Fingerprint
+	base.Password = override.Password
+	base.Passphrase = override.Passphrase
+	return sanitizeProtocolState(base)
+}
+
+func profileEndpointMatches(profile model.Profile, cfg model.ConnectionConfig) bool {
+	return profile.ID != "" && profilebinding.EndpointMatches(
+		profile.Protocol, profile.Host, profile.Port,
+		cfg.Protocol, cfg.Host, cfg.Port,
+	)
+}
+
+func profileAccountMatches(profile model.Profile, cfg model.ConnectionConfig) bool {
+	return profile.ID != "" && profilebinding.AccountMatches(
+		profile.Protocol, profile.Host, profile.Port, profile.Username,
+		cfg.Protocol, cfg.Host, cfg.Port, cfg.Username,
+	)
+}
+
+func profilePrivateKeyMatches(profile model.Profile, cfg model.ConnectionConfig) bool {
+	return profile.ID != "" && profilebinding.PrivateKeyMatches(
+		profile.Protocol, profile.Host, profile.Port, profile.Username, profile.PrivateKeyPath,
+		cfg.Protocol, cfg.Host, cfg.Port, cfg.Username, cfg.PrivateKeyPath,
+	)
+}
+
+func (m *Manager) Resolve(profileID string, in model.ConnectionConfig) (resolvedConnection, model.Profile, error) {
+	in = sanitizeProtocolState(in)
+	var profile model.Profile
+	resolved := resolvedConnection{Config: in}
+	if profileID != "" {
+		p, err := m.profiles.Get(profileID)
+		if err != nil {
+			return resolved, profile, err
+		}
+		profile = p
+		resolved.Config = mergeConnection(model.ConnectionConfig{
+			Protocol: p.Protocol, Host: p.Host, Port: p.Port, Username: p.Username,
+		}, in)
+		// Durable profile credentials are converted to a short-lived runtime
+		// capability only for the exact matching account/key identity. On macOS
+		// this decrypts the Keychain-backed blob and immediately re-wraps it in
+		// the same-user runtime broker; other platforms preserve their existing
+		// borrowed protected-blob behavior.
+		if in.Password == "" && profileAccountMatches(p, resolved.Config) && p.PasswordBlob != "" {
+			resolved.PasswordBlob, resolved.ownsPasswordBlob, err = security.PersistentProfileSecretToRuntime(p.PasswordBlob)
+			if err != nil {
+				resolved.forgetOwnedSecrets()
+				return resolved, profile, err
+			}
+		}
+		if in.Passphrase == "" && profilePrivateKeyMatches(p, resolved.Config) && p.PassphraseBlob != "" {
+			resolved.PassphraseBlob, resolved.ownsPassphraseBlob, err = security.PersistentProfileSecretToRuntime(p.PassphraseBlob)
+			if err != nil {
+				resolved.forgetOwnedSecrets()
+				return resolved, profile, err
+			}
+		}
+	}
+	resolved.Config = sanitizeProtocolState(resolved.Config)
+	if resolved.Config.Protocol != "sftp" {
+		resolved.PassphraseBlob = ""
+		resolved.ownsPassphraseBlob = false
+	}
+	cfg := resolved.Config
+	if err := security.ValidateConnection(cfg.Protocol, cfg.Host, cfg.Username, cfg.Port); err != nil {
+		resolved.forgetOwnedSecrets()
+		return resolved, profile, err
+	}
+	if err := security.ValidateSecret(cfg.Password); err != nil {
+		resolved.forgetOwnedSecrets()
+		return resolved, profile, err
+	}
+	if err := security.ValidateSecret(cfg.Passphrase); err != nil {
+		resolved.forgetOwnedSecrets()
+		return resolved, profile, err
+	}
+	if cfg.Protocol == "sftp" && cfg.Fingerprint != "" {
+		if err := security.ValidateSFTPFingerprint(cfg.Fingerprint); err != nil {
+			resolved.forgetOwnedSecrets()
+			return resolved, profile, err
+		}
+	}
+	return resolved, profile, nil
+}
+
+type ConnectResult struct {
+	Connected     bool                  `json:"connected"`
+	RequiresTrust bool                  `json:"requiresTrust,omitempty"`
+	Fingerprint   string                `json:"fingerprint,omitempty"`
+	Diagnostics   ConnectionDiagnostics `json:"diagnostics"`
+}
+
+func (m *Manager) takePendingTrustLocked() pendingTrustState {
+	p := m.pendingTrust
+	m.pendingTrust = pendingTrustState{}
+	return p
+}
+
+func (m *Manager) clearPendingTrustLocked() {
+	p := m.takePendingTrustLocked()
+	p.forgetOwnedSecrets()
+}
+
+func (m *Manager) CancelPendingTrust() {
+	m.opMu.Lock()
+	defer m.opMu.Unlock()
+	m.clearPendingTrustLocked()
+}
+
+func (m *Manager) stashPendingTrust(cfg model.ConnectionConfig, resolved resolvedConnection, fingerprint string) error {
+	m.clearPendingTrustLocked()
+	passwordBlob := resolved.PasswordBlob
+	passphraseBlob := resolved.PassphraseBlob
+	ownsPasswordBlob := resolved.ownsPasswordBlob
+	ownsPassphraseBlob := resolved.ownsPassphraseBlob
+	var err error
+	if cfg.Password != "" {
+		passwordBlob, err = security.ProtectString(cfg.Password)
+		if err != nil {
+			return err
+		}
+		ownsPasswordBlob = true
+	}
+	if cfg.Passphrase != "" {
+		passphraseBlob, err = security.ProtectString(cfg.Passphrase)
+		if err != nil {
+			if ownsPasswordBlob {
+				security.ForgetProtectedSecret(passwordBlob)
+			}
+			return err
+		}
+		ownsPassphraseBlob = true
+	}
+	m.pendingTrust = pendingTrustState{
+		endpointKey:        profilebinding.EndpointKey(cfg.Protocol, cfg.Host, cfg.Port),
+		username:           cfg.Username,
+		keyPath:            cfg.PrivateKeyPath,
+		fingerprint:        fingerprint,
+		passwordBlob:       passwordBlob,
+		passphraseBlob:     passphraseBlob,
+		ownsPasswordBlob:   ownsPasswordBlob,
+		ownsPassphraseBlob: ownsPassphraseBlob,
+		expires:            time.Now().Add(2 * time.Minute),
+	}
+	return nil
+}
+
+func (m *Manager) applyPendingTrust(cfg model.ConnectionConfig, resolved *resolvedConnection, fingerprint string) {
+	p := m.takePendingTrustLocked()
+	defer p.forgetOwnedSecrets()
+	if resolved == nil || time.Now().After(p.expires) ||
+		p.endpointKey != profilebinding.EndpointKey(cfg.Protocol, cfg.Host, cfg.Port) ||
+		p.username != cfg.Username ||
+		!profilebinding.PrivateKeyPathMatches(p.keyPath, cfg.PrivateKeyPath) ||
+		p.fingerprint != fingerprint {
+		return
+	}
+	if cfg.Password == "" && p.passwordBlob != "" {
+		if resolved.ownsPasswordBlob {
+			security.ForgetProtectedSecret(resolved.PasswordBlob)
+		}
+		resolved.PasswordBlob = p.passwordBlob
+		resolved.ownsPasswordBlob = p.ownsPasswordBlob
+		p.ownsPasswordBlob = false
+	}
+	if cfg.Passphrase == "" && p.passphraseBlob != "" {
+		if resolved.ownsPassphraseBlob {
+			security.ForgetProtectedSecret(resolved.PassphraseBlob)
+		}
+		resolved.PassphraseBlob = p.passphraseBlob
+		resolved.ownsPassphraseBlob = p.ownsPassphraseBlob
+		p.ownsPassphraseBlob = false
+	}
+}
+
+func (m *Manager) Connect(ctx context.Context, profileID string, in model.ConnectionConfig, trust string, remember bool) (ConnectResult, error) {
+	ctx = nonNilContext(ctx)
+	m.opMu.Lock()
+	defer m.opMu.Unlock()
+
+	preservePendingTrust := false
+	defer func() {
+		if !preservePendingTrust {
+			m.clearPendingTrustLocked()
+		}
+	}()
+
+	m.mu.RLock()
+	alreadyConnected := m.session != nil
+	closing := m.closing != nil
+	m.mu.RUnlock()
+	if alreadyConnected {
+		return ConnectResult{}, errors.New("veza je već uspostavljena; prvo prekinite postojeću vezu")
+	}
+	if closing {
+		return ConnectResult{}, ErrSessionClosing
+	}
+
+	resolved, profile, err := m.Resolve(profileID, in)
+	if err != nil {
+		m.clearPendingTrustLocked()
+		return ConnectResult{}, err
+	}
+	defer func() { resolved.forgetOwnedSecrets() }()
+	cfg := resolved.Config
+	profileEndpoint := profileEndpointMatches(profile, cfg)
+	connectTimeout := m.settings.Effective().ConnectionTimeoutSeconds
+	if trust == "" {
+		m.clearPendingTrustLocked()
+	}
+	var s Session
+	if cfg.Protocol == "sftp" {
+		knownHostsDir := filepath.Join(m.dataDir, "known_hosts")
+		if err := security.EnsureNoRedirectDirectory(m.dataDir, knownHostsDir); err != nil {
+			return ConnectResult{}, errors.New("mapa SFTP sesije nije sigurna")
+		}
+		if runtime.GOOS == "windows" {
+			cleanupStaleSFTPArtifacts(knownHostsDir)
+		}
+		fp, keyLine, keyAlgorithm, err := ScanFingerprint(ctx, cfg.Host, cfg.Port, knownHostsDir)
+		if err != nil {
+			return ConnectResult{}, err
+		}
+		expected := strings.TrimSpace(cfg.Fingerprint)
+		if profileEndpoint && profile.Fingerprint != "" {
+			expected = profile.Fingerprint
+		}
+		if expected != "" && expected != fp {
+			return ConnectResult{}, errors.New("otisak SFTP host ključa se promijenio; veza je blokirana")
+		}
+		if expected == "" && trust == "" {
+			if err := m.stashPendingTrust(cfg, resolved, fp); err != nil {
+				return ConnectResult{}, err
+			}
+			// Ownership copied into pending trust must no longer be reclaimed by
+			// this Resolve result while the user verifies the fingerprint.
+			resolved.ownsPasswordBlob = false
+			resolved.ownsPassphraseBlob = false
+			preservePendingTrust = true
+			return ConnectResult{RequiresTrust: true, Fingerprint: fp}, nil
+		}
+		if trust != "" && trust != fp {
+			m.clearPendingTrustLocked()
+			return ConnectResult{}, errors.New("potvrđeni otisak SFTP ključa ne odgovara poslužitelju")
+		}
+		if trust != "" {
+			m.applyPendingTrust(cfg, &resolved, fp)
+		}
+		kh, err := writePrivateTempFile(knownHostsDir, ".GhostFTP-known-*.txt", []byte(keyLine))
+		if err != nil {
+			return ConnectResult{}, err
+		}
+		if remember && profileID != "" && profileEndpoint {
+			if err := m.profiles.UpdateFingerprint(profileID, fp); err != nil {
+				_ = os.Remove(kh)
+				return ConnectResult{}, err
+			}
+		}
+		hostKeyConstraint := hostKeyConstraintForScannedKey(keyAlgorithm)
+		sftpSession, err := newSFTPWithProtectedSecrets(cfg.Host, cfg.Port, cfg.Username, cfg.Password, resolved.PasswordBlob, cfg.PrivateKeyPath, cfg.Passphrase, resolved.PassphraseBlob, kh, hostKeyConstraint, m.exePath, connectTimeout)
+		if err != nil {
+			_ = os.Remove(kh)
+			return ConnectResult{}, err
+		}
+		transferResolvedSecretOwnershipToSFTP(&resolved, sftpSession)
+		s = sftpSession
+		cfg.Fingerprint = fp
+	} else {
+		curlSession, curlErr := newCurlFTPWithProtectedSecret(cfg.Protocol, cfg.Host, cfg.Port, cfg.Username, cfg.Password, resolved.PasswordBlob, connectTimeout)
+		if curlErr != nil {
+			return ConnectResult{}, curlErr
+		}
+		// A converted macOS saved credential must survive beyond the initial probe:
+		// every later FTP/FTPS operation asks CurlFTP to unlock the same runtime
+		// capability. Transfer ownership to the live session and release it on Close.
+		transferResolvedSecretOwnershipToCurl(&resolved, curlSession)
+		s = curlSession
+	}
+
+	cctx, cancel := context.WithTimeout(ctx, time.Duration(connectTimeout+5)*time.Second)
+	defer cancel()
+	initial, err := s.List(cctx, probePathForSession(s))
+	if err != nil {
+		_ = s.Close()
+		return ConnectResult{}, err
+	}
+	diagnostics := diagnoseConnection(s.Protocol(), initial)
+
+	publicCfg := cfg
+	publicCfg.Password = ""
+	publicCfg.Passphrase = ""
+
+	sessionCtx, sessionCancel := context.WithCancel(context.Background())
+	m.mu.Lock()
+	m.session = s
+	m.sessionCtx = sessionCtx
+	m.sessionCancel = sessionCancel
+	m.cfg = publicCfg
+	m.mu.Unlock()
+	return ConnectResult{Connected: true, Diagnostics: diagnostics}, nil
+}
+
+func waitForSessionClose(ctx context.Context, state *sessionCloseState) error {
+	if state == nil {
+		return nil
+	}
+	ctx = nonNilContext(ctx)
+	select {
+	case <-state.done:
+		return state.err
+	case <-ctx.Done():
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return context.Canceled
+		}
+		return ErrDisconnectTimeout
+	}
+}
+
+func (m *Manager) finishSessionClose(state *sessionCloseState, s Session) {
+	m.activeOps.Wait()
+	if s != nil {
+		state.err = s.Close()
+	}
+	m.mu.Lock()
+	if m.closing == state {
+		m.closing = nil
+	}
+	m.mu.Unlock()
+	close(state.done)
+}
+
+func (m *Manager) Disconnect(ctx context.Context) error {
+	ctx = nonNilContext(ctx)
+	m.opMu.Lock()
+	defer m.opMu.Unlock()
+	m.clearPendingTrustLocked()
+
+	m.mu.Lock()
+	if m.session == nil {
+		state := m.closing
+		m.mu.Unlock()
+		return waitForSessionClose(ctx, state)
+	}
+	s := m.session
+	cancel := m.sessionCancel
+	m.session = nil
+	m.sessionCtx = nil
+	m.sessionCancel = nil
+	m.cfg = model.ConnectionConfig{}
+	state := &sessionCloseState{done: make(chan struct{})}
+	m.closing = state
+	m.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+	go m.finishSessionClose(state, s)
+	return waitForSessionClose(ctx, state)
+}
+
+func (m *Manager) Probe(ctx context.Context) error {
+	s, opCtx, release, err := m.Operation(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	_, err = s.List(opCtx, probePathForSession(s))
+	return err
+}
+
+func (m *Manager) Operation(ctx context.Context) (Session, context.Context, func(), error) {
+	ctx = nonNilContext(ctx)
+	m.mu.RLock()
+	s := m.session
+	sessionCtx := m.sessionCtx
+	if s == nil || sessionCtx == nil {
+		m.mu.RUnlock()
+		return nil, nil, func() {}, errors.New("nije uspostavljena veza")
+	}
+	m.activeOps.Add(1)
+	m.mu.RUnlock()
+
+	opCtx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(sessionCtx, cancel)
+	var once sync.Once
+	release := func() {
+		once.Do(func() {
+			stop()
+			cancel()
+			m.activeOps.Done()
+		})
+	}
+	return s, opCtx, release, nil
+}
+
+func connectionIdentity(cfg model.ConnectionConfig) string {
+	cfg = sanitizeProtocolState(cfg)
+	material := fmt.Sprintf("%s\x00%s\x00%s", profilebinding.EndpointKey(cfg.Protocol, cfg.Host, cfg.Port), cfg.Username, cfg.Fingerprint)
+	sum := sha256.Sum256([]byte(material))
+	return hex.EncodeToString(sum[:])
+}
+
+func (m *Manager) ConnectionIdentity() (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.session == nil {
+		return "", errors.New("nije uspostavljena veza")
+	}
+	return connectionIdentity(m.cfg), nil
+}
+
+func (m *Manager) Config() (model.ConnectionConfig, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cfg, m.session != nil
+}

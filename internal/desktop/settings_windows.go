@@ -1,0 +1,281 @@
+//go:build windows
+
+package desktop
+
+import (
+	"strings"
+
+	"github.com/bren-wp/Host-FTP/internal/brand"
+	"github.com/bren-wp/Host-FTP/internal/config"
+	"github.com/bren-wp/Host-FTP/internal/i18n"
+	"github.com/bren-wp/Host-FTP/internal/model"
+	"github.com/bren-wp/Host-FTP/internal/platform"
+)
+
+func (a *app) loadSettings() {
+	a.goSafe(func() {
+		settings, err := a.engine.Settings()
+		a.dispatch(func() {
+			if err != nil {
+				a.setStatus(a.userMessage(err, "settings.load_failed"))
+				return
+			}
+			previousLanguage := a.languageCode()
+			a.settings = settings
+			// The controls were already created in the canonical startup locale.
+			// Reapplying the same locale used to refill every list, relayout every
+			// control and erase the whole client immediately after ShowWindow,
+			// producing a visible startup flash. Only rebuild localized UI when the
+			// persisted locale actually differs.
+			if a.languageCode() != previousLanguage {
+				a.applyLanguage(settings.Language)
+			}
+			a.updateActionControls()
+		})
+	})
+}
+
+func (a *app) setSettingsControlsEnabled(enabled bool) {
+	value := uintptr(0)
+	if enabled {
+		value = 1
+	}
+	for _, hwnd := range []uintptr{a.languageCombo, a.settingsBtn} {
+		if hwnd != 0 {
+			enableWindow.Call(hwnd, value)
+		}
+	}
+}
+
+func conflictPolicyIndex(settings model.Settings) int {
+	switch settings.ConflictPolicy {
+	case model.ConflictPolicySkip:
+		return 0
+	case model.ConflictPolicyReplace:
+		return 1
+	case model.ConflictPolicyReplaceBackup:
+		return 2
+	}
+	if settings.SkipExisting {
+		return 0
+	}
+	if settings.BackupBeforeOverwrite {
+		return 2
+	}
+	return 1
+}
+
+func applyConflictPolicySelection(settings *model.Settings, index int) {
+	if settings == nil {
+		return
+	}
+	switch index {
+	case 0:
+		settings.ConflictPolicy = model.ConflictPolicySkip
+		settings.SkipExisting = true
+		// Legacy consumers historically saw backup enabled together with skip.
+		// The backup flag has no effect because skip performs no overwrite.
+		settings.BackupBeforeOverwrite = true
+	case 1:
+		settings.ConflictPolicy = model.ConflictPolicyReplace
+		settings.SkipExisting = false
+		settings.BackupBeforeOverwrite = false
+	default:
+		settings.ConflictPolicy = model.ConflictPolicyReplaceBackup
+		settings.SkipExisting = false
+		settings.BackupBeforeOverwrite = true
+	}
+}
+
+func normalizeSettingsForPrompt(settings model.Settings) model.Settings {
+	defaults := config.DefaultSettings()
+	if settings.Appearance == "" {
+		settings.Appearance = defaults.Appearance
+	}
+	if settings.Parallelism < config.MinParallelism || settings.Parallelism > config.MaxParallelism {
+		settings.Parallelism = defaults.Parallelism
+	}
+	if settings.UploadLimitKiBPerSecond < config.MinBandwidthLimitKiBPerSecond || settings.UploadLimitKiBPerSecond > config.MaxBandwidthLimitKiBPerSecond {
+		settings.UploadLimitKiBPerSecond = defaults.UploadLimitKiBPerSecond
+	}
+	if settings.DownloadLimitKiBPerSecond < config.MinBandwidthLimitKiBPerSecond || settings.DownloadLimitKiBPerSecond > config.MaxBandwidthLimitKiBPerSecond {
+		settings.DownloadLimitKiBPerSecond = defaults.DownloadLimitKiBPerSecond
+	}
+	if settings.AutoRetryCount < config.MinAutoRetryCount || settings.AutoRetryCount > config.MaxAutoRetryCount {
+		settings.AutoRetryCount = defaults.AutoRetryCount
+	}
+	if settings.RetryDelaySeconds < config.MinRetryDelaySeconds || settings.RetryDelaySeconds > config.MaxRetryDelaySeconds {
+		settings.RetryDelaySeconds = defaults.RetryDelaySeconds
+	}
+	if settings.ConnectionTimeoutSeconds < config.MinConnectionTimeoutSeconds || settings.ConnectionTimeoutSeconds > config.MaxConnectionTimeoutSeconds {
+		settings.ConnectionTimeoutSeconds = defaults.ConnectionTimeoutSeconds
+	}
+	return settings
+}
+
+func settingsNumber(label string, value, min, max int, invalid string) platform.SettingsDialogNumber {
+	return platform.SettingsDialogNumber{
+		Label:       label,
+		Value:       value,
+		Min:         min,
+		Max:         max,
+		InvalidText: invalid,
+	}
+}
+
+func (a *app) openSettings() {
+	if a.connectionBusy {
+		return
+	}
+
+	settings := normalizeSettingsForPrompt(a.settings)
+	language := a.languageCode()
+	languages := i18n.Languages()
+	languageOptions := make([]string, 0, len(languages))
+	languageCodes := make([]string, 0, len(languages))
+	languageIndex := 0
+	for index, item := range languages {
+		label := item.NativeName
+		if item.EnglishName != "" && item.EnglishName != item.NativeName {
+			label += " — " + item.EnglishName
+		}
+		languageOptions = append(languageOptions, label)
+		languageCodes = append(languageCodes, item.Code)
+		if i18n.Normalize(item.Code) == i18n.Normalize(language) {
+			languageIndex = index
+		}
+	}
+	defaultLanguageIndex := 0
+	appearance := appearanceText(language)
+	conflict := conflictPolicyText(language)
+	bandwidth := bandwidthWordsForLanguage(language)
+	conflictOptions := []string{
+		conflict.Skip,
+		conflict.Replace,
+		conflict.ReplaceBackup,
+	}
+	defaults := config.DefaultSettings()
+	for index, code := range languageCodes {
+		if i18n.Normalize(code) == i18n.Normalize(defaults.Language) {
+			defaultLanguageIndex = index
+			break
+		}
+	}
+	defaultNumbers := []int{
+		defaults.Parallelism,
+		defaults.UploadLimitKiBPerSecond,
+		defaults.DownloadLimitKiBPerSecond,
+		defaults.ConnectionTimeoutSeconds,
+		defaults.AutoRetryCount,
+		defaults.RetryDelaySeconds,
+	}
+
+	parallelLabel := a.tr("settings.parallel")
+	timeoutLabel := a.tr("settings.timeout")
+	retriesLabel := a.tr("settings.retries")
+	retryDelayLabel := a.tr("settings.retry_delay")
+	result, ok := platform.SettingsDialog(platform.SettingsDialogConfig{
+		Title:             a.tr("settings.title"),
+		Heading:           brand.ProductName,
+		Intro:             a.tr("settings.title") + " · FTP • FTPS • SFTP",
+		LanguageLabel:     "Language",
+		LanguageOptions:   languageOptions,
+		LanguageIndex:     languageIndex,
+		AppearanceLabel:   appearance.Title,
+		AppearanceOptions: []string{appearance.Dark, appearance.Light},
+		AppearanceIndex:   appearanceIndex(settings.Appearance),
+		Numbers: []platform.SettingsDialogNumber{
+			settingsNumber(parallelLabel, settings.Parallelism, config.MinParallelism, config.MaxParallelism, parallelLabel+" "+a.tr("settings.enter_range", config.MinParallelism, config.MaxParallelism)),
+			settingsNumber(bandwidth.UploadLabel, settings.UploadLimitKiBPerSecond, config.MinBandwidthLimitKiBPerSecond, config.MaxBandwidthLimitKiBPerSecond, bandwidth.UploadLabel+" "+a.tr("settings.enter_range", config.MinBandwidthLimitKiBPerSecond, config.MaxBandwidthLimitKiBPerSecond)),
+			settingsNumber(bandwidth.DownloadLabel, settings.DownloadLimitKiBPerSecond, config.MinBandwidthLimitKiBPerSecond, config.MaxBandwidthLimitKiBPerSecond, bandwidth.DownloadLabel+" "+a.tr("settings.enter_range", config.MinBandwidthLimitKiBPerSecond, config.MaxBandwidthLimitKiBPerSecond)),
+			settingsNumber(timeoutLabel, settings.ConnectionTimeoutSeconds, config.MinConnectionTimeoutSeconds, config.MaxConnectionTimeoutSeconds, timeoutLabel+" "+a.tr("settings.enter_range", config.MinConnectionTimeoutSeconds, config.MaxConnectionTimeoutSeconds)),
+			settingsNumber(retriesLabel, settings.AutoRetryCount, config.MinAutoRetryCount, config.MaxAutoRetryCount, retriesLabel+" "+a.tr("settings.enter_range", config.MinAutoRetryCount, config.MaxAutoRetryCount)),
+			settingsNumber(retryDelayLabel, settings.RetryDelaySeconds, config.MinRetryDelaySeconds, config.MaxRetryDelaySeconds, retryDelayLabel+" "+a.tr("settings.enter_range", config.MinRetryDelaySeconds, config.MaxRetryDelaySeconds)),
+		},
+		ConflictLabel:          conflict.Title,
+		ConflictOptions:        conflictOptions,
+		ConflictIndex:          conflictPolicyIndex(settings),
+		ConfirmDelete:          a.tr("settings.confirm_delete_title"),
+		ConfirmDeleteOn:        settings.ConfirmDelete,
+		Footer:                 appearance.Hint,
+		ApplyLabel:             okLabel(language),
+		CancelLabel:            a.tr("common.cancel"),
+		ResetLabel:             settingsResetLabel(language),
+		UpdateLabel:            "Update",
+		DownloadLabel:          "Download latest",
+		PremiumLabel:           "Premium",
+		WebsiteLabel:           "Official website",
+		DefaultLanguageIndex:   defaultLanguageIndex,
+		DefaultAppearanceIndex: appearanceIndex(defaults.Appearance),
+		DefaultNumbers:         defaultNumbers,
+		DefaultConflictIndex:   conflictPolicyIndex(defaults),
+		DefaultConfirmDelete:   defaults.ConfirmDelete,
+	})
+	if result.Action != "" {
+		switch result.Action {
+		case "update":
+			a.checkForUpdates()
+		case "download":
+			a.openUpdateDownload()
+		case "premium":
+			a.openPremiumDownload()
+		case "website":
+			a.openOfficialWebsite()
+		}
+		return
+	}
+	if !ok || len(result.Numbers) != 6 {
+		return
+	}
+	if result.LanguageIndex >= 0 && result.LanguageIndex < len(languageCodes) {
+		settings.Language = languageCodes[result.LanguageIndex]
+	}
+	applyAppearanceSelection(&settings, result.AppearanceIndex)
+	settings.Parallelism = result.Numbers[0]
+	settings.UploadLimitKiBPerSecond = result.Numbers[1]
+	settings.DownloadLimitKiBPerSecond = result.Numbers[2]
+	settings.ConnectionTimeoutSeconds = result.Numbers[3]
+	settings.AutoRetryCount = result.Numbers[4]
+	settings.RetryDelaySeconds = result.Numbers[5]
+	applyConflictPolicySelection(&settings, result.ConflictIndex)
+	settings.ConfirmDelete = result.ConfirmDelete
+
+	title := a.tr("settings.title")
+	a.setSettingsControlsEnabled(false)
+	a.goSafe(func() {
+		saved, err := a.engine.SetSettings(settings)
+		a.dispatch(func() {
+			a.setSettingsControlsEnabled(true)
+			if err != nil {
+				platform.ErrorDialog(title, a.tr("settings.save_failed"), a.userMessage(err, "settings.save_failed_body"))
+				return
+			}
+			displayedLanguage := a.languageCode()
+			a.settings = saved
+			if i18n.Normalize(saved.Language) != displayedLanguage {
+				a.applyLanguage(saved.Language)
+			}
+			status := a.tr("settings.saved", saved.Parallelism, saved.ConnectionTimeoutSeconds, retrySummary(a, saved), overwriteSummary(a, saved))
+			if isDarkAppearance(saved.Appearance) != activeThemeIsDark() {
+				status += " · " + appearanceText(saved.Language).Hint
+			}
+			a.setStatus(status)
+			a.updateActionControls()
+		})
+	})
+}
+
+func (a *app) openAbout() {
+	// About is the only user-facing surface that carries author/publisher identity.
+	// All generic runtime, package and support metadata remains Ghost FTP-only.
+	aboutBody := strings.ReplaceAll(a.tr("about.body", brand.Website, aboutSupport), "GhostFTP", brand.ProductName)
+	body := aboutBody + "\n\n" +
+		aboutPublisher + " · " + aboutAuthorWebsite + "\n" +
+		"FTP • FTPS • SFTP  ·  " + brand.ProductName + " " + a.version
+	platform.InfoCardDialog(
+		brand.ProductName+" — "+a.tr("about.title"),
+		a.tr("about.heading"),
+		body,
+		okLabel(a.languageCode()),
+	)
+}
