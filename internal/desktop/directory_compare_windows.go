@@ -162,14 +162,23 @@ func (a *app) layoutDirectoryComparisonControls() {
 	}
 	localRect, localOK := recursiveSearchClientRect(a.hwnd, a.localList)
 	remoteRect, remoteOK := recursiveSearchClientRect(a.hwnd, a.remoteList)
-	centerRect, centerOK := recursiveSearchClientRect(a.hwnd, a.upload)
-	if !localOK || !remoteOK || !centerOK {
+	if !localOK || !remoteOK {
 		return
 	}
-	buttonH := a.scale(32)
-	gap := a.scale(8)
-	moveWindow.Call(state.compareButton, uintptr(centerRect.Left), uintptr(localRect.Top), uintptr(centerRect.Right-centerRect.Left), uintptr(buttonH), 1)
-	moveWindow.Call(state.openBothButton, uintptr(centerRect.Left), uintptr(int(localRect.Top)+buttonH+gap), uintptr(centerRect.Right-centerRect.Left), uintptr(buttonH), 1)
+
+	// The reference shows one compact circular transfer/sync bridge centered
+	// between Local Files and Remote Files.
+	centerX := (int(localRect.Right) + int(remoteRect.Left)) / 2
+	buttonW := a.scale(42)
+	buttonH := a.scale(42)
+	buttonX := centerX - buttonW/2
+	buttonY := int(localRect.Top) + a.scale(86)
+	moveWindow.Call(state.compareButton, uintptr(buttonX), uintptr(buttonY), uintptr(buttonW), uintptr(buttonH), 1)
+
+	if state.active {
+		openW := a.scale(112)
+		moveWindow.Call(state.openBothButton, uintptr(centerX-openW/2), uintptr(buttonY+buttonH+a.scale(8)), uintptr(openW), uintptr(a.scale(30)), 1)
+	}
 	moveWindow.Call(state.localList, uintptr(localRect.Left), uintptr(localRect.Top), uintptr(localRect.Right-localRect.Left), uintptr(localRect.Bottom-localRect.Top), 1)
 	moveWindow.Call(state.remoteList, uintptr(remoteRect.Left), uintptr(remoteRect.Top), uintptr(remoteRect.Right-remoteRect.Left), uintptr(remoteRect.Bottom-remoteRect.Top), 1)
 	a.updateDirectoryComparisonControls()
