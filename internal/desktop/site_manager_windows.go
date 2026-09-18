@@ -1141,10 +1141,6 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.refreshOptionsSummary()
 	state.refreshSyncOptions()
 	state.refillRecentConnections()
-	var client rect
-	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
-		state.layoutResponsive(parent.unscale(int(client.Right - client.Left)))
-	}
 	return nil
 }
 
@@ -1222,6 +1218,10 @@ func (a *app) openSiteManager() {
 	state.refillRecentConnections()
 	enableWindow.Call(a.hwnd, 0)
 	showWindow.Call(hwnd, swShow)
+	var siteClient rect
+	if ok, _, _ := getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&siteClient))); ok != 0 {
+		state.layoutResponsive(a.unscale(int(siteClient.Right - siteClient.Left)))
+	}
 	updateWindow.Call(hwnd)
 
 	var message msg
