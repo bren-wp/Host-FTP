@@ -198,6 +198,8 @@ type siteManagerState struct {
 	syncConfirm     uintptr
 	testConnection  uintptr
 	testing         bool
+	testCancel      context.CancelFunc
+	closeAfterTest  bool
 }
 
 var (
@@ -207,7 +209,19 @@ var (
 	siteManagerProc   = syscall.NewCallback(siteManagerWndProc)
 )
 
-func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		if value, ok := siteManagerStates.Load(hwnd); ok {
+			if state, ok := value.(*siteManagerState); ok && state != nil && state.parent != nil && !state.closed {
+				state.parent.setStatus("Connections recovered from an internal UI error.")
+			}
+		}
+		result = 0
+	}()
+
 	value, ok := siteManagerStates.Load(hwnd)
 	if ok {
 		state := value.(*siteManagerState)
@@ -373,9 +387,16 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			setBkColor.Call(wParam, panelColor())
 			return state.parent.panelBrush
 		case wmClose:
+			if state.testing {
+				state.closeAfterTest = true
+				state.cancelConnectionTest()
+				state.parent.setStatus("Cancelling connection test…")
+				return 0
+			}
 			destroyWindow.Call(hwnd)
 			return 0
 		case wmDestroy:
+			state.cancelConnectionTest()
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
 				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
@@ -625,6 +646,16 @@ func (state *siteManagerState) connectionDraft() (string, model.ConnectionConfig
 	}, nil
 }
 
+func (state *siteManagerState) cancelConnectionTest() {
+	if state == nil {
+		return
+	}
+	if state.testCancel != nil {
+		state.testCancel()
+		state.testCancel = nil
+	}
+}
+
 func (state *siteManagerState) setTesting(testing bool) {
 	if state == nil {
 		return
@@ -648,7 +679,13 @@ func (state *siteManagerState) finishConnectionTest(host string, err error) {
 	if state == nil || state.parent == nil || state.closed {
 		return
 	}
+	state.testCancel = nil
 	state.setTesting(false)
+	if state.closeAfterTest {
+		state.closeAfterTest = false
+		destroyWindow.Call(state.hwnd)
+		return
+	}
 	if err != nil {
 		state.parent.setStatus("Connection test failed")
 		platform.ErrorDialog(
@@ -673,6 +710,8 @@ func (state *siteManagerState) runConnectionTest(profileID string, cfg model.Con
 	host := cfg.Host
 	timeout := connectionTimeoutDuration(state.parent.settings)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.cancelConnectionTest()
+	state.testCancel = cancel
 	state.parent.goSafe(func() {
 		defer cancel()
 		result, err := state.parent.engine.Connect(ctx, profileID, cfg, fingerprint, false)
@@ -720,6 +759,8 @@ func (state *siteManagerState) testCurrentConnection() {
 
 	timeout := connectionTimeoutDuration(state.parent.settings)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.cancelConnectionTest()
+	state.testCancel = cancel
 	state.parent.goSafe(func() {
 		defer cancel()
 		result, connectErr := state.parent.engine.Connect(ctx, profileID, cfg, "", false)
