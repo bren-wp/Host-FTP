@@ -270,6 +270,23 @@ func taskDialogCall(title, instruction, content string, buttons uintptr) (int, b
 	return int(pressed), true
 }
 
+// ChoiceDialog presents a branded two-action decision surface. It is used when
+// the actions are verbs such as Import/Export rather than generic Yes/No.
+func ChoiceDialog(title, instruction, content, primaryLabel, secondaryLabel string) bool {
+	pressed, ok := decisionCardDialogWithLabels(
+		title,
+		instruction,
+		content,
+		decisionCardKindConfirm,
+		primaryLabel,
+		secondaryLabel,
+	)
+	if ok {
+		return pressed == decisionIDYes
+	}
+	return ConfirmDialog(title, instruction, content)
+}
+
 func ConfirmDialog(title, instruction, content string) bool {
 	if pressed, ok := decisionCardDialog(title, instruction, content, decisionCardKindConfirm); ok {
 		return pressed == decisionIDYes
