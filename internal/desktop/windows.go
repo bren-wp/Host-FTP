@@ -21,7 +21,7 @@ type app struct {
 	hwnd                                 uintptr
 	engine                               *api.Engine
 	version                              string
-	font, titleFont, smallFont, iconFont uintptr
+	font, titleFont, smallFont, iconFont, scriptFont uintptr
 	dpi                                  uint32
 	brush, panelBrush                    uintptr
 
@@ -43,6 +43,7 @@ type app struct {
 
 	siteManagerBtn         uintptr
 	sidebarBookmarkHeading uintptr
+	sidebarMotto           uintptr
 	sidebarProfileButtons  []uintptr
 
 	mu                   sync.Mutex
@@ -161,7 +162,7 @@ func Run(engine *api.Engine, version string) error {
 	if err := a.createControls(hinst); err != nil {
 		apps.Delete(hwnd)
 		destroyWindow.Call(hwnd)
-		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont} {
+		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
 			if f != 0 {
 				deleteObject.Call(f)
 			}
