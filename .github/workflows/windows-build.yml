@@ -109,7 +109,7 @@ jobs:
 
           go build -trimpath -buildvcs=false -ldflags $appLdflags -o $portable .\cmd\ghostftp
           if ($LASTEXITCODE -ne 0) { throw 'Portable.exe build failed.' }
-          python .\scripts\pe_resources.py $portable --ico .\build\icon.ico --version $version --role portable --original-filename "Ghost-FTP-$version-Portable.exe"
+          python .\scripts\pe_resources.py $portable --ico .\build\icon.ico --brand-ico .\build\brandmark.ico --version $version --role portable --original-filename "Ghost-FTP-$version-Portable.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Portable PE resource step failed.' }
 
           python .\scripts\make_payload.py --app $portable --output $payload
@@ -122,12 +122,12 @@ jobs:
           finally {
             Remove-Item -LiteralPath $payload -Force -ErrorAction SilentlyContinue
           }
-          python .\scripts\pe_resources.py $setup --ico .\build\icon.ico --version $version --role setup --original-filename "Ghost-FTP-$version-Setup.exe"
+          python .\scripts\pe_resources.py $setup --ico .\build\icon.ico --brand-ico .\build\brandmark.ico --version $version --role setup --original-filename "Ghost-FTP-$version-Setup.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Setup PE resource step failed.' }
 
           go build -trimpath -buildvcs=false -ldflags $appLdflags -o $updater .\cmd\updater
           if ($LASTEXITCODE -ne 0) { throw 'Update.exe build failed.' }
-          python .\scripts\pe_resources.py $updater --ico .\build\icon.ico --version $version --role updater --original-filename "Ghost-FTP-$version-Update.exe"
+          python .\scripts\pe_resources.py $updater --ico .\build\icon.ico --brand-ico .\build\brandmark.ico --version $version --role updater --original-filename "Ghost-FTP-$version-Update.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Updater PE resource step failed.' }
 
           foreach ($path in @($portable,$setup,$updater)) {
