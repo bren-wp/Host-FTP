@@ -148,6 +148,10 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 		case wmPaint:
 			state.paintReferenceConnections()
 			return 0
+		case wmSize:
+			width := state.parent.unscale(int(lParam & 0xffff))
+			state.layoutResponsive(width)
+			return 0
 		case wmCommand:
 			id := int(wParam & 0xffff)
 			notify := int((wParam >> 16) & 0xffff)
@@ -526,6 +530,22 @@ func (state *siteManagerState) refreshOptionsSummary() {
 	setText(state.options, text)
 }
 
+func (state *siteManagerState) layoutResponsive(width int) {
+	if state == nil || state.parent == nil {
+		return
+	}
+	if width > 0 && width < 1240 {
+		// On compact displays the full reference third column cannot physically
+		// fit. Keep the actual Settings action reachable in the center footer and
+		// hide read-only summaries that would otherwise sit off-screen.
+		showControls(false, state.options, state.securityInfo)
+		state.parent.move(state.settings, 504, 674, 146, 40)
+		return
+	}
+	showControls(true, state.options, state.securityInfo)
+	state.parent.move(state.settings, 1050, 674, 298, 40)
+}
+
 func (state *siteManagerState) createControls(hinst uintptr) error {
 	parent := state.parent
 	mk := func(class, text string, style uint32, x, y, width, height, id int) uintptr {
@@ -646,6 +666,10 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
+	var client rect
+	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
+		state.layoutResponsive(state.parent.unscale(int(client.Right - client.Left)))
+	}
 	_ = words
 	return nil
 }
