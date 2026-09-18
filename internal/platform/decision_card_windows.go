@@ -276,10 +276,10 @@ func decisionCardDialogWithLabels(title, instruction, content string, kind int, 
 	applyPremiumDialogWindow(hwnd)
 
 	state := &decisionCardState{
-		kind: kind,
-		primaryLabel: primaryLabel,
+		kind:           kind,
+		primaryLabel:   primaryLabel,
 		secondaryLabel: secondaryLabel,
-		customChoice: strings.TrimSpace(primaryLabel) != "" || strings.TrimSpace(secondaryLabel) != "",
+		customChoice:   strings.TrimSpace(primaryLabel) != "" || strings.TrimSpace(secondaryLabel) != "",
 	}
 	if kind == decisionCardKindConfirm {
 		state.result = decisionIDNo

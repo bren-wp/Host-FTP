@@ -18,12 +18,12 @@ import (
 )
 
 type app struct {
-	hwnd                                 uintptr
-	engine                               *api.Engine
-	version                              string
+	hwnd                                             uintptr
+	engine                                           *api.Engine
+	version                                          string
 	font, titleFont, smallFont, iconFont, scriptFont uintptr
-	dpi                                  uint32
-	brush, panelBrush                    uintptr
+	dpi                                              uint32
+	brush, panelBrush                                uintptr
 
 	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers               uintptr
 	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn                                   uintptr

@@ -67,10 +67,10 @@ const (
 	siteLBNSelChange        = 1
 	siteLBNDblClk           = 2
 	siteBSDefPushButton     = 0x00000001
-	siteBSAutoCheckBox       = 0x00000003
-	siteBMGetCheck           = 0x00F0
-	siteBMSetCheck           = 0x00F1
-	siteBSTChecked           = 1
+	siteBSAutoCheckBox      = 0x00000003
+	siteBMGetCheck          = 0x00F0
+	siteBMSetCheck          = 0x00F1
+	siteBSTChecked          = 1
 	siteWindowStyle         = 0x00C80000 // WS_CAPTION | WS_SYSMENU
 	siteWMCtlColorListBox   = 0x0134
 )
