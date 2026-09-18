@@ -21,6 +21,8 @@ import zlib
 ROOT = Path(__file__).resolve().parents[1]
 ICON_PNG = ROOT / "build" / "icon.png"
 ICON_ICO = ROOT / "build" / "icon.ico"
+BRANDMARK_PNG = ROOT / "build" / "brandmark.png"
+BRANDMARK_ICO = ROOT / "build" / "brandmark.ico"
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ICO_SIGNATURE = b"\x00\x00\x01\x00"
@@ -154,7 +156,34 @@ def _sample_reference_pixel(x: float, y: float) -> tuple[int, int, int, int]:
     return tile
 
 
-def _render_rgba(size: int) -> bytes:
+def _sample_brandmark_pixel(x: float, y: float) -> tuple[int, int, int, int]:
+    """Transparent in-app Ghost mark used beside the Ghost FTP wordmark."""
+    ghost = _inside_ghost(x, y)
+    if ghost:
+        color = _gradient(x, y)
+        if (
+            _inside_rotated_ellipse(x, y, 151.0, 92.0, 7.0, 12.0, 0.18)
+            or _inside_rotated_ellipse(x, y, 176.0, 99.0, 6.5, 11.0, 0.18)
+        ):
+            return TRANSPARENT
+        return color
+
+    if _inside_arrow(x, y, 139.0, 102.0, 10.0):
+        return _mix(CYAN, BLUE, min(1.0, max(0.0, (x - 54.0) / 102.0)))
+    if _inside_arrow(x, y, 164.0, 82.0, 8.0):
+        return _mix(BLUE, VIOLET, min(1.0, max(0.0, (x - 54.0) / 82.0)))
+
+    for cx, cy, r, color in (
+        (49.0, 139.0, 3.0, CYAN),
+        (42.0, 164.0, 2.8, BLUE),
+        (55.0, 184.0, 2.5, VIOLET),
+    ):
+        if _inside_ellipse(x, y, cx, cy, r, r):
+            return color
+    return TRANSPARENT
+
+
+def _render_rgba(size: int, sampler=_sample_reference_pixel) -> bytes:
     scale = CANVAS / float(size)
     ss = SUPERSAMPLE
     out = bytearray(size * size * 4)
@@ -165,7 +194,7 @@ def _render_rgba(size: int) -> bytes:
                 for sx in range(ss):
                     x = (px + (sx + 0.5) / ss) * scale
                     y = (py + (sy + 0.5) / ss) * scale
-                    sample = _sample_reference_pixel(x, y)
+                    sample = sampler(x, y)
                     for i, value in enumerate(sample):
                         accum[i] += value
             base = (py * size + px) * 4
@@ -184,8 +213,8 @@ def _png_chunk(kind: bytes, payload: bytes) -> bytes:
     )
 
 
-def _png_bytes(size: int) -> bytes:
-    rgba = _render_rgba(size)
+def _png_bytes(size: int, sampler=_sample_reference_pixel) -> bytes:
+    rgba = _render_rgba(size, sampler)
     scanlines = bytearray()
     stride = size * 4
     for row in range(size):
@@ -201,9 +230,9 @@ def _png_bytes(size: int) -> bytes:
     )
 
 
-def _ico_bytes() -> bytes:
+def _ico_bytes(sampler=_sample_reference_pixel) -> bytes:
     sizes = (16, 24, 32, 48, 64, 96, 128, 256)
-    images = [_png_bytes(size) for size in sizes]
+    images = [_png_bytes(size, sampler) for size in sizes]
     header = ICO_SIGNATURE + struct.pack("<H", len(images))
     directory = bytearray()
     offset = 6 + len(images) * 16
@@ -221,6 +250,8 @@ def materialize() -> None:
     ICON_PNG.parent.mkdir(parents=True, exist_ok=True)
     ICON_PNG.write_bytes(_png_bytes(256))
     ICON_ICO.write_bytes(_ico_bytes())
+    BRANDMARK_PNG.write_bytes(_png_bytes(256, _sample_brandmark_pixel))
+    BRANDMARK_ICO.write_bytes(_ico_bytes(_sample_brandmark_pixel))
 
 
 def require_file(path: Path, minimum_size: int = 1) -> bytes:
@@ -239,6 +270,12 @@ def validate() -> None:
     ico = require_file(ICON_ICO, 1024)
     if not ico.startswith(ICO_SIGNATURE):
         raise ValueError("build/icon.ico is not a valid Windows icon asset")
+    brandmark_png = require_file(BRANDMARK_PNG, 1024)
+    if not brandmark_png.startswith(PNG_SIGNATURE):
+        raise ValueError("build/brandmark.png is not a valid PNG asset")
+    brandmark_ico = require_file(BRANDMARK_ICO, 1024)
+    if not brandmark_ico.startswith(ICO_SIGNATURE):
+        raise ValueError("build/brandmark.ico is not a valid Windows icon asset")
     if (ROOT / "GhostFTP WEB").exists():
         raise ValueError("retired Web/PWA application surface is present")
 
