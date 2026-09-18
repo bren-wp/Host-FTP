@@ -126,6 +126,8 @@ func (state *siteManagerState) paintReferenceConnections() {
 	// transfer/safety options, and saved sites.
 	state.parent.drawReferenceCard(hdc, 12, 12, 220, 818, 18, panelColor(), borderColor())
 	state.parent.drawReferenceCard(hdc, 244, 44, 654, 770, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 908, 44, 300, 770, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 1222, 44, 354, 770, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 908, 44, 300, 510, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 1222, 516, 354, 298, 16, panelColor(), borderColor())
 }
