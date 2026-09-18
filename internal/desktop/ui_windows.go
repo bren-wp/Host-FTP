@@ -142,7 +142,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.clearQueue = mkButton(a.tr("transfer.clear"), iconClear, buttonSubtle, idClearQueue)
 	a.transferList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
 	a.status = mk("STATIC", "", 0, idStatus)
-	a.statusVersion = mk("STATIC", brand.ProductName+" "+a.version+"  •  "+brand.Company, 0, 0)
+	a.statusVersion = mk("STATIC", brand.ProductName+" "+a.version+"  •  FTP • FTPS • SFTP", 0, 0)
 	a.transferSummary = mk("STATIC", a.tr("transfer.summary", 0, 0, 0), 0, 0)
 	setFont(a.status, a.smallFont)
 	setFont(a.statusVersion, a.smallFont)
@@ -270,7 +270,7 @@ func (a *app) defaultFontControls() []uintptr {
 		a.localPath, a.localUp, a.localRefresh, a.localChoose, a.localList, a.localMkdir, a.localRename, a.localDelete,
 		a.remotePath, a.remoteUp, a.remoteRefresh, a.remoteList, a.remoteMkdir, a.remoteRename, a.remoteDelete, remoteEditButton(a), a.remoteChmod,
 		a.upload, a.download, a.transferList, a.pauseQueue, a.resumeQueue, a.cancelJob, a.retryJob, a.clearQueue,
-		a.masterBack, a.masterForward, a.masterRefresh, a.masterNewFolder, a.masterBookmarks, a.masterMore,
+		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward, a.masterRefresh, a.masterNewFolder, a.masterBookmarks, a.masterMore,
 	}
 }
 
