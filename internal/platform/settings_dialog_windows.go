@@ -136,6 +136,7 @@ var (
 	settingsSelectObject    = premiumGdi32.NewProc("SelectObject")
 	settingsRoundRect       = premiumGdi32.NewProc("RoundRect")
 	settingsSetBkMode       = premiumGdi32.NewProc("SetBkMode")
+	settingsRtlMoveMemory   = syscall.NewLazyDLL("kernel32.dll").NewProc("RtlMoveMemory")
 )
 
 type settingsDrawItemStruct struct {
@@ -148,6 +149,18 @@ type settingsDrawItemStruct struct {
 	HDC        uintptr
 	RcItem     premiumRect
 	ItemData   uintptr
+}
+
+func settingsDrawItemFromLParam(lParam uintptr) settingsDrawItemStruct {
+	var item settingsDrawItemStruct
+	if lParam != 0 {
+		settingsRtlMoveMemory.Call(
+			uintptr(unsafe.Pointer(&item)),
+			lParam,
+			unsafe.Sizeof(item),
+		)
+	}
+	return item
 }
 
 func settingsDrawButton(dis *settingsDrawItemStruct) bool {
@@ -328,8 +341,8 @@ func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (resu
 			}
 		case settingsWMDrawItem:
 			if lParam != 0 {
-				dis := (*settingsDrawItemStruct)(unsafe.Pointer(lParam))
-				if settingsDrawButton(dis) {
+				dis := settingsDrawItemFromLParam(lParam)
+				if settingsDrawButton(&dis) {
 					return 1
 				}
 			}
