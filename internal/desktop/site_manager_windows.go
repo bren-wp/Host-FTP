@@ -746,7 +746,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		return hwnd
 	}
 	nav := func(id int, text, icon string, active bool) uintptr {
-		variant := buttonSubtle
+		variant := buttonNav
 		if active {
 			variant = buttonNavActive
 		}
@@ -790,52 +790,63 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 
 	// Main connection card.
 	heading("New Connection", 262, 54, 420)
-	label("Connection Name", 262, 98, 220)
-	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 120, 618, 34, siteIDName)
+	state.quickConnectTab = parent.registerButton(mk("BUTTON", "Quick Connect", wsTabStop|bsOwnerDraw, 262, 96, 150, 40, siteIDQuickConnect), iconConnect, "Quick Connect", buttonNavActive)
+	state.siteManagerTab = parent.registerButton(mk("BUTTON", "Site Manager", wsTabStop|bsOwnerDraw, 420, 96, 150, 40, siteIDSiteManagerTab), iconOpenLocal, "Site Manager", buttonNav)
+	state.importExportTab = parent.registerButton(mk("BUTTON", "Import / Export", wsTabStop|bsOwnerDraw, 578, 96, 164, 40, siteIDImportExport), iconUpload, "Import / Export", buttonNav)
 
-	label(parent.tr("terminal.protocol"), 262, 170, 150)
-	label("Host / Address", 502, 170, 190)
-	label(parent.tr("terminal.port"), 796, 170, 70)
-	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 192, 224, 240, siteIDProtocol)
+	label("Connection Name", 262, 148, 220)
+	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 170, 618, 34, siteIDName)
+
+	label(parent.tr("terminal.protocol"), 262, 216, 150)
+	label("Host / Address", 502, 216, 190)
+	label(parent.tr("terminal.port"), 796, 216, 70)
+	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 238, 224, 240, siteIDProtocol)
 	for _, spec := range protocolSpecs {
 		sendMessageW.Call(state.protocol, cbAddString, 0, uintptr(unsafe.Pointer(wstr(protocolLabel(parent.languageCode(), spec.Value)))))
 	}
-	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 192, 278, 34, siteIDHost)
-	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 192, 84, 34, siteIDPort)
+	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 238, 278, 34, siteIDHost)
+	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 238, 84, 34, siteIDPort)
 
-	label(parent.tr("terminal.username"), 262, 244, 260)
-	label(parent.tr("terminal.password"), 578, 244, 260)
-	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 266, 300, 34, siteIDUser)
-	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 266, 302, 34, siteIDPassword)
+	label(parent.tr("terminal.username"), 262, 290, 260)
+	label(parent.tr("terminal.password"), 578, 290, 260)
+	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 312, 300, 34, siteIDUser)
+	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 312, 302, 34, siteIDPassword)
 
-	label(sitePathLabel(parent.languageCode(), false), 262, 318, 260)
-	label(sitePathLabel(parent.languageCode(), true), 578, 318, 260)
-	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 340, 300, 34, siteIDLocal)
-	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 340, 302, 34, siteIDRemote)
+	label(sitePathLabel(parent.languageCode(), false), 262, 364, 260)
+	label(sitePathLabel(parent.languageCode(), true), 578, 364, 260)
+	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 386, 300, 34, siteIDLocal)
+	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 386, 302, 34, siteIDRemote)
 
-	label(parent.tr("terminal.private_key"), 262, 392, 260)
-	label(parent.tr("cue.passphrase"), 646, 392, 210)
-	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 414, 368, 34, siteIDKey)
-	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 414, 234, 34, siteIDPassphrase)
+	label(parent.tr("terminal.private_key"), 262, 438, 260)
+	label(parent.tr("cue.passphrase"), 646, 438, 210)
+	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 460, 368, 34, siteIDKey)
+	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 460, 234, 34, siteIDPassphrase)
 
-	label(cleanConnectionSecurityTitle(parent.tr("sftp.security")), 262, 466, 618)
-	state.security = mk("STATIC", "", wsBorder, 262, 488, 618, 82, siteIDSecurity)
+	label(cleanConnectionSecurityTitle(parent.tr("sftp.security")), 262, 512, 618)
+	state.security = mk("STATIC", "", wsBorder, 262, 534, 618, 72, siteIDSecurity)
 
-	label("PROFILE BEHAVIOR", 262, 590, 618)
+	label("PROFILE BEHAVIOR", 262, 618, 618)
 	profileNote := "Quick Connect uses credentials only for this session. Saving a profile asks before secrets are stored in the protected Windows credential layer."
-	mk("STATIC", profileNote, 0, 262, 614, 618, 52, 0)
+	mk("STATIC", profileNote, 0, 262, 642, 618, 48, 0)
 
 	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 262, 738, 160, 42, siteIDSave), iconSave, "Save as Profile", buttonDefault)
 	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 738, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
 	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 738, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
 
-	// Transfer & Sync settings card uses real persisted settings.
+	// Transfer & Sync settings card uses real persisted settings and real presets.
 	heading("Transfer & Sync Options", 924, 54, 270)
-	label("ACTIVE TRANSFER SETTINGS", 926, 100, 262)
-	state.options = mk("STATIC", "", wsBorder, 926, 124, 264, 330, 0)
-	label("SECURITY", 926, 472, 264)
-	securityText := "SFTP host-key verification and FTPS certificate verification are enforced by the protocol engine. Saved secrets use the protected Windows credential layer."
-	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 496, 264, 142, 0)
+	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 96, 86, 38, siteIDPresetsTab), iconSave, "Presets", buttonNavActive)
+	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 96, 82, 38, siteIDSyncTab), iconSync, "Sync", buttonNav)
+	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 96, 84, 38, siteIDAutomationTab), iconSettings, "Automation", buttonNav)
+	state.presetStandard = parent.registerButton(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 150, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", buttonNavActive)
+	state.presetWebsite = parent.registerButton(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 216, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", buttonNav)
+	state.presetBackup = parent.registerButton(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 282, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", buttonNav)
+	state.presetMedia = parent.registerButton(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 348, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", buttonNav)
+	label("ACTIVE TRANSFER SETTINGS", 926, 422, 262)
+	state.options = mk("STATIC", "", wsBorder, 926, 446, 264, 178, 0)
+	label("SECURITY", 926, 638, 264)
+	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain in the protected Windows credential layer."
+	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 662, 264, 62, 0)
 	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
 	// Saved Sites card on the right, matching the approved reference.
@@ -856,7 +867,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-		state.globalSearch,
+		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 	} {
 		if control == 0 {
 			return fmt.Errorf("Connections control initialization failed")
