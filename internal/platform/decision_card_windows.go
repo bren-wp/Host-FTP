@@ -42,6 +42,7 @@ type decisionCardState struct {
 	closed         bool
 	primaryLabel   string
 	secondaryLabel string
+	customChoice   bool
 }
 
 type decisionCardLayout struct {
@@ -182,8 +183,16 @@ func decisionCardWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) u
 					state.result = decisionIDYes
 					promptDestroyWindow.Call(hwnd)
 					return 0
-				case decisionIDNo, promptIDCancel:
+				case decisionIDNo:
 					state.result = decisionIDNo
+					promptDestroyWindow.Call(hwnd)
+					return 0
+				case promptIDCancel:
+					if state.customChoice {
+						state.result = 0
+					} else {
+						state.result = decisionIDNo
+					}
 					promptDestroyWindow.Call(hwnd)
 					return 0
 				}
@@ -203,7 +212,11 @@ func decisionCardWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) u
 			return premiumDialogControlColor(wParam)
 		case promptWMClose:
 			if state.kind == decisionCardKindConfirm {
-				state.result = decisionIDNo
+				if state.customChoice {
+					state.result = 0
+				} else {
+					state.result = decisionIDNo
+				}
 			} else {
 				state.result = promptIDOK
 			}
@@ -262,7 +275,12 @@ func decisionCardDialogWithLabels(title, instruction, content string, kind int, 
 	}
 	applyPremiumDialogWindow(hwnd)
 
-	state := &decisionCardState{kind: kind, primaryLabel: primaryLabel, secondaryLabel: secondaryLabel}
+	state := &decisionCardState{
+		kind: kind,
+		primaryLabel: primaryLabel,
+		secondaryLabel: secondaryLabel,
+		customChoice: strings.TrimSpace(primaryLabel) != "" || strings.TrimSpace(secondaryLabel) != "",
+	}
 	if kind == decisionCardKindConfirm {
 		state.result = decisionIDNo
 	} else {
