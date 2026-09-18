@@ -19,9 +19,9 @@ var (
 	loadImageW       = user32.NewProc("LoadImageW")
 )
 
-// ensureBrandLogo reuses the canonical PE icon that is already shipped in the
-// Setup and Portable binaries. Keeping the workspace mark tied to resource 1
-// prevents a second logo source from drifting away from build/icon.ico.
+// ensureBrandLogo uses dedicated PE icon group 2: the transparent Ghost mark
+// designed to sit beside the wordmark. Group 1 remains the rounded-square
+// Windows application icon used by Explorer and the taskbar.
 func (a *app) ensureBrandLogo() uintptr {
 	if a == nil || a.hwnd == 0 {
 		return 0
@@ -34,11 +34,11 @@ func (a *app) ensureBrandLogo() uintptr {
 
 	hinst, _, _ := getModuleHandleW.Call(0)
 	iconSize := a.scale(48)
-	icon, _, _ := loadImageW.Call(hinst, 1, imageIcon, uintptr(iconSize), uintptr(iconSize), lrShared)
+	icon, _, _ := loadImageW.Call(hinst, 2, imageIcon, uintptr(iconSize), uintptr(iconSize), lrShared)
 	if icon == 0 {
 		// LoadIcon returns a shared icon resource too, so neither path requires
 		// Ghost FTP to destroy a handle that Windows owns.
-		icon, _, _ = loadIconW.Call(hinst, 1)
+		icon, _, _ = loadIconW.Call(hinst, 2)
 	}
 	if icon == 0 {
 		return 0
