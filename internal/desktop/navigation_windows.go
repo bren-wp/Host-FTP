@@ -12,6 +12,8 @@ const (
 	idWorkspaceNewFolder = 706
 	idWorkspaceMore      = 707
 	idQueueNav           = 708
+	idSidebarProfileBase = 9200
+	maxSidebarProfiles   = 5
 )
 
 // nativeMenuWords remains as a narrow compatibility shim for one localization
