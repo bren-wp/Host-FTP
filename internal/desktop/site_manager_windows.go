@@ -907,14 +907,23 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	if state == nil || state.parent == nil {
 		return
 	}
-	const fullReferenceWidth = 1580
-	compact := width > 0 && width < fullReferenceWidth
+	var client rect
+	height := 0
+	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
+		height = state.parent.unscale(int(client.Bottom - client.Top))
+	}
+
+	const (
+		fullReferenceWidth  = 1580
+		fullReferenceHeight = 820
+	)
+	compact := (width > 0 && width < fullReferenceWidth) || (height > 0 && height < fullReferenceHeight)
 	if compact {
 		// Preserve a complete, usable connection editor on smaller displays. Every
 		// optional side-card control and heading is hidden together so no orphaned
-		// labels or clipped reference chrome remain visible.
+		// labels, overlapping buttons or clipped reference chrome remain visible.
 		showControls(false,
-			state.privacyLabel,
+			state.privacyLabel, state.brandHero, state.settings,
 			state.transferHeading, state.syncHeading, state.savedHeading, state.recentHeading,
 			state.activeLabel, state.securityLabel, state.savedLabel, state.recentLabel,
 			state.presetsTab, state.syncTab, state.automationTab,
@@ -923,12 +932,24 @@ func (state *siteManagerState) layoutResponsive(width int) {
 			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 		)
 		state.parent.move(state.globalSearch, 560, 18, 320, 38)
-		state.parent.move(state.settings, 720, 738, 160, 42)
+		actionY := 738
+		if height > 0 {
+			actionY = height - 54
+			if actionY < 690 {
+				actionY = 690
+			}
+			if actionY > 738 {
+				actionY = 738
+			}
+		}
+		state.parent.move(state.save, 262, actionY, 160, 42)
+		state.parent.move(state.close, 500, actionY, 132, 42)
+		state.parent.move(state.connect, 646, actionY, 234, 42)
 		invalidateRect.Call(state.hwnd, 0, 1)
 		return
 	}
 	showControls(true,
-		state.privacyLabel,
+		state.privacyLabel, state.brandHero, state.settings,
 		state.transferHeading, state.syncHeading, state.savedHeading, state.recentHeading,
 		state.activeLabel, state.securityLabel, state.savedLabel, state.recentLabel,
 		state.presetsTab, state.syncTab, state.automationTab,
@@ -938,6 +959,9 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 738, 264, 42)
+	state.parent.move(state.save, 262, 738, 160, 42)
+	state.parent.move(state.close, 500, 738, 132, 42)
+	state.parent.move(state.connect, 646, 738, 234, 42)
 	invalidateRect.Call(state.hwnd, 0, 1)
 }
 
