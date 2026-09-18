@@ -122,6 +122,14 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Run Windows test suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go telemetry off
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Windows test suite failed.' }
+
       - name: Generate canonical Ghost FTP brand assets
         shell: pwsh
         run: |
@@ -179,6 +187,13 @@ jobs:
             ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
             Set-Content -LiteralPath dist\SHA256.txt -Encoding ascii
 
+      - name: Capture authentic reference UI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          .\scripts\capture_reference_windows.ps1 -Executable "dist\Ghost-FTP-$version-Portable.exe" -OutputDirectory ui-screenshots
+
       - name: Package exact source tree
         shell: pwsh
         run: |
@@ -231,3 +246,4 @@ jobs:
             dist/Ghost-FTP-*-Portable.exe
             dist/Ghost-FTP-*-Source.zip
             dist/SHA256.txt
+            ui-screenshots/*.png
