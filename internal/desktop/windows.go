@@ -53,6 +53,7 @@ type app struct {
 	transferViewJobs     []model.TransferJob
 	transferViewFilter   string
 	profiles             []model.PublicProfile
+	recentConnections    []recentConnectionEntry
 	settings             model.Settings
 	localCurrent         string
 	remoteCurrent        string
