@@ -227,7 +227,7 @@ func Run(engine *api.Engine, version string) error {
 		dispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
 	apps.Delete(hwnd)
-	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont} {
+	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
 		if f != 0 {
 			deleteObject.Call(f)
 		}
