@@ -47,7 +47,7 @@ jobs:
 
           $textExtensions = @('.go','.mod','.py','.ps1','.sh','.md','.txt','.json','.yml','.yaml','.toml')
           Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Recurse -File |
-            Where-Object { $_.Extension -in $textExtensions -and $_.FullName -notmatch '\\.git\\' } |
+            Where-Object { $_.Extension -in $textExtensions -and $_.FullName -notmatch '\\.git\\' -and $_.FullName -notmatch '\\.github\\' } |
             ForEach-Object {
               $content = [IO.File]::ReadAllText($_.FullName)
               $updated = $content.Replace('github.com/bren-wp/Ghost-FTP','github.com/bren-wp/Host-FTP')
@@ -217,6 +217,7 @@ jobs:
           git add -A
           git commit -m 'Ghost FTP 0.1.0 Windows source and approved reference UI baseline'
           git push origin HEAD:${{ github.ref_name }}
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to push bootstrapped Host-FTP source.' }
           Write-Host 'SOURCE_COMMIT=PUSHED'
 
       - name: Upload Windows deliverables
