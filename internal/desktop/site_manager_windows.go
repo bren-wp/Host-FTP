@@ -578,16 +578,16 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	if state == nil || state.parent == nil {
 		return
 	}
-	if width > 0 && width < 1240 {
-		// On compact displays the full reference third column cannot physically
-		// fit. Keep the actual Settings action reachable in the center footer and
-		// hide read-only summaries that would otherwise sit off-screen.
-		showControls(false, state.options, state.securityInfo)
-		state.parent.move(state.settings, 504, 674, 146, 40)
+	if width > 0 && width < 1380 {
+		// The approved four-column view needs desktop width. On smaller work areas
+		// keep all connection editing actions reachable and collapse only the
+		// read-only transfer/safety and saved-site side cards.
+		showControls(false, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
+		state.parent.move(state.settings, 500, 690, 160, 38)
 		return
 	}
-	showControls(true, state.options, state.securityInfo)
-	state.parent.move(state.settings, 1050, 674, 298, 40)
+	showControls(true, state.options, state.securityInfo, state.newSite, state.list, state.duplicate, state.delete)
+	state.parent.move(state.settings, 926, 738, 264, 42)
 }
 
 func (state *siteManagerState) createControls(hinst uintptr) error {
