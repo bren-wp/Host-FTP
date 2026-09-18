@@ -16,6 +16,7 @@ BANNED = {
     "runneradmin": "CI account name",
     "john doe": "sample persona",
     "pro plan": "sample subscription label",
+    "ghost ftp premium": "non-production upsell copy",
     "production server": "sample site name",
     "media server": "sample site name",
     "client a": "sample client name",
