@@ -1,92 +1,154 @@
-# Ghost FTP
+<p align="center">
+  <img src="build/ghostftp-brand.svg" alt="Ghost FTP" width="760">
+</p>
 
-Ghost FTP is a privacy-first Windows FTP, FTPS and SFTP desktop client maintained in **bren-wp/Host-FTP**.
+<p align="center">
+  <strong>Secure transfers. Without a trace.</strong><br>
+  A modern Windows FTP, FTPS and SFTP client built around a fast dual-pane workflow, clear security decisions and a premium dark interface.
+</p>
 
-**Files move freely. You stay in control.**
-
-## Source version
-
-Version: **0.4.0**
-
-English is the primary and default product language. Additional languages remain available from Settings.
-
-Ghost FTP 0.4.0 is a deeper reference-UI rebuild based on the approved Ghost FTP product boards: charcoal/slate surfaces, cyan → electric-blue → violet interaction accents, an integrated Ghost wordmark, a persistent application rail, dual Local/Remote file panes and a metrics-rich transfer queue.
-
-## Main workspace
-
-- Sites, Transfers, Queue, Sync and Settings navigation
-- saved-site shortcuts in the left rail
-- global Ctrl+K file/site search entry point
-- Connect / Disconnect / New Folder / Upload / Download / Refresh action row
-- Local Files and Remote Files side by side
-- independent pane navigation and remote search
-- directory comparison / synchronization bridge
-- transfer queue tabs: All, Uploading, Downloading and Completed
-- transfer metrics: name, direction, progress, size, speed, status and ETA
-- pause, resume, cancel, retry, clear and priority actions
-- rename, delete, create folder, remote editing and CHMOD where supported
-- recursive search, bookmarks and high-DPI-aware Windows layout
-
-## Connections workspace
-
-The Connections experience is structured around the approved reference layout:
-
-- Quick Connect, Site Manager and Import / Export entry tabs
-- FTP, FTPS and SFTP connection details
-- private-key and passphrase fields for SFTP
-- protected credential persistence
-- Saved Sites management
-- Transfer & Sync Options with functional presets
-- Standard Upload, Website Deployment, Backup (Incremental) and Media Transfer presets
-- Sync and Automation shortcuts into maintained application functionality
-
-Import / Export is intentionally secret-safe: stored passwords and private-key passphrases are never exported as clear text. The current UI explains that contract while encrypted profile bundles remain a future capability.
-
-## Security and privacy
-
-Ghost FTP does not require a Ghost FTP account. The maintained desktop client does not add advertising or product telemetry.
-
-Saved credentials use the maintained Windows protection layer. Sensitive credentials are not intentionally written to application logs. SFTP host-key and FTPS certificate validation remain enforced by the protocol engine.
-
-## Updates
-
-Update discovery and Windows update packages use the dedicated first-party service:
-
-`https://update.ghostftp.com/`
-
-The application checks `https://update.ghostftp.com/windows/latest.json` only when the user explicitly requests an update check.
-
-Update downloads are restricted to the same HTTPS host and verified with SHA-256 before the standalone updater launches Setup.
-
-See `UPDATE_SERVICE.md` for the deployment contract.
-
-## Windows release artifacts
-
-Every production GitHub release publishes:
-
-- `Ghost-FTP-0.4.0-Setup.exe`
-- `Ghost-FTP-0.4.0-Portable.exe`
-- `Ghost-FTP-0.4.0-Update.exe`
-- `Ghost-FTP-0.4.0-Source.zip`
-- `SHA256.txt`
-- `latest.json`
-
-## Quality gates
-
-The Windows release workflow runs formatting, `go vet`, the full Go test suite, deterministic brand-asset generation, executable builds, PE resource embedding, reference screenshot capture, source packaging and SHA-256 manifest generation before publishing release artifacts.
-
-## Official website
-
-`https://ghostftp.com/`
-
-## Source repository
-
-Canonical repository: **bren-wp/Host-FTP**
-
-## License
-
-This repository is distributed under **GNU GPL-3.0**. See `LICENSE`.
+<p align="center">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-3b82f6">
+  <img alt="Protocols" src="https://img.shields.io/badge/Protocols-FTP%20%7C%20FTPS%20%7C%20SFTP-00e5ff">
+  <img alt="Telemetry" src="https://img.shields.io/badge/Telemetry-None-16c784">
+  <img alt="License" src="https://img.shields.io/badge/License-GPL--3.0-8b5cf6">
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.4.0-e5e7eb">
+</p>
 
 ---
 
-**Ghost FTP 0.4.0** — secure transfers, modern Windows workflow.
+## Files move freely. You stay in control.
+
+Ghost FTP is designed for people who work directly with servers and do not want a dated file-transfer workflow. The application combines familiar FTP tooling with a cleaner Windows-native experience: saved sites on the left, Local Files and Remote Files side by side, transfer status always visible, and security decisions shown where they matter.
+
+<p align="center">
+  <img src="docs/screenshots/Ghost-FTP-main-reference.png" alt="Ghost FTP main workspace" width="100%">
+</p>
+
+### Built for the transfer work that actually happens
+
+<table>
+<tr>
+<td align="center" width="25%">
+<img src="docs/assets/secure.svg" width="48" alt=""><br>
+<strong>Secure by design</strong><br>
+SFTP host-key verification, FTPS certificate validation and protected Windows credential storage.
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/transfer.svg" width="48" alt=""><br>
+<strong>Fast transfer workflow</strong><br>
+Upload, download, pause, resume, retry, cancel, queue priority, progress, speed and ETA.
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/sync.svg" width="48" alt=""><br>
+<strong>Compare & synchronize</strong><br>
+Side-by-side directories, comparison results and synchronization helpers without hiding the underlying files.
+</td>
+<td align="center" width="25%">
+<img src="docs/assets/power.svg" width="48" alt=""><br>
+<strong>Power-user ready</strong><br>
+Saved sites, bookmarks, remote editing, permissions, recursive search and keyboard-friendly navigation.
+</td>
+</tr>
+</table>
+
+## Connections that stay organized
+
+The Connections workspace keeps quick access, saved sites and transfer behavior in one place. English is the primary product language and all operational copy is written for end users — no demo personas, development labels or placeholder account content is shipped in the interface.
+
+<p align="center">
+  <img src="docs/screenshots/Ghost-FTP-connections-reference.png" alt="Ghost FTP Connections workspace" width="100%">
+</p>
+
+### Connection workspace
+
+- **Quick Connect** for one-time FTP, FTPS and SFTP sessions.
+- **Site Manager** for protected saved profiles.
+- **Import / Export** follows a secret-safe contract: stored passwords and private-key passphrases are never exposed as clear text.
+- **Transfer presets** apply real persisted settings for Standard Upload, Website Deployment, Backup (Incremental) and Media Transfer workflows.
+- **Saved Sites** and session-level recent connections reduce repetitive setup.
+- **Transfer & Sync Options** surface the settings that affect queue behavior instead of displaying decorative controls that do nothing.
+
+## A workspace built around your files
+
+Ghost FTP 0.4.0 uses a premium charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
+
+The main workspace includes:
+
+- Sites / Transfers / Queue / Sync / Settings navigation
+- saved-site shortcuts directly in the application rail
+- global **Ctrl+K** search entry point
+- Connect / Disconnect / New Folder / Upload / Download / Refresh actions
+- Local Files and Remote Files panes
+- Name / Size / Type / Modified / Permissions file metadata
+- independent local and remote navigation
+- directory comparison and synchronization bridge
+- Transfer Queue filters for All / Uploading / Downloading / Completed
+- real Name / Direction / Progress / Size / Speed / Status / Time Remaining metrics
+- pause, resume, retry, cancel, clear and queue-priority actions
+- remote rename, delete, create-folder, edit and CHMOD support where the server permits it
+- recursive search and bookmarks
+- DPI-aware Windows layouts
+
+## Privacy without marketing theatre
+
+Ghost FTP does not require a Ghost FTP account to connect to your servers. The maintained desktop client does not add advertising or product telemetry.
+
+Saved credentials use the Windows protection layer. Sensitive passwords and passphrases are not intentionally written to application logs, and update checks do not include connection profiles, server credentials, local/remote paths, file names or transfer history.
+
+## Verified updates
+
+Ghost FTP uses the dedicated first-party update service:
+
+`https://update.ghostftp.com/`
+
+The desktop client checks:
+
+`https://update.ghostftp.com/windows/latest.json`
+
+A release manifest contains the expected SHA-256 for Setup, Portable and Update packages. The standalone updater accepts packages only from the HTTPS update host and verifies the Setup package before launch.
+
+See **UPDATE_SERVICE.md** for the deployment contract.
+
+## Windows downloads
+
+Every production GitHub release publishes the same release set used by the update service:
+
+| Artifact | Purpose |
+| --- | --- |
+| `Ghost-FTP-0.4.0-Setup.exe` | Standard Windows installation |
+| `Ghost-FTP-0.4.0-Portable.exe` | Portable build with no installer |
+| `Ghost-FTP-0.4.0-Update.exe` | Verified first-party update helper |
+| `Ghost-FTP-0.4.0-Source.zip` | Exact source package for the release |
+| `SHA256.txt` | Release integrity manifest |
+| `latest.json` | `update.ghostftp.com` client manifest |
+
+## Release quality gates
+
+A Windows release is not considered complete merely because the executable compiles. The GitHub Actions pipeline runs:
+
+`gofmt` → `go vet` → full Go tests → deterministic brand assets → Portable/Setup/Update builds → PE metadata/resources → real Windows UI capture → source packaging → SHA-256 manifest → release publication.
+
+This keeps the published binaries, source package, update manifest and repository version aligned.
+
+## Product identity
+
+| | |
+| --- | --- |
+| **Product** | Ghost FTP |
+| **Tagline** | Secure transfers. Without a trace. |
+| **Primary language** | English |
+| **Protocols** | FTP, FTPS, SFTP |
+| **Platform** | Windows 10 / 11 |
+| **Website** | https://ghostftp.com/ |
+| **Update service** | https://update.ghostftp.com/ |
+| **Repository** | `bren-wp/Host-FTP` |
+| **License** | GNU GPL-3.0 |
+
+---
+
+<p align="center">
+  <img src="build/brandmark.png" alt="Ghost FTP mark" width="88"><br>
+  <strong>Ghost FTP</strong><br>
+  <sub>Move more. Do more. Transfer further.</sub>
+</p>
