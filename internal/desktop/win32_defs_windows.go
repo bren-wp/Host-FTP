@@ -162,6 +162,7 @@ var (
 	kernel32 = syscall.NewLazyDLL("kernel32.dll")
 	comctl32 = syscall.NewLazyDLL("comctl32.dll")
 	gdi32    = syscall.NewLazyDLL("gdi32.dll")
+	msimg32  = syscall.NewLazyDLL("msimg32.dll")
 	uxtheme  = syscall.NewLazyDLL("uxtheme.dll")
 	dwmapi   = syscall.NewLazyDLL("dwmapi.dll")
 	ntdll    = syscall.NewLazyDLL("ntdll.dll")
@@ -206,6 +207,9 @@ var (
 	createPen               = gdi32.NewProc("CreatePen")
 	selectObject            = gdi32.NewProc("SelectObject")
 	roundRect               = gdi32.NewProc("RoundRect")
+	createRoundRectRgn      = gdi32.NewProc("CreateRoundRectRgn")
+	selectClipRgn           = gdi32.NewProc("SelectClipRgn")
+	gradientFill            = msimg32.NewProc("GradientFill")
 	setBkMode               = gdi32.NewProc("SetBkMode")
 
 	getModuleHandleW      = kernel32.NewProc("GetModuleHandleW")
@@ -235,6 +239,16 @@ type wndClassEx struct {
 
 type rect struct {
 	Left, Top, Right, Bottom int32
+}
+
+type triVertex struct {
+	X, Y         int32
+	Red, Green   uint16
+	Blue, Alpha  uint16
+}
+
+type gradientRect struct {
+	UpperLeft, LowerRight uint32
 }
 
 type paintStruct struct {
