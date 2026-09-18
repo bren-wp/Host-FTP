@@ -43,9 +43,9 @@ const (
 	settingsCBSDropList = 0x0003
 	settingsDefButton   = 0x00000001
 	settingsEtchedHorz  = 0x00000010
-	settingsSSIcon       = 0x00000003
-	settingsSTMSetImage  = 0x0172
-	settingsImageIcon    = 1
+	settingsSSIcon      = 0x00000003
+	settingsSTMSetImage = 0x0172
+	settingsImageIcon   = 1
 )
 
 // SettingsDialogNumber describes one bounded integer preference. InvalidText is
