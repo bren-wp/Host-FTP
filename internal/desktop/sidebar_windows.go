@@ -16,8 +16,8 @@ const (
 	applicationSidebarUtilityH    = 38
 	applicationSidebarUtilityGap  = 7
 	applicationSidebarPrimaryTop  = 86
-	applicationSidebarBrandIcon   = 50
-	applicationSidebarBrandGap    = 10
+	applicationSidebarBrandIcon   = 54
+	applicationSidebarBrandGap    = 8
 	applicationSidebarBottomInset = 18
 )
 
@@ -408,9 +408,10 @@ func (a *app) layoutSidebarRail(height int) {
 		sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
 		sendMessageW.Call(a.brandFTP, wmSetFont, a.titleFont, 1)
 	}
-	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 4
-	a.move(a.brandTitle, titleX, 20, 92, 36)
-	a.move(a.brandFTP, titleX+92, 20, 52, 36)
+	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 2
+	const ghostWordWidth = 72
+	a.move(a.brandTitle, titleX, 20, ghostWordWidth, 36)
+	a.move(a.brandFTP, titleX+ghostWordWidth+4, 20, 54, 36)
 
 	y := applicationSidebarPrimaryTop
 	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
