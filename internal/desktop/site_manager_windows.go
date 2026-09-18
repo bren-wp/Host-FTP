@@ -42,6 +42,16 @@ const (
 	siteIDNavSettings    = 8125
 	siteIDNewSite        = 8126
 	siteIDGlobalSearch   = 8127
+	siteIDQuickConnect    = 8128
+	siteIDSiteManagerTab  = 8129
+	siteIDImportExport    = 8130
+	siteIDPresetsTab      = 8131
+	siteIDSyncTab         = 8132
+	siteIDAutomationTab   = 8133
+	siteIDPresetStandard  = 8134
+	siteIDPresetWebsite   = 8135
+	siteIDPresetBackup    = 8136
+	siteIDPresetMedia     = 8137
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -149,6 +159,16 @@ type siteManagerState struct {
 	newSite        uintptr
 	globalSearch   uintptr
 	brandIcon      uintptr
+	quickConnectTab uintptr
+	siteManagerTab  uintptr
+	importExportTab uintptr
+	presetsTab      uintptr
+	syncTab         uintptr
+	automationTab   uintptr
+	presetStandard  uintptr
+	presetWebsite   uintptr
+	presetBackup    uintptr
+	presetMedia     uintptr
 }
 
 var (
