@@ -122,8 +122,10 @@ func (state *siteManagerState) paintReferenceConnections() {
 		deleteObject.Call(background)
 	}
 
-	// Three-column Connections workspace from the approved reference.
-	state.parent.drawReferenceCard(hdc, 16, 54, 286, 694, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 316, 54, 704, 694, 16, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 1034, 54, 330, 694, 16, panelColor(), borderColor())
+	// Approved Connections composition: product rail, connection editor,
+	// transfer/safety options, and saved sites.
+	state.parent.drawReferenceCard(hdc, 12, 12, 220, 818, 18, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 244, 44, 654, 770, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 908, 44, 300, 770, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 1222, 44, 354, 770, 16, panelColor(), borderColor())
 }
