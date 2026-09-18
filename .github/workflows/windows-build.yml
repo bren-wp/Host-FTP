@@ -18,6 +18,7 @@ jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 45
+
     steps:
       - name: Checkout Host-FTP
         uses: actions/checkout@v4
@@ -45,70 +46,6 @@ jobs:
             Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $env:GITHUB_WORKSPACE $name) -Force
           }
 
-          $textExtensions = @('.go','.mod','.py','.ps1','.sh','.md','.txt','.json','.yml','.yaml','.toml')
-          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Recurse -File |
-            Where-Object { $_.Extension -in $textExtensions -and $_.FullName -notmatch '\\.git\\' -and $_.FullName -notmatch '\\.github\\' } |
-            ForEach-Object {
-              $content = [IO.File]::ReadAllText($_.FullName)
-              $updated = $content.Replace('github.com/bren-wp/Ghost-FTP','github.com/bren-wp/Host-FTP')
-              if ($updated -ne $content) {
-                [IO.File]::WriteAllText($_.FullName, $updated, [Text.UTF8Encoding]::new($false))
-              }
-            }
-
-          Set-Content -LiteralPath VERSION -Value '0.1.0' -Encoding ascii
-
-          @'
-          # Ghost FTP
-
-          Ghost FTP is a privacy-first Windows FTP, FTPS and SFTP desktop client maintained in the **bren-wp/Host-FTP** repository.
-
-          ## Current build
-
-          Version: **0.1.0**
-
-          The Windows product uses the approved premium dark Ghost FTP interface:
-          - wide application rail
-          - Connections / Files / Transfers / Sync / Settings navigation
-          - Local Files and Remote Files dual-pane workspace
-          - persistent transfer queue
-          - cyan / electric-blue / violet product accents
-          - native Windows Setup and Portable executables
-
-          ## Functional scope
-
-          The application source includes real local/remote navigation, FTP/FTPS/SFTP connection handling, upload/download queues, retry/cancel/pause lifecycle, bookmarks, file filtering/search, remote edit, directory comparison, rename/delete/create-directory operations and CHMOD where supported.
-
-          ## Build
-
-          GitHub Actions and the repository source produce:
-          - `Ghost-FTP-0.1.0-Setup.exe`
-          - `Ghost-FTP-0.1.0-Portable.exe`
-          - `Ghost-FTP-0.1.0-Source.zip`
-          - `SHA256.txt`
-
-          ## Privacy
-
-          Ghost FTP does not require a Ghost FTP account and the maintained client does not add advertising or product telemetry.
-
-          ## License
-
-          This repository is distributed under **GNU GPL-3.0**. See `LICENSE`.
-
-          ---
-          Ghost FTP 0.1.0 — Windows production baseline.
-          '@ | Set-Content -LiteralPath README.md -Encoding utf8
-
-          @'
-          # Third-party and source notice
-
-          Ghost FTP 0.1.0 in this repository is maintained as GPL-3.0 source.
-
-          The Windows client uses the Go standard library and operating-system facilities. Remote protocol execution follows the maintained Ghost FTP engine source included in this repository.
-
-          The source baseline was migrated by the repository owner from the maintained Ghost FTP codebase and adapted for the Host-FTP repository and approved Ghost FTP interface.
-          '@ | Set-Content -LiteralPath THIRD_PARTY_NOTICES.md -Encoding utf8
-
           Write-Host 'SOURCE_BOOTSTRAP=PASS'
 
       - name: Set up Go
@@ -121,6 +58,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+
+      - name: Read release version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid VERSION value: $version"
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "GHOST_FTP_VERSION=$version"
 
       - name: Run Windows test suite
         shell: pwsh
@@ -138,7 +87,7 @@ jobs:
           python .\scripts\generate_brand_assets.py --materialize
           if ($LASTEXITCODE -ne 0) { throw 'Brand asset generation failed.' }
 
-      - name: Build Portable.exe and Setup.exe
+      - name: Build Setup, Portable and Update executables
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -154,12 +103,12 @@ jobs:
 
           $portable = "dist\Ghost-FTP-$version-Portable.exe"
           $setup = "dist\Ghost-FTP-$version-Setup.exe"
+          $updater = "dist\Ghost-FTP-$version-Update.exe"
           $payload = 'cmd\installer\payload\payload.zip'
-          $ldflags = "-s -w -H=windowsgui -X main.version=$version"
+          $appLdflags = "-s -w -H=windowsgui -X main.version=$version"
 
-          go build -trimpath -buildvcs=false -ldflags $ldflags -o $portable .\cmd\ghostftp
+          go build -trimpath -buildvcs=false -ldflags $appLdflags -o $portable .\cmd\ghostftp
           if ($LASTEXITCODE -ne 0) { throw 'Portable.exe build failed.' }
-
           python .\scripts\pe_resources.py $portable --ico .\build\icon.ico --version $version --role portable --original-filename "Ghost-FTP-$version-Portable.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Portable PE resource step failed.' }
 
@@ -167,23 +116,27 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installer payload generation failed.' }
 
           try {
-            go build -trimpath -buildvcs=false -ldflags $ldflags -o $setup .\cmd\installer
+            go build -trimpath -buildvcs=false -ldflags $appLdflags -o $setup .\cmd\installer
             if ($LASTEXITCODE -ne 0) { throw 'Setup.exe build failed.' }
           }
           finally {
             Remove-Item -LiteralPath $payload -Force -ErrorAction SilentlyContinue
           }
-
           python .\scripts\pe_resources.py $setup --ico .\build\icon.ico --version $version --role setup --original-filename "Ghost-FTP-$version-Setup.exe"
           if ($LASTEXITCODE -ne 0) { throw 'Setup PE resource step failed.' }
 
-          foreach ($path in @($portable,$setup)) {
+          go build -trimpath -buildvcs=false -ldflags $appLdflags -o $updater .\cmd\updater
+          if ($LASTEXITCODE -ne 0) { throw 'Update.exe build failed.' }
+          python .\scripts\pe_resources.py $updater --ico .\build\icon.ico --version $version --role updater --original-filename "Ghost-FTP-$version-Update.exe"
+          if ($LASTEXITCODE -ne 0) { throw 'Updater PE resource step failed.' }
+
+          foreach ($path in @($portable,$setup,$updater)) {
             if (-not (Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -lt 100000) {
               throw "Invalid Windows artifact: $path"
             }
           }
 
-          Get-FileHash $portable,$setup -Algorithm SHA256 |
+          Get-FileHash $portable,$setup,$updater -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
             Set-Content -LiteralPath dist\SHA256.txt -Encoding ascii
 
@@ -204,10 +157,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
           foreach ($name in @('cmd','internal','scripts','build','.github')) {
-            if (Test-Path $name) { Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Recurse -Force }
+            if (Test-Path $name) {
+              Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Recurse -Force
+            }
           }
-          foreach ($name in @('go.mod','VERSION','README.md','LICENSE','THIRD_PARTY_NOTICES.md','.gitignore','.editorconfig','.gitattributes')) {
-            if (Test-Path $name) { Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Force }
+          foreach ($name in @(
+            'go.mod','VERSION','README.md','RELEASE_NOTES.md','UPDATE_SERVICE.md',
+            'LICENSE','THIRD_PARTY_NOTICES.md','.gitignore','.editorconfig','.gitattributes'
+          )) {
+            if (Test-Path $name) {
+              Copy-Item -LiteralPath $name -Destination (Join-Path $stage $name) -Force
+            }
           }
 
           $zip = "dist\Ghost-FTP-$version-Source.zip"
@@ -216,10 +176,40 @@ jobs:
           if (-not (Test-Path $zip -PathType Leaf) -or (Get-Item $zip).Length -lt 50000) {
             throw 'Source ZIP is missing or unexpectedly small.'
           }
+
           $hash = Get-FileHash $zip -Algorithm SHA256
           Add-Content -LiteralPath dist\SHA256.txt -Value "$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($zip))" -Encoding ascii
 
-      - name: Persist bootstrapped source
+      - name: Generate update.ghostftp.com manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+
+          function Digest([string]$path) {
+            return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+          }
+
+          $setupName = "Ghost-FTP-$version-Setup.exe"
+          $portableName = "Ghost-FTP-$version-Portable.exe"
+          $updaterName = "Ghost-FTP-$version-Update.exe"
+
+          $manifest = [ordered]@{
+            schema = 1
+            version = $version
+            setup_url = "https://update.ghostftp.com/windows/$setupName"
+            setup_sha256 = Digest "dist\$setupName"
+            portable_url = "https://update.ghostftp.com/windows/$portableName"
+            portable_sha256 = Digest "dist\$portableName"
+            updater_url = "https://update.ghostftp.com/windows/$updaterName"
+            updater_sha256 = Digest "dist\$updaterName"
+          }
+
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath dist\latest.json -Encoding utf8
+          $manifestHash = Get-FileHash -LiteralPath dist\latest.json -Algorithm SHA256
+          Add-Content -LiteralPath dist\SHA256.txt -Value "$($manifestHash.Hash.ToLowerInvariant())  latest.json" -Encoding ascii
+
+      - name: Persist generated source assets
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -227,23 +217,58 @@ jobs:
             Write-Host 'SOURCE_COMMIT=UNCHANGED'
             exit 0
           }
+
+          $version = (Get-Content VERSION -Raw).Trim()
           git config user.name 'Brendigo'
           git config user.email 'info@brendigo.com'
           git add -A
-          git commit -m 'Ghost FTP 0.2.0 Windows source and approved reference UI'
+          git commit -m "Refresh Ghost FTP $version generated release assets"
           git push origin HEAD:${{ github.ref_name }}
-          if ($LASTEXITCODE -ne 0) { throw 'Unable to push bootstrapped Host-FTP source.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to push generated Host-FTP source assets.' }
           Write-Host 'SOURCE_COMMIT=PUSHED'
 
       - name: Upload Windows deliverables
         uses: actions/upload-artifact@v4
         with:
-          name: ghostftp-windows-0.2.0
+          name: ghostftp-windows-${{ steps.version.outputs.value }}
           if-no-files-found: error
           retention-days: 30
           path: |
             dist/Ghost-FTP-*-Setup.exe
             dist/Ghost-FTP-*-Portable.exe
+            dist/Ghost-FTP-*-Update.exe
             dist/Ghost-FTP-*-Source.zip
             dist/SHA256.txt
+            dist/latest.json
             ui-screenshots/*.png
+
+      - name: Publish GitHub release
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "v$version"
+          $target = (git rev-parse HEAD).Trim()
+          $assets = @(
+            "dist\Ghost-FTP-$version-Setup.exe",
+            "dist\Ghost-FTP-$version-Portable.exe",
+            "dist\Ghost-FTP-$version-Update.exe",
+            "dist\Ghost-FTP-$version-Source.zip",
+            "dist\SHA256.txt",
+            "dist\latest.json"
+          )
+
+          gh release view $tag --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @assets --repo ${{ github.repository }} --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to refresh GitHub release assets.' }
+            gh release edit $tag --repo ${{ github.repository }} --title "Ghost FTP $version" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to refresh GitHub release notes.' }
+          }
+          else {
+            gh release create $tag @assets --repo ${{ github.repository }} --target $target --title "Ghost FTP $version" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to publish GitHub release.' }
+          }
