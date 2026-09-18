@@ -104,13 +104,16 @@ func infoCardDialog(title, heading, body, closeLabel string, compact bool) {
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	infoCardOnce.Do(func() {
 		cursor, _, _ := promptLoadCursorW.Call(0, 32512)
+		icon := premiumDialogIcon(hinst)
 		wc := promptWndClassEx{
 			CbSize:     uint32(unsafe.Sizeof(promptWndClassEx{})),
 			WndProc:    infoCardProc,
 			Instance:   hinst,
 			Cursor:     cursor,
+			Icon:       icon,
 			Background: premiumDialogBackgroundBrush(),
 			ClassName:  promptWstr(infoCardClass),
+			IconSm:     icon,
 		}
 		promptRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 	})
