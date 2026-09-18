@@ -83,6 +83,13 @@ jobs:
           go test ./...
           if ($LASTEXITCODE -ne 0) { throw 'Windows test suite failed.' }
 
+      - name: Audit production UI copy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python .\scripts\audit_product_copy.py
+          if ($LASTEXITCODE -ne 0) { throw 'Production UI copy audit failed.' }
+
       - name: Generate canonical Ghost FTP brand assets
         shell: pwsh
         run: |
