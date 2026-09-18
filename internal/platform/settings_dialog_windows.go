@@ -26,24 +26,24 @@ const (
 	settingsIDDownload   = 4126
 	settingsIDWebsite    = 4128
 
-	settingsCBAdd       = 0x0143
-	settingsCBGet       = 0x0147
-	settingsCBSet       = 0x014E
-	settingsBMGetCheck  = 0x00F0
-	settingsBMSetCheck  = 0x00F1
-	settingsBSTChecked  = 1
-	settingsEMSetSel    = 0x00B1
-	settingsESNumber    = 0x2000
-	settingsAutoCheck   = 0x00000003
-	settingsWSBorder    = 0x00800000
-	settingsWSChild     = 0x40000000
-	settingsWSVisible   = 0x10000000
-	settingsWSTabStop   = 0x00010000
-	settingsWSVScroll   = 0x00200000
-	settingsCBSDropList = 0x0003
-	settingsDefButton   = 0x00000001
-	settingsEtchedHorz  = 0x00000010
-	settingsSSIcon      = 0x00000003
+	settingsCBAdd        = 0x0143
+	settingsCBGet        = 0x0147
+	settingsCBSet        = 0x014E
+	settingsBMGetCheck   = 0x00F0
+	settingsBMSetCheck   = 0x00F1
+	settingsBSTChecked   = 1
+	settingsEMSetSel     = 0x00B1
+	settingsESNumber     = 0x2000
+	settingsAutoCheck    = 0x00000003
+	settingsWSBorder     = 0x00800000
+	settingsWSChild      = 0x40000000
+	settingsWSVisible    = 0x10000000
+	settingsWSTabStop    = 0x00010000
+	settingsWSVScroll    = 0x00200000
+	settingsCBSDropList  = 0x0003
+	settingsDefButton    = 0x00000001
+	settingsEtchedHorz   = 0x00000010
+	settingsSSIcon       = 0x00000003
 	settingsSTMSetImage  = 0x0172
 	settingsImageIcon    = 1
 	settingsBSOwnerDraw  = 0x0000000B
@@ -130,13 +130,13 @@ var (
 	settingsClass          = "GhostFTP.SettingsDialog"
 	settingsProc           = syscall.NewCallback(settingsWndProc)
 	settingsSetWindowTextW = user32.NewProc("SetWindowTextW")
-	settingsDrawTextW       = user32.NewProc("DrawTextW")
-	settingsDrawFocusRect   = user32.NewProc("DrawFocusRect")
-	settingsCreatePen       = premiumGdi32.NewProc("CreatePen")
-	settingsSelectObject    = premiumGdi32.NewProc("SelectObject")
-	settingsRoundRect       = premiumGdi32.NewProc("RoundRect")
-	settingsSetBkMode       = premiumGdi32.NewProc("SetBkMode")
-	settingsRtlMoveMemory   = syscall.NewLazyDLL("kernel32.dll").NewProc("RtlMoveMemory")
+	settingsDrawTextW      = user32.NewProc("DrawTextW")
+	settingsDrawFocusRect  = user32.NewProc("DrawFocusRect")
+	settingsCreatePen      = premiumGdi32.NewProc("CreatePen")
+	settingsSelectObject   = premiumGdi32.NewProc("SelectObject")
+	settingsRoundRect      = premiumGdi32.NewProc("RoundRect")
+	settingsSetBkMode      = premiumGdi32.NewProc("SetBkMode")
+	settingsRtlMoveMemory  = syscall.NewLazyDLL("kernel32.dll").NewProc("RtlMoveMemory")
 )
 
 type settingsDrawItemStruct struct {

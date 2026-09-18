@@ -14,16 +14,16 @@ const (
 	idTitleMaximize = 9902
 	idTitleClose    = 9903
 
-	wmNcHitTest = 0x0084
-	htClient    = 1
-	htCaption   = 2
+	wmNcHitTest      = 0x0084
+	htClient         = 1
+	htCaption        = 2
 	chromeSWMinimize = 6
 	chromeSWMaximize = 3
 	chromeSWRestore  = 9
 )
 
 var (
-	chromeIsZoomed      = user32.NewProc("IsZoomed")
+	chromeIsZoomed       = user32.NewProc("IsZoomed")
 	chromeScreenToClient = user32.NewProc("ScreenToClient")
 )
 

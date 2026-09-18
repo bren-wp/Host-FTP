@@ -59,13 +59,13 @@ const (
 	siteIDSyncSkip       = 8140
 	siteIDSyncConfirm    = 8141
 	siteIDTestConnection = 8142
-	siteIDTitleMinimize   = 8143
-	siteIDTitleMaximize   = 8144
-	siteIDTitleClose      = 8145
-	siteIDNavSiteManager  = 8146
-	siteIDNavAutomation   = 8147
-	siteIDSavedSearch     = 8148
-	siteIDRecentClear     = 8149
+	siteIDTitleMinimize  = 8143
+	siteIDTitleMaximize  = 8144
+	siteIDTitleClose     = 8145
+	siteIDNavSiteManager = 8146
+	siteIDNavAutomation  = 8147
+	siteIDSavedSearch    = 8148
+	siteIDRecentClear    = 8149
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100

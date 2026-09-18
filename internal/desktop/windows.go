@@ -42,11 +42,11 @@ type app struct {
 	titleMinimize, titleMaximize, titleClose                                                                          uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
 
-	siteManagerBtn           uintptr
-	sidebarBookmarkHeading   uintptr
-	sidebarMotto             uintptr
-	sidebarConnectionStatus  uintptr
-	sidebarProfileButtons  []uintptr
+	siteManagerBtn          uintptr
+	sidebarBookmarkHeading  uintptr
+	sidebarMotto            uintptr
+	sidebarConnectionStatus uintptr
+	sidebarProfileButtons   []uintptr
 
 	mu                   sync.Mutex
 	dispatchQ            []func()
