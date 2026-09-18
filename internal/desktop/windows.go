@@ -364,7 +364,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			color = textColor()
 		} else if lParam == a.brandFTP {
 			color = accentStrongColor()
-		} else if lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
+		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
 		} else if lParam == a.connectionBadge {
 			if a.connected {
