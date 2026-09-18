@@ -266,26 +266,33 @@ func (a *app) openSettings() {
 }
 
 func (a *app) openAbout() {
-	// English is the primary product language. Localized UI remains available,
-	// while About keeps one concise canonical product description so technical
-	// security/update claims do not drift between translations.
+	// English is the canonical product copy. A localized summary is appended
+	// when the user selects another language, while security/update guarantees
+	// stay expressed once to prevent translation drift.
 	localizedIntro := strings.ReplaceAll(a.tr("about.body", brand.Website, aboutSupport), "GhostFTP", brand.ProductName)
 	body := "FILES MOVE FREELY. YOU STAY IN CONTROL.\n\n" +
-		"Ghost FTP is a focused Windows file-transfer client for developers, administrators and teams working with FTP, FTPS and SFTP servers.\n\n" +
-		"WORKSPACE\n" +
-		"• Local and remote files side by side\n" +
-		"• Saved sites, bookmarks and connection profiles\n" +
-		"• Transfer queue with pause, resume, retry and cancellation\n" +
-		"• Rename, delete, create folder, remote edit and permissions tools\n\n" +
-		"SECURITY\n" +
+		"Ghost FTP is a focused Windows file-transfer client built for developers, administrators and teams that work directly with their own servers.\n\n" +
+		"TRANSFER WORKSPACE\n" +
+		"• FTP, FTPS and SFTP connections\n" +
+		"• Local Files and Remote Files side by side\n" +
+		"• Saved sites, bookmarks and quick connection profiles\n" +
+		"• Upload/download queue with filters, progress, speed and ETA\n" +
+		"• Pause, resume, retry, cancel and queue-priority controls\n" +
+		"• Rename, delete, create folder, remote edit and permissions tools\n" +
+		"• Directory comparison, synchronization helpers and recursive search\n\n" +
+		"SECURITY & PRIVACY\n" +
 		"• SFTP host-key and FTPS certificate verification\n" +
 		"• Protected saved credentials on Windows\n" +
-		"• No advertising or product telemetry\n\n" +
+		"• No advertising or product telemetry\n" +
+		"• No Ghost FTP account is required to connect to your servers\n\n" +
 		"UPDATES\n" +
-		"Verified Windows updates are discovered and downloaded only from " + brand.UpdateBaseURL + "\n\n" +
+		"• Update discovery: " + brand.UpdateManifestURL + "\n" +
+		"• Packages are accepted only from " + brand.UpdateBaseURL + "\n" +
+		"• Setup integrity is verified with SHA-256 before launch\n\n" +
 		"PRODUCT\n" +
-		brand.Website + " · FTP • FTPS • SFTP · Version " + a.version + "\n\n" +
-		"PUBLISHER\n" +
+		"Ghost FTP " + a.version + " · Windows · FTP • FTPS • SFTP\n" +
+		brand.WebsiteURL + "\n\n" +
+		"PUBLISHER & SUPPORT\n" +
 		aboutPublisher + " · " + aboutAuthorWebsite + "\n" +
 		aboutSupport
 	if a.languageCode() != "en" && strings.TrimSpace(localizedIntro) != "" {
@@ -293,7 +300,7 @@ func (a *app) openAbout() {
 	}
 	platform.InfoCardDialog(
 		brand.ProductName+" — About",
-		brand.ProductName,
+		brand.ProductName+" "+a.version,
 		body,
 		okLabel(a.languageCode()),
 	)
