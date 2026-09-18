@@ -36,10 +36,12 @@ const (
 )
 
 type decisionCardState struct {
-	kind    int
-	heading uintptr
-	result  int
-	closed  bool
+	kind           int
+	heading        uintptr
+	result         int
+	closed         bool
+	primaryLabel   string
+	secondaryLabel string
 }
 
 type decisionCardLayout struct {
@@ -220,6 +222,10 @@ func decisionCardWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) u
 // InfoDialog and ErrorDialog. Returning ok=false means Win32 could not create
 // the custom surface and the caller should use the stock Windows fallback.
 func decisionCardDialog(title, instruction, content string, kind int) (result int, ok bool) {
+	return decisionCardDialogWithLabels(title, instruction, content, kind, "", "")
+}
+
+func decisionCardDialogWithLabels(title, instruction, content string, kind int, primaryLabel, secondaryLabel string) (result int, ok bool) {
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	decisionCardOnce.Do(func() {
 		cursor, _, _ := promptLoadCursorW.Call(0, 32512)
@@ -256,7 +262,7 @@ func decisionCardDialog(title, instruction, content string, kind int) (result in
 	}
 	applyPremiumDialogWindow(hwnd)
 
-	state := &decisionCardState{kind: kind}
+	state := &decisionCardState{kind: kind, primaryLabel: primaryLabel, secondaryLabel: secondaryLabel}
 	if kind == decisionCardKindConfirm {
 		state.result = decisionIDNo
 	} else {
@@ -302,7 +308,13 @@ func decisionCardDialog(title, instruction, content string, kind int) (result in
 
 	if kind == decisionCardKindConfirm {
 		_, _, yesLabel, noLabel := resolvedDialogLabels()
-		yesButton := makeControl("BUTTON", yesLabel, decisionWSTabStop|decisionDefButton, 430, layout.buttonY, 102, decisionButtonH, decisionIDYes, bodyFont)
+		if strings.TrimSpace(state.primaryLabel) != "" {
+			yesLabel = state.primaryLabel
+		}
+		if strings.TrimSpace(state.secondaryLabel) != "" {
+			noLabel = state.secondaryLabel
+		}
+		yesButton := makeControl("BUTTON", yesLabel, decisionWSTabStop|decisionDefButton, 402, layout.buttonY, 130, decisionButtonH, decisionIDYes, bodyFont)
 		makeControl("BUTTON", noLabel, decisionWSTabStop, 542, layout.buttonY, 102, decisionButtonH, decisionIDNo, bodyFont)
 		if yesButton != 0 {
 			promptSetFocus.Call(yesButton)
