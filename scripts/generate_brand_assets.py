@@ -114,7 +114,15 @@ def _sample_reference_pixel(x: float, y: float) -> tuple[int, int, int, int]:
         return TRANSPARENT
 
     inner = _inside_rounded_rect(x, y, 13.0, 13.0, 243.0, 243.0, 38.0)
-    tile = CHARCOAL if inner else _mix(BLUE, VIOLET, 0.42)
+    # Keep the app-icon silhouette, but make its tile translucent so the mark
+    # blends into the dark navigation rail instead of reading as a pasted-on
+    # square. The ghost/arrows remain fully opaque and retain the approved
+    # cyan -> blue -> violet identity.
+    if inner:
+        tile = (8, 14, 20, 72)
+    else:
+        rim = _mix(BLUE, VIOLET, 0.42)
+        tile = (rim[0], rim[1], rim[2], 168)
 
     ghost = _inside_ghost(x, y)
     if ghost:
