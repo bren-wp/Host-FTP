@@ -14,6 +14,39 @@ type infoCardState struct {
 	closed bool
 }
 
+type infoCardLayout struct {
+	clientWidth   int
+	clientHeight  int
+	headingY      int
+	headingHeight int
+	bodyY         int
+	bodyHeight    int
+	dividerY      int
+	buttonY       int
+}
+
+func infoCardLayoutForText(heading, body string, compact bool) infoCardLayout {
+	if compact {
+		return infoCardLayout{
+			clientWidth: 560, clientHeight: 300,
+			headingY: 24, headingHeight: 44,
+			bodyY: 82, bodyHeight: 126,
+			dividerY: 220, buttonY: 238,
+		}
+	}
+	headingHeight := decisionCardClamp(decisionCardEstimatedLines(heading, 34)*31, 62, 112)
+	bodyHeight := decisionCardClamp(decisionCardEstimatedLines(body, 70)*22, 250, 500)
+	bodyY := 30 + headingHeight + 14
+	dividerY := bodyY + bodyHeight + 18
+	buttonY := dividerY + 16
+	return infoCardLayout{
+		clientWidth: 820, clientHeight: buttonY + 62,
+		headingY: 30, headingHeight: headingHeight,
+		bodyY: bodyY, bodyHeight: bodyHeight,
+		dividerY: dividerY, buttonY: buttonY,
+	}
+}
+
 var (
 	infoCardStates sync.Map
 	infoCardOnce   sync.Once
@@ -89,18 +122,11 @@ func infoCardDialog(title, heading, body, closeLabel string, compact bool) {
 		wsTabStop       = 0x00010000
 		bsDefPushButton = 0x00000001
 		ssEtchedHorz    = 0x00000010
-		// Keep these canonical About client dimensions explicit. Existing release
-		// regression coverage protects the 760x460 multiline-heading geometry.
-		windowWidth  = 760
-		windowHeight = 460
 	)
 
-	clientWidth := windowWidth
-	clientHeight := windowHeight
-	if compact {
-		clientWidth = 560
-		clientHeight = 300
-	}
+	layout := infoCardLayoutForText(heading, body, compact)
+	clientWidth := layout.clientWidth
+	clientHeight := layout.clientHeight
 	owner := premiumDialogOwner()
 	dpi := premiumDialogDPI(owner)
 	outerWidth, outerHeight := premiumDialogOuterSize(clientWidth, clientHeight, wsOverlapped, 0, dpi)
@@ -155,20 +181,22 @@ func infoCardDialog(title, heading, body, closeLabel string, compact bool) {
 		return child
 	}
 
-	var closeButton uintptr
-	if compact {
-		makeControl("STATIC", heading, 0, 32, 24, 496, 44, 0, headingFont)
-		makeControl("STATIC", body, 0, 32, 82, 496, 126, 0, bodyFont)
-		makeControl("STATIC", "", ssEtchedHorz, 32, 220, 496, 2, 0, bodyFont)
-		closeButton = makeControl("BUTTON", closeLabel, wsTabStop|bsDefPushButton, 424, 238, 104, 38, infoCardIDClose, bodyFont)
-	} else {
-		// About headings vary substantially across the 24 runtime locales. Reserve
-		// enough room for a wrapped three-line heading instead of clipping it.
-		makeControl("STATIC", heading, 0, 40, 26, 680, 92, 0, headingFont)
-		makeControl("STATIC", body, 0, 40, 132, 680, 220, 0, bodyFont)
-		makeControl("STATIC", "", ssEtchedHorz, 40, 366, 680, 2, 0, bodyFont)
-		closeButton = makeControl("BUTTON", closeLabel, wsTabStop|bsDefPushButton, 616, 382, 104, 38, infoCardIDClose, bodyFont)
-	}
+	contentX := 36
+	contentW := layout.clientWidth - 72
+	makeControl("STATIC", heading, 0, contentX, layout.headingY, contentW, layout.headingHeight, 0, headingFont)
+	makeControl("STATIC", body, 0, contentX, layout.bodyY, contentW, layout.bodyHeight, 0, bodyFont)
+	makeControl("STATIC", "", ssEtchedHorz, contentX, layout.dividerY, contentW, 2, 0, bodyFont)
+	closeButton := makeControl(
+		"BUTTON",
+		closeLabel,
+		wsTabStop|bsDefPushButton,
+		layout.clientWidth-140,
+		layout.buttonY,
+		104,
+		38,
+		infoCardIDClose,
+		bodyFont,
+	)
 	if closeButton != 0 {
 		promptSetFocus.Call(closeButton)
 	}
