@@ -54,6 +54,9 @@ const (
 	siteIDPresetBackup   = 8136
 	siteIDPresetMedia    = 8137
 	siteIDRecentList     = 8138
+	siteIDSyncBackup     = 8139
+	siteIDSyncSkip       = 8140
+	siteIDSyncConfirm    = 8141
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -64,6 +67,10 @@ const (
 	siteLBNSelChange        = 1
 	siteLBNDblClk           = 2
 	siteBSDefPushButton     = 0x00000001
+	siteBSAutoCheckBox       = 0x00000003
+	siteBMGetCheck           = 0x00F0
+	siteBMSetCheck           = 0x00F1
+	siteBSTChecked           = 1
 	siteWindowStyle         = 0x00C80000 // WS_CAPTION | WS_SYSMENU
 	siteWMCtlColorListBox   = 0x0134
 )
@@ -172,6 +179,9 @@ type siteManagerState struct {
 	presetWebsite   uintptr
 	presetBackup    uintptr
 	presetMedia     uintptr
+	syncBackup      uintptr
+	syncSkip        uintptr
+	syncConfirm     uintptr
 }
 
 var (
@@ -284,6 +294,9 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				case siteIDPresetMedia:
 					state.applyTransferPreset("media")
 					return 0
+				case siteIDSyncBackup, siteIDSyncSkip, siteIDSyncConfirm:
+					state.saveSyncOptions()
+					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
 					return 0
@@ -348,6 +361,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+				state.syncBackup, state.syncSkip, state.syncConfirm,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -726,7 +740,56 @@ func (state *siteManagerState) applyTransferPreset(name string) {
 	}
 	state.parent.settings = saved
 	state.refreshOptionsSummary()
+	state.refreshSyncOptions()
 	state.parent.setStatus("Transfer preset applied: " + label)
+}
+
+func siteChecked(hwnd uintptr) bool {
+	if hwnd == 0 {
+		return false
+	}
+	checked, _, _ := sendMessageW.Call(hwnd, siteBMGetCheck, 0, 0)
+	return checked == siteBSTChecked
+}
+
+func siteSetChecked(hwnd uintptr, checked bool) {
+	if hwnd == 0 {
+		return
+	}
+	value := uintptr(0)
+	if checked {
+		value = siteBSTChecked
+	}
+	sendMessageW.Call(hwnd, siteBMSetCheck, value, 0)
+}
+
+func (state *siteManagerState) refreshSyncOptions() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	settings := state.parent.settings
+	siteSetChecked(state.syncBackup, settings.BackupBeforeOverwrite)
+	siteSetChecked(state.syncSkip, settings.SkipExisting)
+	siteSetChecked(state.syncConfirm, settings.ConfirmDelete)
+}
+
+func (state *siteManagerState) saveSyncOptions() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	next := state.parent.settings
+	next.BackupBeforeOverwrite = siteChecked(state.syncBackup)
+	next.SkipExisting = siteChecked(state.syncSkip)
+	next.ConfirmDelete = siteChecked(state.syncConfirm)
+	saved, err := state.parent.engine.SetSettings(next)
+	if err != nil {
+		state.refreshSyncOptions()
+		platform.ErrorDialog("Ghost FTP", "Sync Options", state.parent.userMessage(err, "settings.save_failed_body"))
+		return
+	}
+	state.parent.settings = saved
+	state.refreshOptionsSummary()
+	state.parent.setStatus("Sync options updated")
 }
 
 func (state *siteManagerState) refreshOptionsSummary() {
@@ -769,6 +832,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		showControls(false,
 			state.presetsTab, state.syncTab, state.automationTab,
 			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+			state.syncBackup, state.syncSkip, state.syncConfirm,
 			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 		)
 		state.parent.move(state.settings, 720, 738, 160, 42)
@@ -777,6 +841,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	showControls(true,
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+		state.syncBackup, state.syncSkip, state.syncConfirm,
 		state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
 	)
 	state.parent.move(state.settings, 926, 738, 264, 42)
@@ -912,11 +977,15 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.presetWebsite = parent.registerButton(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 216, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", buttonNav)
 	state.presetBackup = parent.registerButton(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 282, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", buttonNav)
 	state.presetMedia = parent.registerButton(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 348, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", buttonNav)
-	label("ACTIVE TRANSFER SETTINGS", 926, 422, 262)
-	state.options = mk("STATIC", "", wsBorder, 926, 446, 264, 178, 0)
-	label("SECURITY", 926, 638, 264)
-	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain in the protected Windows credential layer."
-	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 662, 264, 62, 0)
+	heading("Sync Options", 926, 422, 264)
+	state.syncBackup = mk("BUTTON", "Backup before overwrite", wsTabStop|siteBSAutoCheckBox, 926, 458, 264, 28, siteIDSyncBackup)
+	state.syncSkip = mk("BUTTON", "Skip existing files", wsTabStop|siteBSAutoCheckBox, 926, 492, 264, 28, siteIDSyncSkip)
+	state.syncConfirm = mk("BUTTON", "Confirm destructive actions", wsTabStop|siteBSAutoCheckBox, 926, 526, 264, 28, siteIDSyncConfirm)
+	label("ACTIVE TRANSFER SETTINGS", 926, 568, 262)
+	state.options = mk("STATIC", "", wsBorder, 926, 592, 264, 72, 0)
+	label("SECURITY", 926, 674, 264)
+	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain protected by Windows."
+	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 696, 264, 34, 0)
 	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
 	// Saved Sites and private session history share the right reference column.
@@ -946,6 +1015,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
+		state.syncBackup, state.syncSkip, state.syncConfirm,
 	} {
 		if control == 0 {
 			return fmt.Errorf("Connections control initialization failed")
@@ -964,6 +1034,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
+	state.refreshSyncOptions()
 	state.refillRecentConnections()
 	return nil
 }
