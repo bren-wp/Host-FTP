@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/bren-wp/Host-FTP/internal/i18n"
@@ -415,6 +416,59 @@ func (state *siteManagerState) refillProfiles(selectedID string) {
 	state.selected = selected
 	sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(selected), 0)
 	state.loadSelection(selected)
+}
+
+func (state *siteManagerState) refillRecentConnections() {
+	if state == nil || state.recentList == 0 || state.parent == nil {
+		return
+	}
+	sendMessageW.Call(state.recentList, siteLBResetContent, 0, 0)
+	now := time.Now()
+	for _, entry := range state.parent.recentConnections {
+		label := recentConnectionLabel(entry, now)
+		sendMessageW.Call(state.recentList, siteLBAddString, 0, uintptr(unsafe.Pointer(wstr(label))))
+	}
+}
+
+func (state *siteManagerState) loadRecentSelection() bool {
+	if state == nil || state.recentList == 0 || state.parent == nil {
+		return false
+	}
+	index, _, _ := sendMessageW.Call(state.recentList, siteLBGetCurSel, 0, 0)
+	if int32(index) < 0 || int(index) >= len(state.parent.recentConnections) {
+		return false
+	}
+	entry := state.parent.recentConnections[int(index)]
+	if entry.ProfileID != "" {
+		for profileIndex, profile := range state.profiles {
+			if profile.ID == entry.ProfileID {
+				sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(profileIndex+1), 0)
+				state.loadSelection(profileIndex + 1)
+				return true
+			}
+		}
+	}
+
+	state.selected = 0
+	sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
+	setText(state.name, entry.Name)
+	state.setProtocol(entry.Protocol)
+	setText(state.host, entry.Host)
+	if entry.Port > 0 {
+		setText(state.port, strconv.Itoa(entry.Port))
+	} else {
+		setText(state.port, protocolSpecs[protocolIndex(entry.Protocol)].Port)
+	}
+	setText(state.user, entry.Username)
+	setText(state.password, "")
+	setText(state.passphrase, "")
+	setText(state.localPath, state.parent.localCurrent)
+	setText(state.remotePath, "/")
+	setText(state.keyPath, "")
+	setText(state.security, "Recent session · credentials are never stored in recent history")
+	setControlEnabled(state.duplicate, false)
+	setControlEnabled(state.delete, false)
+	return true
 }
 
 func (state *siteManagerState) loadCurrentSelection() {
@@ -865,21 +919,28 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 662, 264, 62, 0)
 	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
-	// Saved Sites card on the right, matching the approved reference.
+	// Saved Sites and private session history share the right reference column.
 	heading("Saved Sites", 1240, 54, 190)
 	state.newSite = parent.registerButton(mk("BUTTON", "New Site", wsTabStop|bsOwnerDraw, 1460, 50, 104, 38, siteIDNewSite), iconNewFolder, "New Site", buttonAccent)
 	label("SAVED CONNECTIONS", 1240, 100, 300)
-	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 514, siteIDList)
+	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 314, siteIDList)
 	if state.list != 0 {
 		applySiteManagerNavigationTheme(state.list)
 		state.listBrush, _, _ = createSolidBrush.Call(listColor())
 	}
 	duplicateLabel := siteManagerDuplicateLabel(parent.languageCode())
-	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 650, 154, 38, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
-	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 650, 160, 38, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
+	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 450, 154, 36, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
+	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 450, 160, 36, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
+
+	heading("Recent Connections", 1240, 514, 250)
+	label("SESSION HISTORY · NO PASSWORDS", 1240, 550, 310)
+	state.recentList = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight, 1240, 576, 324, 148, siteIDRecentList)
+	if state.recentList != 0 {
+		applySiteManagerNavigationTheme(state.recentList)
+	}
 
 	for _, control := range []uintptr{
-		state.list, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
+		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
@@ -903,6 +964,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
+	state.refillRecentConnections()
 	return nil
 }
 
@@ -977,6 +1039,7 @@ func (a *app) openSiteManager() {
 	}
 	selectedID := a.selectedProfileID
 	state.refillProfiles(selectedID)
+	state.refillRecentConnections()
 	enableWindow.Call(a.hwnd, 0)
 	showWindow.Call(hwnd, swShow)
 	updateWindow.Call(hwnd)
