@@ -203,7 +203,6 @@ func (a *app) openSettings() {
 		ResetLabel:             settingsResetLabel(language),
 		UpdateLabel:            "Check for updates",
 		DownloadLabel:          "Open update center",
-		PremiumLabel:           "Ghost FTP Premium",
 		WebsiteLabel:           "ghostftp.com",
 		DefaultLanguageIndex:   defaultLanguageIndex,
 		DefaultAppearanceIndex: appearanceIndex(defaults.Appearance),
@@ -217,8 +216,6 @@ func (a *app) openSettings() {
 			a.checkForUpdates()
 		case "download":
 			a.openUpdateDownload()
-		case "premium":
-			a.openPremiumDownload()
 		case "website":
 			a.openOfficialWebsite()
 		}
