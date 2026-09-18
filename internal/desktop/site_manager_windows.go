@@ -57,6 +57,7 @@ const (
 	siteIDSyncBackup     = 8139
 	siteIDSyncSkip       = 8140
 	siteIDSyncConfirm    = 8141
+	siteIDTestConnection = 8142
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -194,6 +195,8 @@ type siteManagerState struct {
 	syncBackup      uintptr
 	syncSkip        uintptr
 	syncConfirm     uintptr
+	testConnection  uintptr
+	testing         bool
 }
 
 var (
@@ -305,6 +308,9 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				case siteIDSyncBackup, siteIDSyncSkip, siteIDSyncConfirm:
 					state.saveSyncOptions()
 					return 0
+				case siteIDTestConnection:
+					state.testCurrentConnection()
+					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
 					return 0
@@ -375,7 +381,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
-				state.syncBackup, state.syncSkip, state.syncConfirm,
+				state.syncBackup, state.syncSkip, state.syncConfirm, state.testConnection,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -942,8 +948,9 @@ func (state *siteManagerState) layoutResponsive(width int) {
 				actionY = 738
 			}
 		}
-		state.parent.move(state.save, 262, actionY, 160, 42)
-		state.parent.move(state.close, 500, actionY, 132, 42)
+		state.parent.move(state.testConnection, 262, actionY, 166, 42)
+		state.parent.move(state.save, 742, 50, 138, 38)
+		showControls(false, state.close)
 		state.parent.move(state.connect, 646, actionY, 234, 42)
 		invalidateRect.Call(state.hwnd, 0, 1)
 		return
@@ -959,8 +966,9 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 738, 264, 42)
-	state.parent.move(state.save, 262, 738, 160, 42)
-	state.parent.move(state.close, 500, 738, 132, 42)
+	state.parent.move(state.testConnection, 262, 738, 166, 42)
+	state.parent.move(state.save, 742, 50, 138, 38)
+	showControls(false, state.close)
 	state.parent.move(state.connect, 646, 738, 234, 42)
 	invalidateRect.Call(state.hwnd, 0, 1)
 }
@@ -1093,9 +1101,11 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	profileNote := "Quick Connect uses credentials only for this session. Saving a profile asks before secrets are stored in the protected Windows credential layer."
 	mk("STATIC", profileNote, 0, 262, 642, 618, 48, 0)
 
-	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 262, 738, 160, 42, siteIDSave), iconSave, "Save as Profile", buttonDefault)
+	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 742, 50, 138, 38, siteIDSave), iconSave, "Save as Profile", buttonDefault)
+	state.testConnection = parent.registerButton(mk("BUTTON", "Test Connection", wsTabStop|bsOwnerDraw, 262, 738, 166, 42, siteIDTestConnection), iconConnect, "Test Connection", buttonDefault)
 	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 738, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
 	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 738, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
+	showControls(false, state.close)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
 	state.transferHeading = heading("Transfer & Sync Options", 924, 54, 270)
@@ -1140,7 +1150,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	for _, control := range []uintptr{
 		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
-		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
+		state.settings, state.save, state.testConnection, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
