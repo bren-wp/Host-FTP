@@ -90,6 +90,16 @@ The main workspace includes:
 - recursive search and bookmarks
 - DPI-aware Windows layouts
 
+## Settings that stay focused
+
+Ghost FTP keeps frequently changed preferences in one branded Windows surface: language, appearance, parallel transfers, bandwidth limits, connection timeout, automatic retry behavior, conflict handling and update access.
+
+<p align="center">
+  <img src="docs/screenshots/Ghost-FTP-settings-reference.png" alt="Ghost FTP Settings" width="82%">
+</p>
+
+The Settings UI contains only working product actions. There is no subscription upsell, demo account or development-only control in the production build.
+
 ## Privacy without marketing theatre
 
 Ghost FTP does not require a Ghost FTP account to connect to your servers. The maintained desktop client does not add advertising or product telemetry.
@@ -116,7 +126,7 @@ Every production GitHub release publishes the same release set used by the updat
 
 | Artifact | Purpose |
 | --- | --- |
-| `Ghost-FTP-0.5.0-Setup.exe` | Standard Windows installation |
+| `Ghost-FTP-0.5.0-Setup.exe` | Standard Windows installation; uninstall is integrated into GhostFTP.exe via Windows Installed Apps, with no permanent Uninstall.exe |
 | `Ghost-FTP-0.5.0-Portable.exe` | Portable build with no installer |
 | `Ghost-FTP-0.5.0-Update.exe` | Verified first-party update helper |
 | `Ghost-FTP-0.5.0-Source.zip` | Exact source package for the release |

@@ -113,6 +113,18 @@ try {
     Start-Sleep -Milliseconds 700
     Save-Window $connections (Join-Path $OutputDirectory "Ghost-FTP-connections-reference.png")
     [GhostReferenceCapture]::PostMessage($connections, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
+    Start-Sleep -Milliseconds 350
+
+    # Settings is an application-owned modal and must stay visually aligned with
+    # the main Ghost FTP reference UI. Capture it on every Windows release so
+    # regressions in spacing, branding or button layout are visible in CI.
+    if (-not [GhostReferenceCapture]::PostMessage($main, 0x0111, [IntPtr]94, [IntPtr]::Zero)) {
+        throw "Could not open Settings."
+    }
+    $settings = Find-Window $process.Id "Settings"
+    Start-Sleep -Milliseconds 500
+    Save-Window $settings (Join-Path $OutputDirectory "Ghost-FTP-settings-reference.png")
+    [GhostReferenceCapture]::PostMessage($settings, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
 } finally {
     if (-not $process.HasExited) {
         $process.CloseMainWindow() | Out-Null
