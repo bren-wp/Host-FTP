@@ -240,7 +240,24 @@ func Run(engine *api.Engine, version string) error {
 	return nil
 }
 
-func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	// A panic must never cross a syscall callback boundary. Win32 callbacks are
+	// invoked by user32 outside Go's normal goroutine call tree; allowing a panic
+	// to escape here can terminate the whole desktop process. Recover at the
+	// outermost UI boundary, keep the window alive and report the fault in the
+	// in-app status area instead.
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		if value, ok := apps.Load(hwnd); ok {
+			if current, ok := value.(*app); ok && current != nil && !current.closing {
+				current.setStatus("Ghost FTP recovered from an internal UI error. Your session is still running.")
+			}
+		}
+		result = 0
+	}()
+
 	v, ok := apps.Load(hwnd)
 	if !ok {
 		r, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
