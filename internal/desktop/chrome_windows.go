@@ -70,8 +70,9 @@ func (a *app) refineBrandHeader() {
 	// Reserve a fixed wordmark gutter large enough for the real Segoe UI bold
 	// rendering seen on Windows runners. Keep the subtitle responsive inside
 	// the remaining header space rather than allowing it to overlap the title.
-	const titleX, titleWidth, subtitleX = 54, 168, 230
-	a.move(a.brandTitle, titleX, 10, titleWidth, 35)
+	const titleX, ghostWidth, ftpWidth, wordmarkGap, subtitleX = 72, 92, 54, 2, 230
+	a.move(a.brandTitle, titleX, 10, ghostWidth, 35)
+	a.move(a.brandFTP, titleX+ghostWidth+wordmarkGap, 10, ftpWidth, 35)
 	var client rect
 	if ok, _, _ := getClientRect.Call(a.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
 		logicalWidth := a.unscale(int(client.Right - client.Left))
