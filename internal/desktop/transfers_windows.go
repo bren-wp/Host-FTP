@@ -155,6 +155,30 @@ func (a *app) applyTransferEvents(events []transfer.Event) bool {
 	return changed
 }
 
+func (a *app) fullTransferSelectionIndices() []int {
+	if a == nil {
+		return nil
+	}
+	viewSelection := selectedIndices(a.transferList)
+	if len(viewSelection) == 0 {
+		return nil
+	}
+	byID := make(map[string]int, len(a.transferJobs))
+	for index, job := range a.transferJobs {
+		byID[job.ID] = index
+	}
+	full := make([]int, 0, len(viewSelection))
+	for _, viewIndex := range viewSelection {
+		if viewIndex < 0 || viewIndex >= len(a.transferViewJobs) {
+			continue
+		}
+		if index, ok := byID[a.transferViewJobs[viewIndex].ID]; ok {
+			full = append(full, index)
+		}
+	}
+	return full
+}
+
 func (a *app) selectedTransferIDSet() map[string]struct{} {
 	selected := make(map[string]struct{})
 	for _, index := range selectedIndices(a.transferList) {
