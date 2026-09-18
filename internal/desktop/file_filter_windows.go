@@ -87,14 +87,19 @@ func (a *app) updateFileFilterControls() {
 		return
 	}
 	words := fileFilterWordsForLanguage(a.languageCode())
-	label := func(query string, visible, total int) string {
+	localCue, remoteCue := words.Cue, words.Cue
+	if a.languageCode() == "en" {
+		localCue = "Search local files…"
+		remoteCue = "Search remote files…"
+	}
+	label := func(cue, query string, visible, total int) string {
 		if strings.TrimSpace(query) == "" {
-			return words.Cue
+			return cue
 		}
-		return words.Cue + "  ·  " + strconv.Itoa(visible) + "/" + strconv.Itoa(total)
+		return cue + "  ·  " + strconv.Itoa(visible) + "/" + strconv.Itoa(total)
 	}
 	if state.localButton != 0 {
-		a.setButtonLabel(state.localButton, label(state.localQuery, len(a.localItems), len(state.localAll)))
+		a.setButtonLabel(state.localButton, label(localCue, state.localQuery, len(a.localItems), len(state.localAll)))
 		setControlEnabled(state.localButton, !a.closing)
 	}
 	if state.remoteButton != 0 {
@@ -102,7 +107,7 @@ func (a *app) updateFileFilterControls() {
 		if state.remoteGeneration == a.connectionGeneration {
 			remoteTotal = len(state.remoteAll)
 		}
-		a.setButtonLabel(state.remoteButton, label(state.remoteQuery, len(a.remoteItems), remoteTotal))
+		a.setButtonLabel(state.remoteButton, label(remoteCue, state.remoteQuery, len(a.remoteItems), remoteTotal))
 		setControlEnabled(state.remoteButton, a.connected && !a.connectionBusy && !a.closing)
 	}
 }
