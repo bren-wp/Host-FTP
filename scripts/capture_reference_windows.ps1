@@ -101,7 +101,7 @@ New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $process = Start-Process -FilePath $exe -PassThru
 try {
     $main = Wait-MainWindow $process
-    [GhostReferenceCapture]::MoveWindow($main, 0, 0, 1600, 900, $true) | Out-Null
+    [GhostReferenceCapture]::MoveWindow($main, 0, 0, 1664, 960, $true) | Out-Null
     Start-Sleep -Milliseconds 900
     Save-Window $main (Join-Path $OutputDirectory "Ghost-FTP-main-reference.png")
 
@@ -109,7 +109,7 @@ try {
         throw "Could not open Connections."
     }
     $connections = Find-Window $process.Id "Connections"
-    [GhostReferenceCapture]::MoveWindow($connections, 0, 0, 1380, 800, $true) | Out-Null
+    [GhostReferenceCapture]::MoveWindow($connections, 0, 0, 1590, 880, $true) | Out-Null
     Start-Sleep -Milliseconds 700
     Save-Window $connections (Join-Path $OutputDirectory "Ghost-FTP-connections-reference.png")
     [GhostReferenceCapture]::PostMessage($connections, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
