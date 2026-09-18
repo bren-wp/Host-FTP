@@ -1407,16 +1407,21 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	)
 	state.titleMinimize = parent.registerButton(mk("BUTTON", "—", bsOwnerDraw, 1448, 4, 38, 32, siteIDTitleMinimize), "", "—", buttonSubtle)
 	state.titleMaximize = parent.registerButton(mk("BUTTON", "□", bsOwnerDraw, 1488, 4, 38, 32, siteIDTitleMaximize), "", "□", buttonSubtle)
-	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonDanger)
+	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonSubtle)
 	state.privacyLabel = mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
 	state.navSync = nav(siteIDNavSync, "Synchronize", iconSync, false)
 	state.navRemote = nav(siteIDNavRemote, "Remote Files", iconDownload, false)
 	state.navLocal = nav(siteIDNavLocal, "Local Files", iconOpenLocal, false)
+	state.navSiteManager = nav(siteIDNavSiteManager, "Site Manager", iconSave, false)
+	state.navAutomation = nav(siteIDNavAutomation, "Automation", iconSync, false)
 	state.navSettings = nav(siteIDNavSettings, "Settings", iconSettings, false)
 	navY := 102
-	for _, control := range []uintptr{state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings} {
+	for _, control := range []uintptr{
+		state.navConnections, state.navTransfers, state.navSync, state.navRemote,
+		state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
+	} {
 		parent.move(control, 28, navY, 184, 42)
 		navY += 50
 	}
@@ -1506,8 +1511,12 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	// Saved Sites and private session history share the right reference column.
 	state.savedHeading = heading("Saved Sites", 1240, 54, 190)
 	state.newSite = parent.registerButton(mk("BUTTON", "New Site", wsTabStop|bsOwnerDraw, 1460, 50, 104, 38, siteIDNewSite), iconNewFolder, "New Site", buttonAccent)
-	state.savedLabel = label("SAVED CONNECTIONS", 1240, 100, 300)
-	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 314, siteIDList)
+	state.savedLabel = label("SAVED CONNECTIONS", 1240, 96, 300)
+	state.savedSearch = parent.registerButton(
+		mk("BUTTON", "Search saved connections…", wsTabStop|bsOwnerDraw, 1240, 118, 324, 36, siteIDSavedSearch),
+		iconSearch, "Search saved connections…", buttonSubtle,
+	)
+	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 164, 324, 274, siteIDList)
 	if state.list != 0 {
 		applySiteManagerNavigationTheme(state.list)
 		state.listBrush, _, _ = createSolidBrush.Call(listColor())
@@ -1516,19 +1525,32 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 450, 154, 36, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
 	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 450, 160, 36, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
 
-	state.recentHeading = heading("Recent Connections", 1240, 514, 250)
+	state.recentHeading = heading("Recent Connections", 1240, 514, 224)
+	state.recentClear = parent.registerButton(
+		mk("BUTTON", "Clear All", wsTabStop|bsOwnerDraw, 1470, 510, 94, 34, siteIDRecentClear),
+		iconClear, "Clear All", buttonSubtle,
+	)
 	state.recentLabel = label("SESSION HISTORY · NO PASSWORDS", 1240, 550, 310)
 	state.recentList = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight, 1240, 576, 324, 148, siteIDRecentList)
 	if state.recentList != 0 {
 		applySiteManagerNavigationTheme(state.recentList)
 	}
 
+	// Reference footer uses real runtime data instead of sample telemetry.
+	state.footerReady = mk("STATIC", "", 0, 250, 834, 410, 28, 0)
+	state.footerStats = mk("STATIC", "", 0, 892, 834, 672, 28, 0)
+	if parent.smallFont != 0 {
+		sendMessageW.Call(state.footerReady, wmSetFont, parent.smallFont, 1)
+		sendMessageW.Call(state.footerStats, wmSetFont, parent.smallFont, 1)
+	}
+
 	for _, control := range []uintptr{
 		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.testConnection, state.delete, state.connect, state.close, state.newSite,
+		state.savedSearch, state.recentClear, state.footerReady, state.footerStats,
 		state.titleMinimize, state.titleMaximize, state.titleClose,
-		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
+		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 		state.syncBackup, state.syncSkip, state.syncConfirm,
@@ -1552,6 +1574,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.refreshOptionsSummary()
 	state.refreshSyncOptions()
 	state.refillRecentConnections()
+	state.refreshFooter()
 	return nil
 }
 
