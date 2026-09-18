@@ -20,6 +20,7 @@ var premiumAdjustWindowRectEx = user32.NewProc("AdjustWindowRectEx")
 var premiumAdjustWindowRectExForDpi = user32.NewProc("AdjustWindowRectExForDpi")
 var premiumEnableWindow = user32.NewProc("EnableWindow")
 var premiumSetActiveWindow = user32.NewProc("SetActiveWindow")
+var premiumLoadIconW = user32.NewProc("LoadIconW")
 var premiumShowWindow = user32.NewProc("ShowWindow")
 var premiumIsIconic = user32.NewProc("IsIconic")
 var premiumIsWindow = user32.NewProc("IsWindow")
@@ -155,6 +156,14 @@ func applyPremiumDialogControl(hwnd uintptr, class string) {
 	if theme != "" {
 		premiumSetWindowTheme.Call(hwnd, uintptr(unsafe.Pointer(promptWstr(theme))), 0)
 	}
+}
+
+func premiumDialogIcon(instance uintptr) uintptr {
+	if instance == 0 {
+		return 0
+	}
+	icon, _, _ := premiumLoadIconW.Call(instance, 1)
+	return icon
 }
 
 func premiumDialogOwner() uintptr {
