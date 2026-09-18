@@ -415,7 +415,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 			return 0
 		}
 	}
-	result, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+	result, _, _ = defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
 	return result
 }
 
