@@ -9,14 +9,14 @@ import (
 
 const (
 	applicationSidebarX           = 16
-	applicationSidebarWidth       = 236
-	applicationContentLeft        = 276
+	applicationSidebarWidth       = 248
+	applicationContentLeft        = 286
 	applicationSidebarCardH       = 48
 	applicationSidebarCardGap     = 8
 	applicationSidebarUtilityH    = 38
 	applicationSidebarUtilityGap  = 7
-	applicationSidebarPrimaryTop  = 78
-	applicationSidebarBrandIcon   = 42
+	applicationSidebarPrimaryTop  = 86
+	applicationSidebarBrandIcon   = 50
 	applicationSidebarBrandGap    = 10
 	applicationSidebarBottomInset = 18
 )
@@ -253,7 +253,11 @@ func (a *app) layoutSidebarRail(height int) {
 	bookmarks := a.ensureSidebarBookmarks()
 	labels := navigationLabelsForLanguage(a.languageCode())
 
-	a.setSidebarButtonVisual(a.siteManagerBtn, iconConnect, labels.Connections, buttonDefault)
+	sitesLabel := labels.Connections
+	if a.languageCode() == "en" {
+		sitesLabel = "Sites"
+	}
+	a.setSidebarButtonVisual(a.siteManagerBtn, iconConnect, sitesLabel, buttonDefault)
 	a.setSidebarButtonVisual(files, iconOpenLocal, labels.Files, buttonNavActive)
 	a.setSidebarButtonVisual(transfers, iconSync, labels.TransferQueue, buttonDefault)
 	syncLabel := "Sync"
@@ -272,17 +276,18 @@ func (a *app) layoutSidebarRail(height int) {
 		a.move(logo, applicationSidebarX+2, 16, applicationSidebarBrandIcon, applicationSidebarBrandIcon)
 	}
 	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 2
-	// The full product name must remain visible in the compact rail. Reuse the
-	// native UI font here instead of the large workspace wordmark font, which
-	// clipped "FTP" at runner-sized and high-DPI windows.
-	if a.font != 0 {
-		sendMessageW.Call(a.brandTitle, wmSetFont, a.font, 1)
+	// The approved rail uses the logo as a true wordmark lockup rather than a
+	// tiny toolbar icon. There is enough width for the bold product title at all
+	// supported DPI values.
+	if a.titleFont != 0 {
+		sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
 	}
-	a.move(a.brandTitle, titleX, 18, applicationSidebarWidth-(titleX-applicationSidebarX), 34)
-	// The master desktop references keep the rail brand intentionally compact.
-	// The descriptive subtitle remains in About rather than competing with
-	// operational navigation and file content.
-	showControls(false, a.brandSubtitle)
+	a.move(a.brandTitle, titleX, 19, applicationSidebarWidth-(titleX-applicationSidebarX), 38)
+	setText(a.brandSubtitle, "SECURE TRANSFERS.\r\nWITHOUT A TRACE.")
+	if a.smallFont != 0 {
+		sendMessageW.Call(a.brandSubtitle, wmSetFont, a.smallFont, 1)
+	}
+	showControls(true, a.brandSubtitle)
 
 	y := applicationSidebarPrimaryTop
 	for _, control := range []uintptr{a.siteManagerBtn, files, transfers, syncButton, a.settingsBtn} {
@@ -290,15 +295,16 @@ func (a *app) layoutSidebarRail(height int) {
 		y += applicationSidebarCardH + applicationSidebarCardGap
 	}
 
-	utilityBlockH := 3*applicationSidebarUtilityH + 2*applicationSidebarUtilityGap
-	utilityY := height - applicationSidebarBottomInset - utilityBlockH
-	if utilityY < y+18 {
-		utilityY = y + 18
-	}
+	utilityY := y + 14
 	for _, control := range []uintptr{bookmarks, diagnostics, a.aboutBtn} {
 		a.move(control, applicationSidebarX, utilityY, applicationSidebarWidth, applicationSidebarUtilityH)
 		utilityY += applicationSidebarUtilityH + applicationSidebarUtilityGap
 	}
+	mottoY := height - applicationSidebarBottomInset - 70
+	if mottoY < utilityY+16 {
+		mottoY = utilityY + 16
+	}
+	a.move(a.brandSubtitle, applicationSidebarX+10, mottoY, applicationSidebarWidth-20, 52)
 	showControls(false, a.languageCombo)
 }
 
