@@ -438,6 +438,10 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 				color = mutedColor()
 			} else if lParam == state.mottoAccent {
 				color = accentColor()
+			} else if lParam == state.footerReady {
+				color = successColor()
+			} else if lParam == state.footerStats {
+				color = mutedColor()
 			}
 			setTextColor.Call(wParam, color)
 			setBkColor.Call(wParam, panelColor())
@@ -1294,7 +1298,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 
 	const (
 		fullReferenceWidth  = 1580
-		fullReferenceHeight = 820
+		fullReferenceHeight = 840
 	)
 	compact := (width > 0 && width < fullReferenceWidth) || (height > 0 && height < fullReferenceHeight)
 	if compact {
@@ -1308,7 +1312,8 @@ func (state *siteManagerState) layoutResponsive(width int) {
 			state.presetsTab, state.syncTab, state.automationTab,
 			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 			state.syncBackup, state.syncSkip, state.syncConfirm,
-			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
+			state.options, state.securityInfo, state.newSite, state.savedSearch, state.recentClear,
+			state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 		)
 		state.parent.move(state.globalSearch, 560, 18, 320, 38)
 		actionY := 738
@@ -1335,7 +1340,8 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 		state.syncBackup, state.syncSkip, state.syncConfirm,
-		state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
+		state.options, state.securityInfo, state.newSite, state.savedSearch, state.recentClear,
+		state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 	)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 738, 264, 42)
@@ -1343,6 +1349,13 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	state.parent.move(state.save, 742, 50, 138, 38)
 	showControls(false, state.close)
 	state.parent.move(state.connect, 646, 738, 234, 42)
+	footerY := height - 38
+	if footerY < 824 {
+		footerY = 824
+	}
+	state.parent.move(state.footerReady, 250, footerY, 410, 28)
+	state.parent.move(state.footerStats, 892, footerY, 672, 28)
+	state.refreshFooter()
 	invalidateRect.Call(state.hwnd, 0, 1)
 }
 
@@ -1599,7 +1612,7 @@ func (a *app) openSiteManager() {
 		registerClassExW.Call(uintptr(unsafe.Pointer(&class)))
 	})
 
-	logicalW, logicalH := 1590, 850
+	logicalW, logicalH := 1590, 880
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
 	screenLogicalW := a.unscale(int(screenW))
@@ -1607,8 +1620,8 @@ func (a *app) openSiteManager() {
 	if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
 		logicalW = screenLogicalW - 24
 	}
-	if screenLogicalH > 0 && logicalH > screenLogicalH-48 {
-		logicalH = screenLogicalH - 48
+	if screenLogicalH > 0 && logicalH > screenLogicalH-16 {
+		logicalH = screenLogicalH - 16
 	}
 	if logicalW < 960 {
 		logicalW = 960
