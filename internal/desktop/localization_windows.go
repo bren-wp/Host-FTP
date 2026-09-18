@@ -155,8 +155,8 @@ func (a *app) setColumnTitle(list uintptr, index int, title string) {
 func (a *app) applyColumnLanguage() {
 	for _, list := range []uintptr{a.localList, a.remoteList} {
 		a.setColumnTitle(list, 0, a.tr("column.name"))
-		a.setColumnTitle(list, 1, a.tr("column.type"))
-		a.setColumnTitle(list, 2, a.tr("column.size"))
+		a.setColumnTitle(list, 1, a.tr("column.size"))
+		a.setColumnTitle(list, 2, a.tr("column.type"))
 		a.setColumnTitle(list, 3, a.tr("column.modified"))
 	}
 	a.setColumnTitle(a.remoteList, 4, a.tr("common.permissions"))
@@ -344,7 +344,7 @@ func (a *app) fillItemList(list uintptr, items []model.Item) {
 		if item.IsDirectory {
 			size = a.tr("type.folder")
 		}
-		columns := []string{item.Name, a.localizedItemType(item), size, formatTime(item.Modified)}
+		columns := []string{item.Name, size, a.localizedItemType(item), formatTime(item.Modified)}
 		if list == a.remoteList {
 			columns = append(columns, item.Permissions)
 		}
