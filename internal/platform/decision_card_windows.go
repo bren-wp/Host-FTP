@@ -223,13 +223,16 @@ func decisionCardDialog(title, instruction, content string, kind int) (result in
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	decisionCardOnce.Do(func() {
 		cursor, _, _ := promptLoadCursorW.Call(0, 32512)
+		icon := premiumDialogIcon(hinst)
 		wc := promptWndClassEx{
 			CbSize:     uint32(unsafe.Sizeof(promptWndClassEx{})),
 			WndProc:    decisionCardProc,
 			Instance:   hinst,
 			Cursor:     cursor,
+			Icon:       icon,
 			Background: premiumDialogBackgroundBrush(),
 			ClassName:  promptWstr(decisionCardClass),
+			IconSm:     icon,
 		}
 		promptRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc)))
 	})
