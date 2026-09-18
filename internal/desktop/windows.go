@@ -180,6 +180,7 @@ func Run(engine *api.Engine, version string) error {
 	accelerators := []accel{
 		{FVirt: fvirtKey, Key: vkF5, Cmd: idRefreshAll},
 		{FVirt: fvirtKey | fcontrol, Key: 'S', Cmd: idSaveProfile},
+		{FVirt: fvirtKey | fcontrol, Key: 'K', Cmd: idWorkspaceMore},
 		{FVirt: fvirtKey | fcontrol, Key: 'L', Cmd: idFocusLocalPath},
 		{FVirt: fvirtKey | fcontrol | fshiftKeyboard, Key: 'L', Cmd: idFocusRemotePath},
 	}
@@ -240,6 +241,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	}
 	a := v.(*app)
 	switch message {
+	case wmPaint:
+		a.paintReferenceWorkspace()
+		return 0
 	case wmGetMinMaxInfo:
 		if lParam != 0 {
 			info := minMaxInfoFromLParam(lParam)
