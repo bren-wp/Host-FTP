@@ -41,9 +41,10 @@ type app struct {
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
 
-	siteManagerBtn         uintptr
-	sidebarBookmarkHeading uintptr
-	sidebarMotto           uintptr
+	siteManagerBtn           uintptr
+	sidebarBookmarkHeading   uintptr
+	sidebarMotto             uintptr
+	sidebarConnectionStatus  uintptr
 	sidebarProfileButtons  []uintptr
 
 	mu                   sync.Mutex
@@ -383,6 +384,12 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			color = accentStrongColor()
 		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
+		} else if lParam == a.sidebarConnectionStatus {
+			if a.connected {
+				color = successColor()
+			} else {
+				color = mutedColor()
+			}
 		} else if lParam == a.connectionBadge {
 			if a.connected {
 				color = successColor()
