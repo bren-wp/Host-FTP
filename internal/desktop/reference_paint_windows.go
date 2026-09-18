@@ -123,13 +123,28 @@ func (state *siteManagerState) paintReferenceConnections() {
 	}
 
 	// Approved Connections composition: product rail and connection editor are
-	// always present. Optional reference side cards render only when the logical
-	// client width can contain them without clipping.
-	state.parent.drawReferenceCard(hdc, 12, 12, 220, 818, 18, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 244, 44, 654, 770, 16, panelColor(), borderColor())
-
+	// always present. Optional reference side cards render only when both width
+	// and height can contain the full board without clipping.
 	logicalWidth := state.parent.unscale(int(client.Right - client.Left))
-	if logicalWidth >= 1580 {
+	logicalHeight := state.parent.unscale(int(client.Bottom - client.Top))
+	compact := logicalWidth < 1580 || logicalHeight < 820
+
+	railHeight := 818
+	editorHeight := 770
+	if compact {
+		railHeight = logicalHeight - 24
+		editorHeight = logicalHeight - 60
+		if railHeight < 620 {
+			railHeight = 620
+		}
+		if editorHeight < 620 {
+			editorHeight = 620
+		}
+	}
+	state.parent.drawReferenceCard(hdc, 12, 12, 220, railHeight, 18, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 244, 44, 654, editorHeight, 16, panelColor(), borderColor())
+
+	if !compact {
 		state.parent.drawReferenceCard(hdc, 908, 44, 300, 510, 16, panelColor(), borderColor())
 		state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
 		state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
