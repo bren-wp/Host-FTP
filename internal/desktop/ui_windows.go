@@ -316,7 +316,7 @@ func (a *app) resizeListColumns() {
 	if localNameW < 120 {
 		localNameW = 120
 	}
-	for i, width := range []int{localNameW, typeW, sizeW, modifiedW} {
+	for i, width := range []int{localNameW, sizeW, typeW, modifiedW} {
 		if a.localList != 0 {
 			sendMessageW.Call(a.localList, lvmSetColumnWidth, uintptr(i), uintptr(a.scale(width)))
 		}
@@ -327,7 +327,7 @@ func (a *app) resizeListColumns() {
 	if remoteNameW < 100 {
 		remoteNameW = 100
 	}
-	for i, width := range []int{remoteNameW, typeW, sizeW, modifiedW, permissionsW} {
+	for i, width := range []int{remoteNameW, sizeW, typeW, modifiedW, permissionsW} {
 		if a.remoteList != 0 {
 			sendMessageW.Call(a.remoteList, lvmSetColumnWidth, uintptr(i), uintptr(a.scale(width)))
 		}
