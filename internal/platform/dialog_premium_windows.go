@@ -21,6 +21,7 @@ var premiumAdjustWindowRectExForDpi = user32.NewProc("AdjustWindowRectExForDpi")
 var premiumEnableWindow = user32.NewProc("EnableWindow")
 var premiumSetActiveWindow = user32.NewProc("SetActiveWindow")
 var premiumLoadIconW = user32.NewProc("LoadIconW")
+var premiumLoadImageW = user32.NewProc("LoadImageW")
 var premiumShowWindow = user32.NewProc("ShowWindow")
 var premiumIsIconic = user32.NewProc("IsIconic")
 var premiumIsWindow = user32.NewProc("IsWindow")
@@ -163,6 +164,29 @@ func premiumDialogIcon(instance uintptr) uintptr {
 		return 0
 	}
 	icon, _, _ := premiumLoadIconW.Call(instance, 1)
+	return icon
+}
+
+func premiumDialogBrandIcon(instance uintptr, size int) uintptr {
+	if instance == 0 || size <= 0 {
+		return 0
+	}
+	const (
+		imageIcon = 1
+		lrShared  = 0x00008000
+	)
+	icon, _, _ := premiumLoadImageW.Call(
+		instance,
+		2,
+		imageIcon,
+		uintptr(size),
+		uintptr(size),
+		lrShared,
+	)
+	if icon != 0 {
+		return icon
+	}
+	icon, _, _ = premiumLoadIconW.Call(instance, 2)
 	return icon
 }
 
