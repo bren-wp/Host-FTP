@@ -140,7 +140,15 @@ func settingsComboIndex(hwnd uintptr, fallback int) int {
 	return int(value)
 }
 
-func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	// Do not let a rendering/validation panic escape a syscall callback and take
+	// the entire desktop client down. Falling back to DefWindowProc keeps the
+	// modal responsive and lets the user cancel/reopen it safely.
+	defer func() {
+		if recover() != nil {
+			result, _, _ = promptDefWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+		}
+	}()
 	if v, ok := settingsStates.Load(hwnd); ok {
 		state := v.(*settingsDialogState)
 		switch message {
