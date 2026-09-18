@@ -25,7 +25,7 @@ type app struct {
 	dpi                                  uint32
 	brush, panelBrush                    uintptr
 
-	brandTitle, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers uintptr
+	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers uintptr
 	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn           uintptr
 	protocol, host, port, user, pass                                                          uintptr
 	keyPath, chooseKey, passphrase                                                            uintptr
@@ -355,6 +355,8 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		color := textColor()
 		if lParam == a.brandTitle {
 			color = textColor()
+		} else if lParam == a.brandFTP {
+			color = accentStrongColor()
 		} else if lParam == a.brandSubtitle || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
 		} else if lParam == a.connectionBadge {
