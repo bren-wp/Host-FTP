@@ -323,16 +323,10 @@ func (a *app) resizeListColumns() {
 	}
 
 	available := logicalWidth - 28
-	directionW, statusW, progressW := 108, 184, 92
-	pathsW := available - directionW - statusW - progressW - 8
-	if pathsW < 340 {
-		pathsW = 340
-	}
-	localW := pathsW / 2
-	remoteW := pathsW - localW
-	transferWidths := []int{directionW, localW, remoteW, statusW, progressW}
-	for i, width := range transferWidths {
+	transferParts := []int{20, 11, 16, 16, 12, 15, 10}
+	for i, percent := range transferParts {
 		if a.transferList != 0 {
+			width := available * percent / 100
 			sendMessageW.Call(a.transferList, lvmSetColumnWidth, uintptr(i), uintptr(a.scale(width)))
 		}
 	}
@@ -384,11 +378,14 @@ func (a *app) setupFileColumns(list uintptr, remote bool) {
 }
 
 func (a *app) setupTransferColumns(list uintptr) {
-	a.insertColumn(list, 0, a.tr("column.direction"), 100)
-	a.insertColumn(list, 1, a.tr("column.local"), 325)
-	a.insertColumn(list, 2, a.tr("column.remote"), 325)
-	a.insertColumn(list, 3, a.tr("column.status"), 180)
-	a.insertColumn(list, 4, a.tr("column.progress"), 92)
+	// Match the approved queue table: filename first, then operational metrics.
+	a.insertColumn(list, 0, a.tr("column.name"), 240)
+	a.insertColumn(list, 1, a.tr("column.direction"), 110)
+	a.insertColumn(list, 2, a.tr("column.progress"), 150)
+	a.insertColumn(list, 3, a.tr("column.size"), 170)
+	a.insertColumn(list, 4, "Speed", 120)
+	a.insertColumn(list, 5, a.tr("column.status"), 150)
+	a.insertColumn(list, 6, "Time Remaining", 120)
 }
 
 func (a *app) insertColumn(list uintptr, idx int, title string, width int) {
