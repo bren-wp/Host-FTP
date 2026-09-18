@@ -14,6 +14,10 @@ const (
 	idQueueNav           = 708
 	idSidebarProfileBase = 9200
 	maxSidebarProfiles   = 5
+	idTransferTabAll       = 9310
+	idTransferTabUploading = 9311
+	idTransferTabDownload  = 9312
+	idTransferTabCompleted = 9313
 )
 
 // nativeMenuWords remains as a narrow compatibility shim for one localization
