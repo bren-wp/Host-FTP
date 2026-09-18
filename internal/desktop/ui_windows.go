@@ -358,6 +358,14 @@ func applyDarkTitleBar(hwnd uintptr) {
 		value = 1
 	}
 	_, _, _ = dwmSetWindowAttribute.Call(hwnd, 20, uintptr(unsafe.Pointer(&value)), unsafe.Sizeof(value))
+
+	// Windows 11 uses these best-effort attributes for the same rounded,
+	// hairline-framed top-level treatment visible in the approved Ghost FTP
+	// boards. Older Windows builds simply ignore unsupported attributes.
+	corner := uint32(2) // DWMWCP_ROUND
+	_, _, _ = dwmSetWindowAttribute.Call(hwnd, 33, uintptr(unsafe.Pointer(&corner)), unsafe.Sizeof(corner))
+	border := uint32(borderColor())
+	_, _, _ = dwmSetWindowAttribute.Call(hwnd, 34, uintptr(unsafe.Pointer(&border)), unsafe.Sizeof(border))
 }
 
 func applyDarkControl(hwnd uintptr, class string) {
