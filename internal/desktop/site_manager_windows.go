@@ -611,6 +611,61 @@ func siteManagerLimitText(value int) string {
 	return fmt.Sprintf("%d KiB/s", value)
 }
 
+func (state *siteManagerState) applyTransferPreset(name string) {
+	if state == nil || state.parent == nil {
+		return
+	}
+	next := state.parent.settings
+	label := "Standard Upload"
+	switch name {
+	case "website":
+		label = "Website Deployment"
+		next.Parallelism = 4
+		next.ConflictPolicy = model.ConflictPolicyReplaceBackup
+		next.BackupBeforeOverwrite = true
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 2
+		next.RetryDelaySeconds = 3
+	case "backup":
+		label = "Backup (Incremental)"
+		next.Parallelism = 2
+		next.ConflictPolicy = model.ConflictPolicySkip
+		next.BackupBeforeOverwrite = true
+		next.SkipExisting = true
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 2
+		next.RetryDelaySeconds = 5
+	case "media":
+		label = "Media Transfer"
+		next.Parallelism = 2
+		next.ConflictPolicy = model.ConflictPolicyReplace
+		next.BackupBeforeOverwrite = false
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 1
+		next.RetryDelaySeconds = 3
+	default:
+		next.Parallelism = 3
+		next.ConflictPolicy = model.ConflictPolicyReplace
+		next.BackupBeforeOverwrite = false
+		next.SkipExisting = false
+		next.ConfirmDelete = true
+		next.AutoRetryCount = 1
+		next.RetryDelaySeconds = 3
+	}
+	next.UploadLimitKiBPerSecond = 0
+	next.DownloadLimitKiBPerSecond = 0
+	saved, err := state.parent.engine.SetSettings(next)
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP", "Transfer preset", state.parent.userMessage(err, "settings.save_failed_body"))
+		return
+	}
+	state.parent.settings = saved
+	state.refreshOptionsSummary()
+	state.parent.setStatus("Transfer preset applied: " + label)
+}
+
 func (state *siteManagerState) refreshOptionsSummary() {
 	if state == nil || state.parent == nil || state.options == 0 {
 		return
