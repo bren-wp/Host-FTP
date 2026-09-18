@@ -120,7 +120,93 @@ var (
 	settingsClass          = "GhostFTP.SettingsDialog"
 	settingsProc           = syscall.NewCallback(settingsWndProc)
 	settingsSetWindowTextW = user32.NewProc("SetWindowTextW")
+	settingsDrawTextW       = user32.NewProc("DrawTextW")
+	settingsDrawFocusRect   = user32.NewProc("DrawFocusRect")
+	settingsCreatePen       = premiumGdi32.NewProc("CreatePen")
+	settingsSelectObject    = premiumGdi32.NewProc("SelectObject")
+	settingsRoundRect       = premiumGdi32.NewProc("RoundRect")
+	settingsSetBkMode       = premiumGdi32.NewProc("SetBkMode")
 )
+
+type settingsDrawItemStruct struct {
+	CtlType    uint32
+	CtlID      uint32
+	ItemID     uint32
+	ItemAction uint32
+	ItemState  uint32
+	HwndItem   uintptr
+	HDC        uintptr
+	RcItem     premiumRect
+	ItemData   uintptr
+}
+
+func settingsDrawButton(dis *settingsDrawItemStruct) bool {
+	if dis == nil || dis.HDC == 0 {
+		return false
+	}
+	theme := premiumDialogTheme()
+	bg := premiumPaletteColor(theme.List)
+	border := premiumPaletteColor(theme.Border)
+	fg := premiumPaletteColor(theme.Text)
+	pressed := dis.ItemState&settingsODSSelected != 0
+	disabled := dis.ItemState&settingsODSDisabled != 0
+
+	if dis.CtlID == settingsIDApply && !disabled {
+		bg = premiumPaletteColor(theme.AccentStrong)
+		border = premiumPaletteColor(theme.Accent)
+		fg = premiumPaletteColor(theme.OnAccent)
+	} else if pressed && !disabled {
+		bg = premiumPaletteColor(theme.Selection)
+		border = premiumPaletteColor(theme.Accent)
+	}
+	if disabled {
+		fg = premiumPaletteColor(theme.Muted)
+		border = premiumPaletteColor(theme.Border)
+	}
+
+	brush, _, _ := premiumCreateSolidBrush.Call(bg)
+	pen, _, _ := settingsCreatePen.Call(0, 1, border)
+	oldBrush, _, _ := settingsSelectObject.Call(dis.HDC, brush)
+	oldPen, _, _ := settingsSelectObject.Call(dis.HDC, pen)
+	r := dis.RcItem
+	settingsRoundRect.Call(
+		dis.HDC,
+		uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom),
+		10, 10,
+	)
+	settingsSelectObject.Call(dis.HDC, oldBrush)
+	settingsSelectObject.Call(dis.HDC, oldPen)
+	if brush != 0 {
+		promptDeleteObject.Call(brush)
+	}
+	if pen != 0 {
+		promptDeleteObject.Call(pen)
+	}
+
+	settingsSetBkMode.Call(dis.HDC, settingsTransparent)
+	premiumSetTextColor.Call(dis.HDC, fg)
+	label := promptText(dis.HwndItem)
+	buf := syscall.StringToUTF16(label)
+	if len(buf) > 0 {
+		textRect := r
+		settingsDrawTextW.Call(
+			dis.HDC,
+			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(len(buf)-1),
+			uintptr(unsafe.Pointer(&textRect)),
+			settingsDTCenter|settingsDTVCenter|settingsDTSingleLine|settingsDTNoPrefix,
+		)
+	}
+	if dis.ItemState&settingsODSFocus != 0 && !disabled {
+		focus := r
+		focus.Left += 4
+		focus.Top += 4
+		focus.Right -= 4
+		focus.Bottom -= 4
+		settingsDrawFocusRect.Call(dis.HDC, uintptr(unsafe.Pointer(&focus)))
+	}
+	return true
+}
 
 func settingsSetText(hwnd uintptr, text string) {
 	if hwnd == 0 {
@@ -229,6 +315,13 @@ func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (resu
 			case settingsIDCancel:
 				promptDestroyWindow.Call(hwnd)
 				return 0
+			}
+		case settingsWMDrawItem:
+			if lParam != 0 {
+				dis := (*settingsDrawItemStruct)(unsafe.Pointer(lParam))
+				if settingsDrawButton(dis) {
+					return 1
+				}
 			}
 		case premiumWMCtlColorEdit, premiumWMCtlColorListBox, premiumWMCtlColorBtn, premiumWMCtlColorStatic:
 			return premiumDialogControlColor(wParam)
@@ -399,6 +492,9 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		}
 		if child != 0 {
 			applyPremiumDialogControl(child, class)
+			if class == "EDIT" || class == "COMBOBOX" {
+				roundPremiumDialogControl(child, premiumScale(8, dpi))
+			}
 		}
 		return child
 	}
@@ -487,15 +583,15 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		if item.text == "" {
 			continue
 		}
-		makeControl("BUTTON", item.text, settingsWSTabStop, utilityX, utilityY, item.w, 36, item.id, font)
+		makeControl("BUTTON", item.text, settingsWSTabStop|settingsBSOwnerDraw, utilityX, utilityY, item.w, 36, item.id, font)
 		utilityX += item.w + 10
 	}
 
 	if config.ResetLabel != "" {
-		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop, 42, buttonY, 170, 38, settingsIDReset, font)
+		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop|settingsBSOwnerDraw, 42, buttonY, 170, 38, settingsIDReset, font)
 	}
-	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton, 602, buttonY, 100, 38, settingsIDApply, font)
-	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop, 712, buttonY, 106, 38, settingsIDCancel, font)
+	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton|settingsBSOwnerDraw, 602, buttonY, 100, 38, settingsIDApply, font)
+	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop|settingsBSOwnerDraw, 712, buttonY, 106, 38, settingsIDCancel, font)
 
 	if state.language != 0 {
 		promptSetFocus.Call(state.language)
