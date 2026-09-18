@@ -242,9 +242,9 @@ type rect struct {
 }
 
 type triVertex struct {
-	X, Y         int32
-	Red, Green   uint16
-	Blue, Alpha  uint16
+	X, Y        int32
+	Red, Green  uint16
+	Blue, Alpha uint16
 }
 
 type gradientRect struct {

@@ -16,23 +16,23 @@ import (
 )
 
 const (
-	siteIDList       = 8101
-	siteIDName       = 8102
-	siteIDProtocol   = 8103
-	siteIDHost       = 8104
-	siteIDPort       = 8105
-	siteIDUser       = 8106
-	siteIDLocal      = 8107
-	siteIDRemote     = 8108
-	siteIDKey        = 8109
-	siteIDSecurity   = 8110
-	siteIDSave       = 8111
-	siteIDDelete     = 8112
-	siteIDConnect    = 8113
-	siteIDClose      = 8114
-	siteIDPassword   = 8115
-	siteIDPassphrase = 8116
-	siteIDDuplicate  = 8117
+	siteIDList           = 8101
+	siteIDName           = 8102
+	siteIDProtocol       = 8103
+	siteIDHost           = 8104
+	siteIDPort           = 8105
+	siteIDUser           = 8106
+	siteIDLocal          = 8107
+	siteIDRemote         = 8108
+	siteIDKey            = 8109
+	siteIDSecurity       = 8110
+	siteIDSave           = 8111
+	siteIDDelete         = 8112
+	siteIDConnect        = 8113
+	siteIDClose          = 8114
+	siteIDPassword       = 8115
+	siteIDPassphrase     = 8116
+	siteIDDuplicate      = 8117
 	siteIDSettings       = 8118
 	siteIDNavConnections = 8120
 	siteIDNavTransfers   = 8121
@@ -42,16 +42,16 @@ const (
 	siteIDNavSettings    = 8125
 	siteIDNewSite        = 8126
 	siteIDGlobalSearch   = 8127
-	siteIDQuickConnect    = 8128
-	siteIDSiteManagerTab  = 8129
-	siteIDImportExport    = 8130
-	siteIDPresetsTab      = 8131
-	siteIDSyncTab         = 8132
-	siteIDAutomationTab   = 8133
-	siteIDPresetStandard  = 8134
-	siteIDPresetWebsite   = 8135
-	siteIDPresetBackup    = 8136
-	siteIDPresetMedia     = 8137
+	siteIDQuickConnect   = 8128
+	siteIDSiteManagerTab = 8129
+	siteIDImportExport   = 8130
+	siteIDPresetsTab     = 8131
+	siteIDSyncTab        = 8132
+	siteIDAutomationTab  = 8133
+	siteIDPresetStandard = 8134
+	siteIDPresetWebsite  = 8135
+	siteIDPresetBackup   = 8136
+	siteIDPresetMedia    = 8137
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -122,43 +122,43 @@ func cleanConnectionSecurityTitle(value string) string {
 }
 
 type siteManagerState struct {
-	parent       *app
-	hwnd         uintptr
-	list         uintptr
-	listBrush    uintptr
-	name         uintptr
-	protocol     uintptr
-	host         uintptr
-	port         uintptr
-	user         uintptr
-	password     uintptr
-	localPath    uintptr
-	remotePath   uintptr
-	keyPath      uintptr
-	passphrase   uintptr
-	security     uintptr
-	options      uintptr
-	securityInfo uintptr
-	settings     uintptr
-	duplicate    uintptr
-	save         uintptr
-	delete       uintptr
-	connect      uintptr
-	close        uintptr
-	profiles     []model.PublicProfile
-	selected     int
-	closed       bool
-	connectAfter  bool
-	postAction    int
-	navConnections uintptr
-	navTransfers   uintptr
-	navSync        uintptr
-	navRemote      uintptr
-	navLocal       uintptr
-	navSettings    uintptr
-	newSite        uintptr
-	globalSearch   uintptr
-	brandIcon      uintptr
+	parent          *app
+	hwnd            uintptr
+	list            uintptr
+	listBrush       uintptr
+	name            uintptr
+	protocol        uintptr
+	host            uintptr
+	port            uintptr
+	user            uintptr
+	password        uintptr
+	localPath       uintptr
+	remotePath      uintptr
+	keyPath         uintptr
+	passphrase      uintptr
+	security        uintptr
+	options         uintptr
+	securityInfo    uintptr
+	settings        uintptr
+	duplicate       uintptr
+	save            uintptr
+	delete          uintptr
+	connect         uintptr
+	close           uintptr
+	profiles        []model.PublicProfile
+	selected        int
+	closed          bool
+	connectAfter    bool
+	postAction      int
+	navConnections  uintptr
+	navTransfers    uintptr
+	navSync         uintptr
+	navRemote       uintptr
+	navLocal        uintptr
+	navSettings     uintptr
+	newSite         uintptr
+	globalSearch    uintptr
+	brandIcon       uintptr
 	quickConnectTab uintptr
 	siteManagerTab  uintptr
 	importExportTab uintptr

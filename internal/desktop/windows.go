@@ -25,23 +25,23 @@ type app struct {
 	dpi                                  uint32
 	brush, panelBrush                    uintptr
 
-	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers uintptr
-	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn           uintptr
-	protocol, host, port, user, pass                                                          uintptr
-	keyPath, chooseKey, passphrase                                                            uintptr
-	connect, disconnect                                                                       uintptr
-	localPath, localUp, localRefresh, localChoose, localList                                  uintptr
-	localMkdir, localRename, localDelete                                                      uintptr
-	remotePath, remoteUp, remoteRefresh, remoteList                                           uintptr
-	remoteMkdir, remoteRename, remoteDelete, remoteChmod                                      uintptr
-	upload, download                                                                          uintptr
-	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                    uintptr
-	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                    uintptr
-	status, statusVersion, transferSummary                                                    uintptr
+	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers               uintptr
+	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn                                   uintptr
+	protocol, host, port, user, pass                                                                                  uintptr
+	keyPath, chooseKey, passphrase                                                                                    uintptr
+	connect, disconnect                                                                                               uintptr
+	localPath, localUp, localRefresh, localChoose, localList                                                          uintptr
+	localMkdir, localRename, localDelete                                                                              uintptr
+	remotePath, remoteUp, remoteRefresh, remoteList                                                                   uintptr
+	remoteMkdir, remoteRename, remoteDelete, remoteChmod                                                              uintptr
+	upload, download                                                                                                  uintptr
+	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                                            uintptr
+	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
+	status, statusVersion, transferSummary                                                                            uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
-	buttons                                                                                   map[uintptr]buttonVisual
+	buttons                                                                                                           map[uintptr]buttonVisual
 
-	siteManagerBtn          uintptr
+	siteManagerBtn         uintptr
 	sidebarBookmarkHeading uintptr
 	sidebarProfileButtons  []uintptr
 
