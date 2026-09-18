@@ -303,11 +303,14 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	searchY, searchH := 18, 40
 	badgeW := 230
 	searchW := contentWidth - badgeW - 18
+	if searchW > 650 {
+		searchW = 650
+	}
 	if searchW < 340 {
 		searchW = 340
 	}
 	a.move(a.masterMore, contentLeft, searchY, searchW, searchH)
-	a.move(a.connectionBadge, contentRight-badgeW, searchY+9, badgeW, 22)
+	a.move(a.connectionBadge, contentRight-badgeW, searchY+3, badgeW, 34)
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
