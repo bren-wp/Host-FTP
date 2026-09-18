@@ -12,7 +12,7 @@
   <img alt="Protocols" src="https://img.shields.io/badge/Protocols-FTP%20%7C%20FTPS%20%7C%20SFTP-00e5ff">
   <img alt="Telemetry" src="https://img.shields.io/badge/Telemetry-None-16c784">
   <img alt="License" src="https://img.shields.io/badge/License-GPL--3.0-8b5cf6">
-  <img alt="Version" src="https://img.shields.io/badge/Version-0.4.0-e5e7eb">
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.5.0-e5e7eb">
 </p>
 
 ---
@@ -64,14 +64,14 @@ The Connections workspace keeps quick access, saved sites and transfer behavior 
 
 - **Quick Connect** for one-time FTP, FTPS and SFTP sessions.
 - **Site Manager** for protected saved profiles.
-- **Import / Export** follows a secret-safe contract: stored passwords and private-key passphrases are never exposed as clear text.
+- **Import / Export** creates and reads real Ghost FTP site bundles containing connection metadata only. Stored passwords, private-key passphrases and trusted host fingerprints are never exported.
 - **Transfer presets** apply real persisted settings for Standard Upload, Website Deployment, Backup (Incremental) and Media Transfer workflows.
-- **Saved Sites** and session-level recent connections reduce repetitive setup.
-- **Transfer & Sync Options** surface the settings that affect queue behavior instead of displaying decorative controls that do nothing.
+- **Saved Sites** and private session-only **Recent Connections** reduce repetitive setup without persisting a second history database.
+- **Transfer & Sync Options** surface real presets and sync safety controls — backup before overwrite, skip existing files and destructive-action confirmation — instead of decorative switches.
 
 ## A workspace built around your files
 
-Ghost FTP 0.4.0 uses a premium charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
+Ghost FTP 0.5.0 uses a premium charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
 
 The main workspace includes:
 
@@ -116,10 +116,10 @@ Every production GitHub release publishes the same release set used by the updat
 
 | Artifact | Purpose |
 | --- | --- |
-| `Ghost-FTP-0.4.0-Setup.exe` | Standard Windows installation |
-| `Ghost-FTP-0.4.0-Portable.exe` | Portable build with no installer |
-| `Ghost-FTP-0.4.0-Update.exe` | Verified first-party update helper |
-| `Ghost-FTP-0.4.0-Source.zip` | Exact source package for the release |
+| `Ghost-FTP-0.5.0-Setup.exe` | Standard Windows installation |
+| `Ghost-FTP-0.5.0-Portable.exe` | Portable build with no installer |
+| `Ghost-FTP-0.5.0-Update.exe` | Verified first-party update helper |
+| `Ghost-FTP-0.5.0-Source.zip` | Exact source package for the release |
 | `SHA256.txt` | Release integrity manifest |
 | `latest.json` | `update.ghostftp.com` client manifest |
 
