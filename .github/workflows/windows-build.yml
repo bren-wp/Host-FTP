@@ -151,6 +151,20 @@ jobs:
             ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
             Set-Content -LiteralPath dist\SHA256.txt -Encoding ascii
 
+      - name: Verify integrated uninstall packaging
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $unexpected = Get-ChildItem -LiteralPath dist -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ieq 'Uninstall.exe' }
+          if ($unexpected) {
+            throw 'A permanent Uninstall.exe was produced. Ghost FTP must uninstall through the installed GhostFTP.exe --uninstall command.'
+          }
+          if (Test-Path -LiteralPath cmd\installer\payload\Uninstall.exe) {
+            throw 'Installer payload contains a forbidden permanent Uninstall.exe.'
+          }
+          Write-Host 'INTEGRATED_UNINSTALL_PACKAGE=PASS'
+
       - name: Capture authentic reference UI
         shell: pwsh
         run: |
