@@ -125,6 +125,14 @@ func (a *app) command(id int) {
 		a.retrySelectedTransfer()
 	case idClearQueue:
 		a.clearFinishedTransfers()
+	case idTransferTabAll:
+		a.setTransferViewFilter("all")
+	case idTransferTabUploading:
+		a.setTransferViewFilter("uploading")
+	case idTransferTabDownload:
+		a.setTransferViewFilter("downloading")
+	case idTransferTabCompleted:
+		a.setTransferViewFilter("completed")
 	case idMoveQueueTop:
 		a.moveSelectedTransfer(queuePriorityTop)
 	case idMoveQueueUp:
