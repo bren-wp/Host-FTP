@@ -810,7 +810,7 @@ func (state *siteManagerState) refreshOptionsSummary() {
 		confirmDelete = "Off"
 	}
 	text := fmt.Sprintf(
-		"Parallel transfers\r\n%d simultaneous jobs\r\n\r\nUpload limit\r\n%s\r\n\r\nDownload limit\r\n%s\r\n\r\nRetry policy\r\n%d retries · %ds delay\r\n\r\nConflict policy\r\n%s\r\n\r\nDelete confirmation\r\n%s",
+		"Parallel %d · Upload %s · Download %s\r\nRetry %d × %ds · Conflict %s · Delete confirm %s",
 		settings.Parallelism,
 		siteManagerLimitText(settings.UploadLimitKiBPerSecond),
 		siteManagerLimitText(settings.DownloadLimitKiBPerSecond),
