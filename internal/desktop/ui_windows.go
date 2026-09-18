@@ -380,8 +380,8 @@ func limitEdit(hwnd uintptr, maxChars uintptr) {
 
 func (a *app) setupFileColumns(list uintptr, remote bool) {
 	a.insertColumn(list, 0, a.tr("column.name"), 300)
-	a.insertColumn(list, 1, a.tr("column.type"), 92)
-	a.insertColumn(list, 2, a.tr("column.size"), 104)
+	a.insertColumn(list, 1, a.tr("column.size"), 104)
+	a.insertColumn(list, 2, a.tr("column.type"), 92)
 	a.insertColumn(list, 3, a.tr("column.modified"), 150)
 	if remote {
 		a.insertColumn(list, 4, a.tr("common.permissions"), 112)
