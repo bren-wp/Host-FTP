@@ -26,6 +26,22 @@ func (a *app) command(id int) {
 		a.openSiteManager()
 	case idTransferQueueNav:
 		a.focusTransferQueue()
+		showControls(false,
+			a.queuePriorityButton(idMoveQueueTop),
+			a.queuePriorityButton(idMoveQueueUp),
+			a.queuePriorityButton(idMoveQueueDown),
+			a.queuePriorityButton(idMoveQueueBottom),
+		)
+	case idQueueNav:
+		a.focusTransferQueue()
+		a.ensureQueuePriorityControls()
+		showControls(true,
+			a.queuePriorityButton(idMoveQueueTop),
+			a.queuePriorityButton(idMoveQueueUp),
+			a.queuePriorityButton(idMoveQueueDown),
+			a.queuePriorityButton(idMoveQueueBottom),
+		)
+		a.layoutQueuePriorityControls()
 	case idWorkspaceBack:
 		a.navigateWorkspaceHistory(true)
 	case idWorkspaceForward:
