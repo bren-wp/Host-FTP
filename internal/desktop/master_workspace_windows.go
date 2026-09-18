@@ -292,16 +292,24 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Primary action row follows the approved mockup.
 	toolbarY, toolbarH, gap := 68, 42, 9
+	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 132, 132, 138, 116, 116, 110
+	if contentWidth < 980 {
+		// Compact Windows work areas keep every reference action visible instead
+		// of clipping Refresh beyond the right edge.
+		gap = 6
+		connectW, disconnectW, folderW = 108, 108, 116
+		uploadW, downloadW, refreshW = 92, 92, 88
+	}
 	fixed := []struct {
 		control uintptr
 		width   int
 	}{
-		{a.connect, 132},
-		{a.disconnect, 132},
-		{a.masterNewFolder, 138},
-		{a.upload, 116},
-		{a.download, 116},
-		{a.masterRefresh, 110},
+		{a.connect, connectW},
+		{a.disconnect, disconnectW},
+		{a.masterNewFolder, folderW},
+		{a.upload, uploadW},
+		{a.download, downloadW},
+		{a.masterRefresh, refreshW},
 	}
 	x := contentLeft
 	for _, item := range fixed {
