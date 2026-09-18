@@ -10,7 +10,11 @@ import (
 )
 
 func createUIFont(height int32, weight uint32) uintptr {
-	fontName := wstr("Segoe UI")
+	name := "Segoe UI"
+	if windowsBuildNumber() >= 22000 {
+		name = "Segoe UI Variable Text"
+	}
+	fontName := wstr(name)
 	font, _, _ := createFontW.Call(
 		uintptr(uint32(height)), 0, 0, 0, uintptr(weight), 0, 0, 0,
 		1, 0, 0, 5, 0, uintptr(unsafe.Pointer(fontName)),
@@ -47,10 +51,12 @@ func (a *app) createControls(hinst uintptr) error {
 
 	// English is the canonical startup locale. loadSettings applies the saved
 	// locale immediately after the controls exist.
-	a.brandTitle = mk("STATIC", brand.ProductName, 0, 0)
+	a.brandTitle = mk("STATIC", "Ghost", 0, 0)
+	a.brandFTP = mk("STATIC", "FTP", 0, 0)
 	a.brandSubtitle = mk("STATIC", a.tr("app.subtitle"), 0, 0)
 	a.connectionBadge = mk("STATIC", a.tr("badge.disconnected"), 0, 0)
 	setFont(a.brandTitle, a.titleFont)
+	setFont(a.brandFTP, a.titleFont)
 	setFont(a.brandSubtitle, a.smallFont)
 	setFont(a.connectionBadge, a.smallFont)
 
@@ -251,8 +257,13 @@ func (a *app) applyDPI(dpi uint32) {
 			sendMessageW.Call(h, wmSetFont, a.smallFont, 1)
 		}
 	}
-	if a.brandTitle != 0 && a.titleFont != 0 {
-		sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
+	if a.titleFont != 0 {
+		if a.brandTitle != 0 {
+			sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
+		}
+		if a.brandFTP != 0 {
+			sendMessageW.Call(a.brandFTP, wmSetFont, a.titleFont, 1)
+		}
 	}
 	a.resizeListColumns()
 	for _, f := range oldFonts {
@@ -642,7 +653,7 @@ func (a *app) validateControls() error {
 		name string
 		h    uintptr
 	}{
-		{"title", a.brandTitle}, {"subtitle", a.brandSubtitle}, {"connection badge", a.connectionBadge}, {"language", a.languageCombo},
+		{"title", a.brandTitle}, {"brand FTP", a.brandFTP}, {"subtitle", a.brandSubtitle}, {"connection badge", a.connectionBadge}, {"language", a.languageCombo},
 		{"profiles", a.profilesCombo}, {"save profile", a.saveProfile}, {"delete profile", a.removeProfile}, {"site manager", a.siteManagerBtn}, {"settings", a.settingsBtn}, {"about", a.aboutBtn},
 		{"protocol", a.protocol}, {"server", a.host}, {"port", a.port}, {"username", a.user}, {"password", a.pass},
 		{"private key", a.keyPath}, {"choose key", a.chooseKey}, {"key passphrase", a.passphrase}, {"connect", a.connect}, {"disconnect", a.disconnect},
