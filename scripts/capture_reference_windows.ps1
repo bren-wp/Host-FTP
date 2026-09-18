@@ -49,9 +49,9 @@ function Find-Window {
         $script:refTitle = $TitleContains
         $callback = [GhostReferenceCapture+EnumWindowsProc]{
             param([IntPtr]$hWnd, [IntPtr]$data)
-            [uint32]$pid = 0
-            [GhostReferenceCapture]::GetWindowThreadProcessId($hWnd, [ref]$pid) | Out-Null
-            if ($pid -ne $script:refPid -or -not [GhostReferenceCapture]::IsWindowVisible($hWnd)) { return $true }
+            [uint32]$windowPid = 0
+            [GhostReferenceCapture]::GetWindowThreadProcessId($hWnd, [ref]$windowPid) | Out-Null
+            if ($windowPid -ne $script:refPid -or -not [GhostReferenceCapture]::IsWindowVisible($hWnd)) { return $true }
             $buffer = New-Object System.Text.StringBuilder 512
             [GhostReferenceCapture]::GetWindowText($hWnd, $buffer, $buffer.Capacity) | Out-Null
             if ($buffer.ToString() -like "*$($script:refTitle)*") {
