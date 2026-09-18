@@ -32,6 +32,7 @@ const (
 
 	wmDestroy        = 0x0002
 	wmSize           = 0x0005
+	wmPaint          = 0x000F
 	wmSetRedraw      = 0x000B
 	wmClose          = 0x0010
 	wmGetMinMaxInfo  = 0x0024
@@ -172,6 +173,8 @@ var (
 	defWindowProcW          = user32.NewProc("DefWindowProcW")
 	showWindow              = user32.NewProc("ShowWindow")
 	updateWindow            = user32.NewProc("UpdateWindow")
+	beginPaint              = user32.NewProc("BeginPaint")
+	endPaint                = user32.NewProc("EndPaint")
 	getMessageW             = newModalAwareGetMessageProc(user32)
 	getClientRect           = user32.NewProc("GetClientRect")
 	getSystemMetrics        = user32.NewProc("GetSystemMetrics")
@@ -232,6 +235,15 @@ type wndClassEx struct {
 
 type rect struct {
 	Left, Top, Right, Bottom int32
+}
+
+type paintStruct struct {
+	HDC       uintptr
+	Erase     int32
+	RcPaint   rect
+	Restore   int32
+	IncUpdate int32
+	Reserved  [32]byte
 }
 
 type drawItemStruct struct {

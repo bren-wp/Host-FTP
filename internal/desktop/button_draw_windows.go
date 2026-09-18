@@ -15,10 +15,13 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 
 	switch v {
 	case buttonAccent:
+		// Reference UI primary actions read as electric-blue controls with a
+		// cyan focus rim and light text. This keeps large Connect/Upload buttons
+		// calmer than a full cyan fill while retaining the Ghost FTP identity.
 		if pressed {
-			return accentStrongColor(), accentStrongColor(), onAccentColor()
+			return accentColor(), accentColor(), textColor()
 		}
-		return accentColor(), accentStrongColor(), onAccentColor()
+		return accentStrongColor(), accentColor(), textColor()
 	case buttonDanger:
 		if activeThemeIsDark() {
 			if pressed {
@@ -34,7 +37,7 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 		if pressed {
 			return accentColor(), accentStrongColor(), onAccentColor()
 		}
-		return selectionColor(), accentColor(), accentStrongColor()
+		return selectionColor(), accentColor(), textColor()
 	case buttonSubtle:
 		if pressed {
 			return selectionColor(), accentColor(), textColor()
@@ -64,7 +67,7 @@ func (a *app) drawButton(dis *drawItemStruct) bool {
 	oldBrush, _, _ := selectObject.Call(dis.HDC, brush)
 	oldPen, _, _ := selectObject.Call(dis.HDC, pen)
 	r := dis.RcItem
-	roundRect.Call(dis.HDC, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom), uintptr(a.scale(10)), uintptr(a.scale(10)))
+	roundRect.Call(dis.HDC, uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom), uintptr(a.scale(12)), uintptr(a.scale(12)))
 	selectObject.Call(dis.HDC, oldBrush)
 	selectObject.Call(dis.HDC, oldPen)
 	if brush != 0 {

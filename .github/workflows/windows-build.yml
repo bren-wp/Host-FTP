@@ -122,6 +122,14 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Run Windows test suite
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go telemetry off
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Windows test suite failed.' }
+
       - name: Generate canonical Ghost FTP brand assets
         shell: pwsh
         run: |
@@ -179,6 +187,13 @@ jobs:
             ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
             Set-Content -LiteralPath dist\SHA256.txt -Encoding ascii
 
+      - name: Capture authentic reference UI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content VERSION -Raw).Trim()
+          .\scripts\capture_reference_windows.ps1 -Executable "dist\Ghost-FTP-$version-Portable.exe" -OutputDirectory ui-screenshots
+
       - name: Package exact source tree
         shell: pwsh
         run: |
@@ -215,7 +230,7 @@ jobs:
           git config user.name 'Brendigo'
           git config user.email 'info@brendigo.com'
           git add -A
-          git commit -m 'Ghost FTP 0.1.0 Windows source and approved reference UI baseline'
+          git commit -m 'Ghost FTP 0.2.0 Windows source and approved reference UI'
           git push origin HEAD:${{ github.ref_name }}
           if ($LASTEXITCODE -ne 0) { throw 'Unable to push bootstrapped Host-FTP source.' }
           Write-Host 'SOURCE_COMMIT=PUSHED'
@@ -223,7 +238,7 @@ jobs:
       - name: Upload Windows deliverables
         uses: actions/upload-artifact@v4
         with:
-          name: ghostftp-windows-0.1.0
+          name: ghostftp-windows-0.2.0
           if-no-files-found: error
           retention-days: 30
           path: |
@@ -231,3 +246,4 @@ jobs:
             dist/Ghost-FTP-*-Portable.exe
             dist/Ghost-FTP-*-Source.zip
             dist/SHA256.txt
+            ui-screenshots/*.png

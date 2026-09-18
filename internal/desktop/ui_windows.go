@@ -270,6 +270,7 @@ func (a *app) defaultFontControls() []uintptr {
 		a.localPath, a.localUp, a.localRefresh, a.localChoose, a.localList, a.localMkdir, a.localRename, a.localDelete,
 		a.remotePath, a.remoteUp, a.remoteRefresh, a.remoteList, a.remoteMkdir, a.remoteRename, a.remoteDelete, remoteEditButton(a), a.remoteChmod,
 		a.upload, a.download, a.transferList, a.pauseQueue, a.resumeQueue, a.cancelJob, a.retryJob, a.clearQueue,
+		a.masterBack, a.masterForward, a.masterRefresh, a.masterNewFolder, a.masterBookmarks, a.masterMore,
 	}
 }
 
