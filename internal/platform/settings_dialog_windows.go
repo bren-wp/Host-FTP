@@ -301,23 +301,23 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		rightX          = 438
 		fieldWidth      = 380
 		editWidth       = 170
-		numberStartY    = 238
+		numberStartY    = 220
 		numberLabelH    = 26
-		numberRowHeight = 68
+		numberRowHeight = 58
 	)
 
 	numberRows := (len(config.Numbers) + 1) / 2
 	behaviorSeparatorY := numberStartY + numberRows*numberRowHeight + 4
-	behaviorTitleY := behaviorSeparatorY + 14
-	conflictLabelY := behaviorTitleY + 28
-	confirmY := conflictLabelY + 68
-	errorY := confirmY + 30
-	footerSeparatorY := errorY + 30
-	footerY := footerSeparatorY + 14
-	utilityTitleY := footerY + 32
-	utilityY := utilityTitleY + 26
-	buttonY := utilityY + 50
-	clientHeight := buttonY + 58
+	behaviorTitleY := behaviorSeparatorY + 12
+	conflictLabelY := behaviorTitleY + 24
+	confirmY := conflictLabelY + 58
+	errorY := confirmY + 26
+	footerSeparatorY := errorY + 28
+	footerY := footerSeparatorY + 12
+	utilityTitleY := footerY + 28
+	utilityY := utilityTitleY + 24
+	buttonY := utilityY + 46
+	clientHeight := buttonY + 52
 
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	settingsOnce.Do(func() {
@@ -421,7 +421,7 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 	promptSendMessageW.Call(state.appearance, settingsCBSet, uintptr(config.AppearanceIndex), 0)
 
 	makeControl("STATIC", "", settingsEtchedHorz, 42, 210, 776, 2, 0, font)
-	makeControl("STATIC", "TRANSFER PERFORMANCE", 0, 42, 218, 776, 20, 0, sectionFont)
+	makeControl("STATIC", "TRANSFER PERFORMANCE", 0, 42, 202, 776, 20, 0, sectionFont)
 
 	for index, field := range config.Numbers {
 		row := index / 2
@@ -436,7 +436,7 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 			"EDIT",
 			strconv.Itoa(field.Value),
 			settingsWSBorder|settingsWSTabStop|settingsESNumber,
-			xPos, yLabel+29, editWidth, 32,
+			xPos, yLabel+25, editWidth, 30,
 			settingsIDNumberBase+index,
 			font,
 		)
@@ -463,7 +463,7 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 
 	makeControl("STATIC", "", settingsEtchedHorz, 42, footerSeparatorY, 776, 2, 0, font)
 	makeControl("STATIC", config.Footer, 0, 42, footerY, 776, 30, 0, captionFont)
-	makeControl("STATIC", "UPDATES & SUPPORT", 0, 42, utilityTitleY, 776, 20, 0, sectionFont)
+	makeControl("STATIC", "UPDATES && SUPPORT", 0, 42, utilityTitleY, 776, 20, 0, sectionFont)
 
 	utilityLabels := []struct {
 		text string
