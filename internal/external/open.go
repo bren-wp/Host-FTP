@@ -14,8 +14,9 @@ import (
 var ErrUntrustedURL = errors.New("untrusted external URL")
 
 var officialHosts = []string{"ghostftp.com", "www.ghostftp.com"}
+var updateHosts = []string{"update.ghostftp.com"}
 
-func OpenUpdatePage() error  { return open(brand.UpdateURL, officialHosts) }
+func OpenUpdatePage() error  { return open(brand.UpdateURL, updateHosts) }
 func OpenPremiumPage() error { return open(brand.PremiumURL, officialHosts) }
 func OpenWebsite() error     { return open(brand.WebsiteURL, officialHosts) }
 
