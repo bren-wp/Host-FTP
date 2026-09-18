@@ -17,9 +17,9 @@ const (
 	wmNcHitTest = 0x0084
 	htClient    = 1
 	htCaption   = 2
-	swMinimize  = 6
-	swMaximize  = 3
-	swRestore   = 9
+	chromeSWMinimize = 6
+	chromeSWMaximize = 3
+	chromeSWRestore  = 9
 )
 
 var (
@@ -86,14 +86,14 @@ func (a *app) windowChromeCommand(id int) bool {
 	}
 	switch id {
 	case idTitleMinimize:
-		showWindow.Call(a.hwnd, swMinimize)
+		showWindow.Call(a.hwnd, chromeSWMinimize)
 		return true
 	case idTitleMaximize:
 		zoomed, _, _ := chromeIsZoomed.Call(a.hwnd)
 		if zoomed != 0 {
-			showWindow.Call(a.hwnd, swRestore)
+			showWindow.Call(a.hwnd, chromeSWRestore)
 		} else {
-			showWindow.Call(a.hwnd, swMaximize)
+			showWindow.Call(a.hwnd, chromeSWMaximize)
 		}
 		return true
 	case idTitleClose:
