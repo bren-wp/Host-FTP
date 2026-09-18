@@ -177,7 +177,7 @@ func (a *app) openSettings() {
 	result, ok := platform.SettingsDialog(platform.SettingsDialogConfig{
 		Title:             a.tr("settings.title"),
 		Heading:           brand.ProductName,
-		Intro:             a.tr("settings.title") + " · FTP • FTPS • SFTP",
+		Intro:             "Transfer, security, appearance and update preferences · FTP • FTPS • SFTP",
 		LanguageLabel:     "Language",
 		LanguageOptions:   languageOptions,
 		LanguageIndex:     languageIndex,
@@ -201,10 +201,10 @@ func (a *app) openSettings() {
 		ApplyLabel:             okLabel(language),
 		CancelLabel:            a.tr("common.cancel"),
 		ResetLabel:             settingsResetLabel(language),
-		UpdateLabel:            "Update",
-		DownloadLabel:          "Download latest",
-		PremiumLabel:           "Premium",
-		WebsiteLabel:           "Official website",
+		UpdateLabel:            "Check for updates",
+		DownloadLabel:          "Open update center",
+		PremiumLabel:           "Ghost FTP Premium",
+		WebsiteLabel:           "ghostftp.com",
 		DefaultLanguageIndex:   defaultLanguageIndex,
 		DefaultAppearanceIndex: appearanceIndex(defaults.Appearance),
 		DefaultNumbers:         defaultNumbers,
@@ -266,15 +266,34 @@ func (a *app) openSettings() {
 }
 
 func (a *app) openAbout() {
-	// About is the only user-facing surface that carries author/publisher identity.
-	// All generic runtime, package and support metadata remains Ghost FTP-only.
-	aboutBody := strings.ReplaceAll(a.tr("about.body", brand.Website, aboutSupport), "GhostFTP", brand.ProductName)
-	body := aboutBody + "\n\n" +
+	// English is the primary product language. Localized UI remains available,
+	// while About keeps one concise canonical product description so technical
+	// security/update claims do not drift between translations.
+	localizedIntro := strings.ReplaceAll(a.tr("about.body", brand.Website, aboutSupport), "GhostFTP", brand.ProductName)
+	body := "FILES MOVE FREELY. YOU STAY IN CONTROL.\n\n" +
+		"Ghost FTP is a focused Windows file-transfer client for developers, administrators and teams working with FTP, FTPS and SFTP servers.\n\n" +
+		"WORKSPACE\n" +
+		"• Local and remote files side by side\n" +
+		"• Saved sites, bookmarks and connection profiles\n" +
+		"• Transfer queue with pause, resume, retry and cancellation\n" +
+		"• Rename, delete, create folder, remote edit and permissions tools\n\n" +
+		"SECURITY\n" +
+		"• SFTP host-key and FTPS certificate verification\n" +
+		"• Protected saved credentials on Windows\n" +
+		"• No advertising or product telemetry\n\n" +
+		"UPDATES\n" +
+		"Verified Windows updates are discovered and downloaded only from " + brand.UpdateBaseURL + "\n\n" +
+		"PRODUCT\n" +
+		brand.Website + " · FTP • FTPS • SFTP · Version " + a.version + "\n\n" +
+		"PUBLISHER\n" +
 		aboutPublisher + " · " + aboutAuthorWebsite + "\n" +
-		"FTP • FTPS • SFTP  ·  " + brand.ProductName + " " + a.version
+		aboutSupport
+	if a.languageCode() != "en" && strings.TrimSpace(localizedIntro) != "" {
+		body += "\n\nLOCALIZED SUMMARY\n" + localizedIntro
+	}
 	platform.InfoCardDialog(
-		brand.ProductName+" — "+a.tr("about.title"),
-		a.tr("about.heading"),
+		brand.ProductName+" — About",
+		brand.ProductName,
 		body,
 		okLabel(a.languageCode()),
 	)
