@@ -296,29 +296,28 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 
 	const (
 		wsOverlapped    = 0x00C80000
-		clientWidth     = 760
-		leftX           = 36
-		rightX          = 390
-		fieldWidth      = 334
-		editWidth       = 160
-		numberStartY    = 192
-		numberLabelH    = 42
-		numberRowHeight = 82
+		clientWidth     = 860
+		leftX           = 42
+		rightX          = 438
+		fieldWidth      = 380
+		editWidth       = 170
+		numberStartY    = 238
+		numberLabelH    = 26
+		numberRowHeight = 68
 	)
-	// Keep the current four-number Settings geometry exactly at 760x600, while
-	// honoring the platform contract that accepts up to six numeric preferences.
-	// Every extra row shifts the lower conflict/confirmation/footer region as one
-	// unit instead of allowing controls to overlap.
+
 	numberRows := (len(config.Numbers) + 1) / 2
-	separatorY := numberStartY + numberRows*numberRowHeight + 4
-	conflictLabelY := separatorY + 18
-	confirmY := conflictLabelY + 70
-	footerSeparatorY := confirmY + 52
+	behaviorSeparatorY := numberStartY + numberRows*numberRowHeight + 4
+	behaviorTitleY := behaviorSeparatorY + 14
+	conflictLabelY := behaviorTitleY + 28
+	confirmY := conflictLabelY + 68
+	errorY := confirmY + 30
+	footerSeparatorY := errorY + 30
 	footerY := footerSeparatorY + 14
-	utilityY := footerSeparatorY + 54
-	buttonY := footerSeparatorY + 100
-	errorY := footerSeparatorY + 146
-	clientHeight := footerSeparatorY + 190
+	utilityTitleY := footerY + 32
+	utilityY := utilityTitleY + 26
+	buttonY := utilityY + 50
+	clientHeight := buttonY + 58
 
 	hinst, _, _ := promptGetModuleHandleW.Call(0)
 	settingsOnce.Do(func() {
@@ -372,6 +371,10 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 	if captionFont != 0 {
 		defer promptDeleteObject.Call(captionFont)
 	}
+	sectionFont := premiumDialogFontForDPI(-13, dpi, 600)
+	if sectionFont != 0 {
+		defer promptDeleteObject.Call(sectionFont)
+	}
 
 	scale := func(value int) uintptr { return uintptr(premiumScale(value, dpi)) }
 	makeControl := func(class, text string, style uint32, x, y, w, h, id int, controlFont uintptr) uintptr {
@@ -392,21 +395,33 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		return child
 	}
 
-	makeControl("STATIC", config.Heading, 0, 36, 22, 688, 38, 0, headingFont)
-	makeControl("STATIC", config.Intro, 0, 36, 66, 688, 34, 0, font)
-	makeControl("STATIC", config.LanguageLabel, 0, 36, 112, 334, 22, 0, captionFont)
-	state.language = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, 36, 137, 334, 240, settingsIDLanguage, font)
+	brandIcon := premiumDialogBrandIcon(hinst, premiumScale(46, dpi))
+	if brandIcon != 0 {
+		brandControl := makeControl("STATIC", "", settingsSSIcon, 42, 22, 46, 46, 0, font)
+		if brandControl != 0 {
+			promptSendMessageW.Call(brandControl, settingsSTMSetImage, settingsImageIcon, brandIcon)
+		}
+	}
+	makeControl("STATIC", config.Heading, 0, 100, 22, 718, 38, 0, headingFont)
+	makeControl("STATIC", config.Intro, 0, 100, 63, 718, 32, 0, font)
+
+	makeControl("STATIC", "GENERAL", 0, 42, 108, 776, 20, 0, sectionFont)
+	makeControl("STATIC", config.LanguageLabel, 0, leftX, 136, fieldWidth, 22, 0, captionFont)
+	state.language = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, leftX, 160, fieldWidth, 240, settingsIDLanguage, font)
 	for _, option := range config.LanguageOptions {
 		promptSendMessageW.Call(state.language, settingsCBAdd, 0, uintptr(unsafe.Pointer(promptWstr(option))))
 	}
 	promptSendMessageW.Call(state.language, settingsCBSet, uintptr(config.LanguageIndex), 0)
 
-	makeControl("STATIC", config.AppearanceLabel, 0, 390, 112, 334, 22, 0, captionFont)
-	state.appearance = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, 390, 137, 334, 240, settingsIDAppearance, font)
+	makeControl("STATIC", config.AppearanceLabel, 0, rightX, 136, fieldWidth, 22, 0, captionFont)
+	state.appearance = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, rightX, 160, fieldWidth, 240, settingsIDAppearance, font)
 	for _, option := range config.AppearanceOptions {
 		promptSendMessageW.Call(state.appearance, settingsCBAdd, 0, uintptr(unsafe.Pointer(promptWstr(option))))
 	}
 	promptSendMessageW.Call(state.appearance, settingsCBSet, uintptr(config.AppearanceIndex), 0)
+
+	makeControl("STATIC", "", settingsEtchedHorz, 42, 210, 776, 2, 0, font)
+	makeControl("STATIC", "TRANSFER PERFORMANCE", 0, 42, 218, 776, 20, 0, sectionFont)
 
 	for index, field := range config.Numbers {
 		row := index / 2
@@ -416,15 +431,12 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 			xPos = rightX
 		}
 		yLabel := numberStartY + row*numberRowHeight
-		// Reserve two visible text lines for long localized labels. The maintained
-		// 24-language catalog contains descriptions that do not fit 334 px in one
-		// line, and clipping their wrapped second line would hide setting meaning.
 		makeControl("STATIC", field.Label, 0, xPos, yLabel, fieldWidth, numberLabelH, 0, captionFont)
 		edit := makeControl(
 			"EDIT",
 			strconv.Itoa(field.Value),
 			settingsWSBorder|settingsWSTabStop|settingsESNumber,
-			xPos, yLabel+45, editWidth, 31,
+			xPos, yLabel+29, editWidth, 32,
 			settingsIDNumberBase+index,
 			font,
 		)
@@ -434,44 +446,48 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		state.numbers = append(state.numbers, edit)
 	}
 
-	makeControl("STATIC", "", settingsEtchedHorz, 36, separatorY, 688, 2, 0, font)
-	makeControl("STATIC", config.ConflictLabel, 0, 36, conflictLabelY, 688, 24, 0, captionFont)
-	state.conflict = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, 36, conflictLabelY+27, 688, 240, settingsIDConflict, font)
+	makeControl("STATIC", "", settingsEtchedHorz, 42, behaviorSeparatorY, 776, 2, 0, font)
+	makeControl("STATIC", "TRANSFER BEHAVIOR", 0, 42, behaviorTitleY, 776, 20, 0, sectionFont)
+	makeControl("STATIC", config.ConflictLabel, 0, 42, conflictLabelY, 776, 22, 0, captionFont)
+	state.conflict = makeControl("COMBOBOX", "", settingsWSTabStop|settingsWSVScroll|settingsCBSDropList, 42, conflictLabelY+24, 776, 240, settingsIDConflict, font)
 	for _, option := range config.ConflictOptions {
 		promptSendMessageW.Call(state.conflict, settingsCBAdd, 0, uintptr(unsafe.Pointer(promptWstr(option))))
 	}
 	promptSendMessageW.Call(state.conflict, settingsCBSet, uintptr(config.ConflictIndex), 0)
 
-	state.confirm = makeControl("BUTTON", config.ConfirmDelete, settingsWSTabStop|settingsAutoCheck, 36, confirmY, 688, 28, settingsIDConfirm, font)
+	state.confirm = makeControl("BUTTON", config.ConfirmDelete, settingsWSTabStop|settingsAutoCheck, 42, confirmY, 776, 28, settingsIDConfirm, font)
 	if config.ConfirmDeleteOn {
 		promptSendMessageW.Call(state.confirm, settingsBMSetCheck, settingsBSTChecked, 0)
 	}
+	state.errorLabel = makeControl("STATIC", "", 0, 42, errorY, 776, 22, settingsIDError, captionFont)
 
-	makeControl("STATIC", "", settingsEtchedHorz, 36, footerSeparatorY, 688, 2, 0, font)
-	makeControl("STATIC", config.Footer, 0, 36, footerY, 688, 32, 0, captionFont)
+	makeControl("STATIC", "", settingsEtchedHorz, 42, footerSeparatorY, 776, 2, 0, font)
+	makeControl("STATIC", config.Footer, 0, 42, footerY, 776, 30, 0, captionFont)
+	makeControl("STATIC", "UPDATES & SUPPORT", 0, 42, utilityTitleY, 776, 20, 0, sectionFont)
+
 	utilityLabels := []struct {
 		text string
 		id   int
+		w    int
 	}{
-		{config.UpdateLabel, settingsIDUpdate},
-		{config.DownloadLabel, settingsIDDownload},
-		{config.PremiumLabel, settingsIDPremium},
-		{config.WebsiteLabel, settingsIDWebsite},
+		{config.UpdateLabel, settingsIDUpdate, 190},
+		{config.DownloadLabel, settingsIDDownload, 190},
+		{config.WebsiteLabel, settingsIDWebsite, 170},
 	}
-	utilityX := 36
+	utilityX := 42
 	for _, item := range utilityLabels {
 		if item.text == "" {
 			continue
 		}
-		makeControl("BUTTON", item.text, settingsWSTabStop, utilityX, utilityY, 163, 36, item.id, font)
-		utilityX += 171
+		makeControl("BUTTON", item.text, settingsWSTabStop, utilityX, utilityY, item.w, 36, item.id, font)
+		utilityX += item.w + 10
 	}
-	state.errorLabel = makeControl("STATIC", "", 0, 36, errorY, 334, 24, settingsIDError, captionFont)
+
 	if config.ResetLabel != "" {
-		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop, 286, buttonY, 220, 38, settingsIDReset, font)
+		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop, 42, buttonY, 170, 38, settingsIDReset, font)
 	}
-	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton, 516, buttonY, 98, 38, settingsIDApply, font)
-	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop, 624, buttonY, 100, 38, settingsIDCancel, font)
+	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton, 602, buttonY, 100, 38, settingsIDApply, font)
+	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop, 712, buttonY, 106, 38, settingsIDCancel, font)
 
 	if state.language != 0 {
 		promptSetFocus.Call(state.language)
