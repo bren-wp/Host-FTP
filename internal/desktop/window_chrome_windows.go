@@ -62,7 +62,7 @@ func (a *app) ensureWindowChrome() {
 	}
 	a.titleMinimize = create(idTitleMinimize, "—", buttonSubtle)
 	a.titleMaximize = create(idTitleMaximize, "□", buttonSubtle)
-	a.titleClose = create(idTitleClose, "×", buttonDanger)
+	a.titleClose = create(idTitleClose, "×", buttonSubtle)
 }
 
 func (a *app) layoutWindowChrome(width int) {
