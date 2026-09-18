@@ -51,7 +51,7 @@ func TestProfileBundleNeverExportsSecrets(t *testing.T) {
 	if strings.Contains(text, "super-secret-password") || strings.Contains(strings.ToLower(text), "passwordblob") {
 		t.Fatal("profile bundle exposed a saved secret")
 	}
-	if !strings.Contains(text, ""product": "Ghost FTP"") {
+	if !strings.Contains(text, "\"product\": \"Ghost FTP\"") {
 		t.Fatal("profile bundle product identity is missing")
 	}
 }
