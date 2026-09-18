@@ -266,11 +266,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					sidebarSetFocus.Call(state.list)
 					return 0
 				case siteIDImportExport:
-					platform.InfoDialog(
-						"Ghost FTP — Import / Export",
-						"Secure profile portability",
-						"Saved-site portability is secret-safe: Ghost FTP never exports stored passwords or private-key passphrases in clear text. Use Duplicate and Save as Profile until encrypted profile bundles are enabled.",
-					)
+					state.importExportProfiles()
 					return 0
 				case siteIDPresetsTab:
 					return 0
@@ -576,6 +572,73 @@ func (state *siteManagerState) profileInput() (model.ProfileInput, error) {
 		LocalPath:      getText(state.localPath),
 		RemotePath:     remotePath,
 	}, nil
+}
+
+func (state *siteManagerState) importExportProfiles() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	export, chosen := platform.ChoiceDialog(
+		"Ghost FTP — Sites",
+		"Import or export saved sites",
+		"Export creates a metadata-only Ghost FTP site bundle. Stored passwords, private-key passphrases and trusted host fingerprints are never written to the bundle. Import adds valid sites without importing secrets.",
+		"Export",
+		"Import",
+	)
+	if !chosen {
+		return
+	}
+
+	if export {
+		path, err := platform.ChooseProfileExportFile()
+		if err != nil {
+			platform.ErrorDialog("Ghost FTP — Sites", "Export failed", state.parent.userMessage(err, "error.generic"))
+			return
+		}
+		if strings.TrimSpace(path) == "" {
+			return
+		}
+		count, err := state.parent.engine.ExportProfiles(path)
+		if err != nil {
+			platform.ErrorDialog("Ghost FTP — Sites", "Export failed", state.parent.userMessage(err, "error.generic"))
+			return
+		}
+		state.parent.setStatus(fmt.Sprintf("Exported %d saved sites", count))
+		platform.InfoDialog(
+			"Ghost FTP — Sites",
+			"Saved sites exported",
+			fmt.Sprintf("%d saved sites were exported without stored passwords, passphrases or trusted host fingerprints.", count),
+		)
+		return
+	}
+
+	path, err := platform.ChooseProfileImportFile()
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", "Import failed", state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	if strings.TrimSpace(path) == "" {
+		return
+	}
+	result, err := state.parent.engine.ImportProfiles(path)
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", "Import failed", state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	profiles, err := state.parent.engine.Profiles()
+	if err != nil {
+		platform.ErrorDialog("Ghost FTP — Sites", state.parent.tr("profile.load_failed"), state.parent.userMessage(err, "error.generic"))
+		return
+	}
+	state.profiles = profiles
+	state.parent.applyProfiles(profiles, nil)
+	state.refillProfiles(state.parent.selectedProfileID)
+	state.parent.setStatus(fmt.Sprintf("Imported %d saved sites · %d already present", result.Imported, result.Skipped))
+	platform.InfoDialog(
+		"Ghost FTP — Sites",
+		"Site import complete",
+		fmt.Sprintf("%d sites imported. %d matching sites were already present. Credentials must be entered or saved again on this Windows account.", result.Imported, result.Skipped),
+	)
 }
 
 func (state *siteManagerState) duplicateCurrent() {
