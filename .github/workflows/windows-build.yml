@@ -45,7 +45,7 @@ jobs:
             Copy-Item -LiteralPath (Join-Path $source $name) -Destination (Join-Path $env:GITHUB_WORKSPACE $name) -Force
           }
 
-          $textExtensions = @('.go','.py','.ps1','.sh','.md','.txt','.json','.yml','.yaml','.toml')
+          $textExtensions = @('.go','.mod','.py','.ps1','.sh','.md','.txt','.json','.yml','.yaml','.toml')
           Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Recurse -File |
             Where-Object { $_.Extension -in $textExtensions -and $_.FullName -notmatch '\\.git\\' } |
             ForEach-Object {
