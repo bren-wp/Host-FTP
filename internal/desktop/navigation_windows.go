@@ -11,6 +11,7 @@ const (
 	idWorkspaceForward   = 705
 	idWorkspaceNewFolder = 706
 	idWorkspaceMore      = 707
+	idQueueNav           = 708
 )
 
 // nativeMenuWords remains as a narrow compatibility shim for one localization
