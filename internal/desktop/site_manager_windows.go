@@ -59,6 +59,9 @@ const (
 	siteIDSyncSkip       = 8140
 	siteIDSyncConfirm    = 8141
 	siteIDTestConnection = 8142
+	siteIDTitleMinimize   = 8143
+	siteIDTitleMaximize   = 8144
+	siteIDTitleClose      = 8145
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -73,7 +76,7 @@ const (
 	siteBMGetCheck          = 0x00F0
 	siteBMSetCheck          = 0x00F1
 	siteBSTChecked          = 1
-	siteWindowStyle         = 0x00C80000 // WS_CAPTION | WS_SYSMENU
+	siteWindowStyle         = ghostWindowStyle
 	siteWMCtlColorListBox   = 0x0134
 )
 
@@ -197,6 +200,9 @@ type siteManagerState struct {
 	syncSkip        uintptr
 	syncConfirm     uintptr
 	testConnection  uintptr
+	titleMinimize   uintptr
+	titleMaximize   uintptr
+	titleClose      uintptr
 	testing         bool
 	testCancel      context.CancelFunc
 	closeAfterTest  bool
@@ -229,6 +235,17 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 		case wmPaint:
 			state.paintReferenceConnections()
 			return 0
+		case wmNcHitTest:
+			base, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+			if base != htClient {
+				return base
+			}
+			point := chromePoint{X: signedWord(lParam), Y: signedHighWord(lParam)}
+			chromeScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&point)))
+			if point.Y >= 0 && point.Y < int32(state.parent.scale(42)) && point.X >= 0 && point.X < int32(state.parent.scale(540)) {
+				return htCaption
+			}
+			return htClient
 		case wmSize:
 			width := state.parent.unscale(int(lParam & 0xffff))
 			state.layoutResponsive(width)
@@ -257,6 +274,26 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 			}
 			if notify == bnClicked {
 				switch id {
+				case siteIDTitleMinimize:
+					showWindow.Call(hwnd, chromeSWMinimize)
+					return 0
+				case siteIDTitleMaximize:
+					zoomed, _, _ := chromeIsZoomed.Call(hwnd)
+					if zoomed != 0 {
+						showWindow.Call(hwnd, chromeSWRestore)
+					} else {
+						showWindow.Call(hwnd, chromeSWMaximize)
+					}
+					return 0
+				case siteIDTitleClose:
+					if state.testing {
+						state.closeAfterTest = true
+						state.cancelConnectionTest()
+						state.parent.setStatus("Cancelling connection test…")
+						return 0
+					}
+					destroyWindow.Call(hwnd)
+					return 0
 				case siteIDNavConnections:
 					return 0
 				case siteIDNavTransfers:
@@ -404,6 +441,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 				state.syncBackup, state.syncSkip, state.syncConfirm, state.testConnection,
+				state.titleMinimize, state.titleMaximize, state.titleClose,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -1120,6 +1158,13 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	if state == nil || state.parent == nil {
 		return
 	}
+	chromeX := width - 126
+	if chromeX < 830 {
+		chromeX = 830
+	}
+	state.parent.move(state.titleMinimize, chromeX, 4, 38, 32)
+	state.parent.move(state.titleMaximize, chromeX+40, 4, 38, 32)
+	state.parent.move(state.titleClose, chromeX+80, 4, 38, 32)
 	var client rect
 	height := 0
 	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
@@ -1239,6 +1284,9 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		mk("BUTTON", "Search sites, history, or files…    Ctrl+K", wsTabStop|bsOwnerDraw, 560, 18, 494, 38, siteIDGlobalSearch),
 		iconSearch, "Search sites, history, or files…    Ctrl+K", buttonSubtle,
 	)
+	state.titleMinimize = parent.registerButton(mk("BUTTON", "—", bsOwnerDraw, 1448, 4, 38, 32, siteIDTitleMinimize), "", "—", buttonSubtle)
+	state.titleMaximize = parent.registerButton(mk("BUTTON", "□", bsOwnerDraw, 1488, 4, 38, 32, siteIDTitleMaximize), "", "□", buttonSubtle)
+	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonDanger)
 	state.privacyLabel = mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
@@ -1358,6 +1406,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.testConnection, state.delete, state.connect, state.close, state.newSite,
+		state.titleMinimize, state.titleMaximize, state.titleClose,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
