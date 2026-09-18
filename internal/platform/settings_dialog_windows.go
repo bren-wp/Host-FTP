@@ -44,8 +44,18 @@ const (
 	settingsDefButton   = 0x00000001
 	settingsEtchedHorz  = 0x00000010
 	settingsSSIcon      = 0x00000003
-	settingsSTMSetImage = 0x0172
-	settingsImageIcon   = 1
+	settingsSTMSetImage  = 0x0172
+	settingsImageIcon    = 1
+	settingsBSOwnerDraw  = 0x0000000B
+	settingsWMDrawItem   = 0x002B
+	settingsODSSelected  = 0x0001
+	settingsODSDisabled  = 0x0004
+	settingsODSFocus     = 0x0010
+	settingsDTCenter     = 0x00000001
+	settingsDTVCenter    = 0x00000004
+	settingsDTSingleLine = 0x00000020
+	settingsDTNoPrefix   = 0x00000800
+	settingsTransparent  = 1
 )
 
 // SettingsDialogNumber describes one bounded integer preference. InvalidText is
