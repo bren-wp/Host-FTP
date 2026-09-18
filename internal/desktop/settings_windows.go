@@ -174,6 +174,10 @@ func (a *app) openSettings() {
 	timeoutLabel := a.tr("settings.timeout")
 	retriesLabel := a.tr("settings.retries")
 	retryDelayLabel := a.tr("settings.retry_delay")
+	applyLabel := okLabel(language)
+	if language == "en" {
+		applyLabel = "Save changes"
+	}
 	result, ok := platform.SettingsDialog(platform.SettingsDialogConfig{
 		Title:             a.tr("settings.title"),
 		Heading:           brand.ProductName,
@@ -198,7 +202,7 @@ func (a *app) openSettings() {
 		ConfirmDelete:          a.tr("settings.confirm_delete_title"),
 		ConfirmDeleteOn:        settings.ConfirmDelete,
 		Footer:                 appearance.Hint,
-		ApplyLabel:             okLabel(language),
+		ApplyLabel:             applyLabel,
 		CancelLabel:            a.tr("common.cancel"),
 		ResetLabel:             settingsResetLabel(language),
 		UpdateLabel:            "Check for updates",
