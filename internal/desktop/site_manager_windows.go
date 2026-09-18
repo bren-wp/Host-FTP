@@ -41,6 +41,7 @@ const (
 	siteIDNavLocal       = 8124
 	siteIDNavSettings    = 8125
 	siteIDNewSite        = 8126
+	siteIDGlobalSearch   = 8127
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -146,6 +147,8 @@ type siteManagerState struct {
 	navLocal       uintptr
 	navSettings    uintptr
 	newSite        uintptr
+	globalSearch   uintptr
+	brandIcon      uintptr
 }
 
 var (
@@ -210,6 +213,10 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
 					state.loadSelection(0)
 					return 0
+				case siteIDGlobalSearch:
+					state.postAction = siteIDGlobalSearch
+					destroyWindow.Call(hwnd)
+					return 0
 				case siteIDDuplicate:
 					state.duplicateCurrent()
 					return 0
@@ -271,6 +278,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
 				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
+				state.globalSearch,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -631,9 +639,25 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		return parent.registerButton(mk("BUTTON", text, wsTabStop|bsOwnerDraw, 28, 0, 184, 42, id), icon, text, variant)
 	}
 
-	// Left product rail.
-	heading("Ghost FTP", 30, 24, 180)
-	label("SECURE TRANSFERS. WITHOUT A TRACE.", 30, 58, 184)
+	// Left product rail. Resource group 2 is the transparent in-app Ghost mark.
+	iconSize := parent.scale(42)
+	brandIcon, _, _ := loadImageW.Call(hinst, 2, imageIcon, uintptr(iconSize), uintptr(iconSize), lrShared)
+	if brandIcon != 0 {
+		state.brandIcon = mk("STATIC", "", ssIcon, 28, 20, 42, 42, 0)
+		if state.brandIcon != 0 {
+			sendMessageW.Call(state.brandIcon, stmSetImage, imageIcon, brandIcon)
+		}
+	}
+	heading("Ghost FTP", 78, 24, 136)
+	label("SECURE TRANSFERS. WITHOUT A TRACE.", 30, 66, 184)
+
+	// Global command/search field across the top, matching the reference while
+	// remaining functional by delegating to the maintained workspace search.
+	state.globalSearch = parent.registerButton(
+		mk("BUTTON", "Search sites, history, or files…    Ctrl+K", wsTabStop|bsOwnerDraw, 560, 18, 494, 38, siteIDGlobalSearch),
+		iconSearch, "Search sites, history, or files…    Ctrl+K", buttonSubtle,
+	)
+	mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
 	state.navSync = nav(siteIDNavSync, "Synchronize", iconSync, false)
@@ -645,7 +669,10 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		parent.move(control, 28, navY, 184, 42)
 		navY += 50
 	}
-	label("FILES\r\nMOVE\r\nFREELY.\r\n\r\nYOU STAY\r\nIN CONTROL.", 34, 610, 176)
+	motto := mk("STATIC", "FILES\r\nMOVE\r\nFREELY.\r\n\r\nYOU STAY\r\nIN CONTROL.", 0, 34, 610, 176, 148, 0)
+	if motto != 0 && parent.smallFont != 0 {
+		sendMessageW.Call(motto, wmSetFont, parent.smallFont, 1)
+	}
 
 	// Main connection card.
 	heading("New Connection", 262, 54, 420)
@@ -715,6 +742,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.delete, state.connect, state.close, state.newSite,
 		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
+		state.globalSearch,
 	} {
 		if control == 0 {
 			return fmt.Errorf("Connections control initialization failed")
@@ -832,6 +860,8 @@ func (a *app) openSiteManager() {
 			}
 		case siteIDNavSettings:
 			a.openSettings()
+		case siteIDGlobalSearch:
+			a.masterMoreAction()
 		}
 		return
 	}
