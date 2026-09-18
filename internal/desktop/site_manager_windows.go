@@ -3,6 +3,7 @@
 package desktop
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -596,6 +597,171 @@ func (state *siteManagerState) profileInput() (model.ProfileInput, error) {
 		LocalPath:      getText(state.localPath),
 		RemotePath:     remotePath,
 	}, nil
+}
+
+func (state *siteManagerState) connectionDraft() (string, model.ConnectionConfig, error) {
+	if state == nil || state.parent == nil {
+		return "", model.ConnectionConfig{}, fmt.Errorf("connection editor is unavailable")
+	}
+	protocol := state.protocolValue()
+	host := getText(state.host)
+	username := getText(state.user)
+	port, err := validateRawConnectionInput(protocol, host, getText(state.port), username)
+	if err != nil {
+		return "", model.ConnectionConfig{}, err
+	}
+	profileID := ""
+	if state.selected > 0 && state.selected <= len(state.profiles) {
+		profileID = state.profiles[state.selected-1].ID
+	}
+	return profileID, model.ConnectionConfig{
+		Protocol:       protocol,
+		Host:           host,
+		Port:           port,
+		Username:       username,
+		Password:       getText(state.password),
+		PrivateKeyPath: strings.TrimSpace(getText(state.keyPath)),
+		Passphrase:     getText(state.passphrase),
+	}, nil
+}
+
+func (state *siteManagerState) setTesting(testing bool) {
+	if state == nil {
+		return
+	}
+	state.testing = testing
+	label := "Test Connection"
+	if testing {
+		label = "Testing…"
+	}
+	if state.testConnection != 0 {
+		state.parent.setButtonLabel(state.testConnection, label)
+		state.parent.registerButtonVisual(state.testConnection, iconConnect, label, buttonDefault, false)
+		setControlEnabled(state.testConnection, !testing)
+		invalidateRect.Call(state.testConnection, 0, 0)
+	}
+	setControlEnabled(state.connect, !testing)
+	setControlEnabled(state.save, !testing)
+}
+
+func (state *siteManagerState) finishConnectionTest(host string, err error) {
+	if state == nil || state.parent == nil || state.closed {
+		return
+	}
+	state.setTesting(false)
+	if err != nil {
+		state.parent.setStatus("Connection test failed")
+		platform.ErrorDialog(
+			"Ghost FTP — Connection Test",
+			"Connection test failed",
+			state.parent.userMessage(err, "connection.failed_body"),
+		)
+		return
+	}
+	state.parent.setStatus("Connection test passed: " + host)
+	platform.InfoDialog(
+		"Ghost FTP — Connection Test",
+		"Connection verified",
+		"Ghost FTP successfully authenticated, verified the remote session and closed the temporary test connection. No profile or credential was changed.",
+	)
+}
+
+func (state *siteManagerState) runConnectionTest(profileID string, cfg model.ConnectionConfig, fingerprint string) {
+	if state == nil || state.parent == nil {
+		return
+	}
+	host := cfg.Host
+	timeout := connectionTimeoutDuration(state.parent.settings)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.parent.goSafe(func() {
+		defer cancel()
+		result, err := state.parent.engine.Connect(ctx, profileID, cfg, fingerprint, false)
+		if err == nil && result.RequiresTrust {
+			state.parent.engine.CancelPendingTrust()
+			err = fmt.Errorf("server identity still requires confirmation")
+		}
+		if err == nil {
+			err = state.parent.engine.Probe(ctx)
+		}
+		disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), timeout)
+		_ = state.parent.engine.Disconnect(disconnectCtx)
+		disconnectCancel()
+		cfg.Password = ""
+		cfg.Passphrase = ""
+		state.parent.dispatch(func() {
+			state.finishConnectionTest(host, err)
+		})
+	})
+}
+
+func (state *siteManagerState) testCurrentConnection() {
+	if state == nil || state.parent == nil || state.testing {
+		return
+	}
+	if state.parent.connected || state.parent.connectionBusy {
+		platform.InfoDialog(
+			"Ghost FTP — Connection Test",
+			"Disconnect the active session first",
+			"Test Connection uses an isolated temporary login through the maintained Ghost FTP transfer engine. Disconnect the current server before starting a test.",
+		)
+		return
+	}
+
+	profileID, cfg, err := state.connectionDraft()
+	if err != nil {
+		platform.ErrorDialog(
+			"Ghost FTP — Connection Test",
+			"Connection details are incomplete",
+			state.parent.userMessage(err, "connection.invalid_data_body"),
+		)
+		return
+	}
+	state.setTesting(true)
+
+	timeout := connectionTimeoutDuration(state.parent.settings)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.parent.goSafe(func() {
+		defer cancel()
+		result, connectErr := state.parent.engine.Connect(ctx, profileID, cfg, "", false)
+		if connectErr != nil {
+			cfg.Password = ""
+			cfg.Passphrase = ""
+			state.parent.dispatch(func() {
+				state.finishConnectionTest(cfg.Host, connectErr)
+			})
+			return
+		}
+		if result.RequiresTrust {
+			fingerprint := result.Fingerprint
+			state.parent.dispatch(func() {
+				if state.closed {
+					state.parent.engine.CancelPendingTrust()
+					return
+				}
+				if !platform.ConfirmDialog(
+					state.parent.tr("sftp.security"),
+					state.parent.tr("sftp.new_key"),
+					state.parent.tr("sftp.trust_body", fingerprint),
+				) {
+					state.parent.engine.CancelPendingTrust()
+					state.finishConnectionTest(cfg.Host, fmt.Errorf("server identity was not trusted"))
+					return
+				}
+				state.runConnectionTest(profileID, cfg, fingerprint)
+			})
+			return
+		}
+
+		probeErr := state.parent.engine.Probe(ctx)
+		disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), timeout)
+		_ = state.parent.engine.Disconnect(disconnectCtx)
+		disconnectCancel()
+		cfg.Password = ""
+		cfg.Passphrase = ""
+		state.parent.dispatch(func() {
+			state.finishConnectionTest(cfg.Host, probeErr)
+		})
+	})
 }
 
 func (state *siteManagerState) importExportProfiles() {
