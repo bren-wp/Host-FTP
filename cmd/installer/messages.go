@@ -20,14 +20,14 @@ type installerCopy struct {
 
 var installerCopies = map[string]installerCopy{
 	"en": {
-		ConfirmTitle: "Install Ghost FTP %s?", ConfirmBody: "Ghost FTP will be installed for your Windows user account and will be available from the Start menu.",
-		CompletedTitle: "Setup completed successfully", ReadyBody: "Ghost FTP is ready to use.", LaunchQuestion: "Launch Ghost FTP now?", InstalledTitle: "Ghost FTP is installed",
+		ConfirmTitle: "Install Ghost FTP %s?", ConfirmBody: "Ghost FTP will be installed for your Windows user account, registered with Windows Installed Apps and added to the Start menu. Uninstall is integrated into Ghost FTP itself, so Setup does not install a separate Uninstall.exe.",
+		CompletedTitle: "Setup completed successfully", ReadyBody: "Ghost FTP is ready to use. You can remove it later from Windows Settings > Apps > Installed apps; no standalone uninstaller file is required.", LaunchQuestion: "Launch Ghost FTP now?", InstalledTitle: "Ghost FTP is installed",
 		LaunchFailed: "Ghost FTP could not be launched automatically. Start it from the Windows Start menu.", LanguageWarning: "The selected language could not be saved. Ghost FTP will start in English; you can change the language in Settings.",
 		ShortcutWarning: "A shortcut could not be created. You can start Ghost FTP from its installation folder.",
 	},
 	"hr": {
-		ConfirmTitle: "Instalirati Ghost FTP %s?", ConfirmBody: "Ghost FTP instalirat će se za vaš Windows korisnički račun i bit će dostupan iz izbornika Start.",
-		CompletedTitle: "Instalacija je uspješno dovršena", ReadyBody: "Ghost FTP je spreman za korištenje.", LaunchQuestion: "Pokrenuti Ghost FTP sada?", InstalledTitle: "Ghost FTP je instaliran",
+		ConfirmTitle: "Instalirati Ghost FTP %s?", ConfirmBody: "Ghost FTP instalirat će se za vaš Windows korisnički račun, registrirati u Windows Installed Apps i dodati u izbornik Start. Deinstalacija je integrirana u samu aplikaciju pa se ne instalira zaseban Uninstall.exe.",
+		CompletedTitle: "Instalacija je uspješno dovršena", ReadyBody: "Ghost FTP je spreman za korištenje. Kasnije ga možete ukloniti kroz Windows Settings > Apps > Installed apps bez zasebne datoteke za deinstalaciju.", LaunchQuestion: "Pokrenuti Ghost FTP sada?", InstalledTitle: "Ghost FTP je instaliran",
 		LaunchFailed: "Ghost FTP nije moguće automatski pokrenuti. Pokrenite ga iz Windows izbornika Start.", LanguageWarning: "Odabrani jezik nije spremljen. Ghost FTP će se pokrenuti na engleskom; jezik možete promijeniti u Postavkama.",
 		ShortcutWarning: "Prečac nije moguće izraditi. Ghost FTP možete pokrenuti iz instalacijske mape.",
 	},
