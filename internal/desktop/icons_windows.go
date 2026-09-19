@@ -46,6 +46,7 @@ const (
 	buttonBridge
 	buttonNav
 	buttonNavActive
+	buttonToggle
 )
 
 type buttonVisual struct {
