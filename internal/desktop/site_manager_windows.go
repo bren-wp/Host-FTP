@@ -245,17 +245,10 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 		case wmPaint:
 			state.paintReferenceConnections()
 			return 0
+		case wmNcCalcSize:
+			return 0
 		case wmNcHitTest:
-			base, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
-			if base != htClient {
-				return base
-			}
-			point := chromePoint{X: signedWord(lParam), Y: signedHighWord(lParam)}
-			chromeScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&point)))
-			if point.Y >= 0 && point.Y < int32(state.parent.scale(42)) && point.X >= 0 && point.X < int32(state.parent.scale(540)) {
-				return htCaption
-			}
-			return htClient
+			return state.parent.chromeHitTestWindow(hwnd, lParam, 540)
 		case wmGetMinMaxInfo:
 			if lParam != 0 && referenceCaptureMode() {
 				info := minMaxInfoFromLParam(lParam)
