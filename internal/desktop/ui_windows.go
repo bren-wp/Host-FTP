@@ -144,8 +144,8 @@ func (a *app) createControls(hinst uintptr) error {
 	storeRemoteEditButton(a, mkButton(remoteEditWords(a.languageCode()).Edit, iconRename, buttonDefault, idRemoteEdit))
 	a.remoteList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
 
-	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonAccent, idUpload)
-	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonAccent, idDownload)
+	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonSubtle, idUpload)
+	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonSubtle, idDownload)
 
 	// Transfer queue.
 	a.pauseQueue = mkButton(a.tr("transfer.pause"), iconPause, buttonDefault, idPauseQueue)
