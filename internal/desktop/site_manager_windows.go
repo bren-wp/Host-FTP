@@ -389,6 +389,17 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 					state.applyTransferPreset("media")
 					return 0
 				case siteIDSyncBackup, siteIDSyncSkip, siteIDSyncConfirm:
+					var toggle uintptr
+					switch id {
+					case siteIDSyncBackup:
+						toggle = state.syncBackup
+					case siteIDSyncSkip:
+						toggle = state.syncSkip
+					case siteIDSyncConfirm:
+						toggle = state.syncConfirm
+					}
+					siteSetChecked(toggle, !siteChecked(toggle))
+					invalidateRect.Call(toggle, 0, 0)
 					state.saveSyncOptions()
 					return 0
 				case siteIDTestConnection:
@@ -1520,9 +1531,9 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.presetBackup = parent.registerButtonWithSubtitle(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 320, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", "Skip existing · preserve current files", buttonNav)
 	state.presetMedia = parent.registerButtonWithSubtitle(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 386, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", "2 parallel · replace existing", buttonNav)
 	state.syncHeading = heading("Sync Options", 926, 460, 264)
-	state.syncBackup = mk("BUTTON", "Backup before overwrite", wsTabStop|siteBSAutoCheckBox, 926, 496, 264, 28, siteIDSyncBackup)
-	state.syncSkip = mk("BUTTON", "Skip existing files", wsTabStop|siteBSAutoCheckBox, 926, 530, 264, 28, siteIDSyncSkip)
-	state.syncConfirm = mk("BUTTON", "Confirm destructive actions", wsTabStop|siteBSAutoCheckBox, 926, 564, 264, 28, siteIDSyncConfirm)
+	state.syncBackup = parent.registerButton(mk("BUTTON", "Backup before overwrite", wsTabStop|bsOwnerDraw, 926, 496, 264, 30, siteIDSyncBackup), "", "Backup before overwrite", buttonToggle)
+	state.syncSkip = parent.registerButton(mk("BUTTON", "Skip existing files", wsTabStop|bsOwnerDraw, 926, 532, 264, 30, siteIDSyncSkip), "", "Skip existing files", buttonToggle)
+	state.syncConfirm = parent.registerButton(mk("BUTTON", "Confirm destructive actions", wsTabStop|bsOwnerDraw, 926, 568, 264, 30, siteIDSyncConfirm), "", "Confirm destructive actions", buttonToggle)
 	state.activeLabel = label("ACTIVE TRANSFER SETTINGS", 926, 606, 262)
 	state.options = mk("STATIC", "", wsBorder, 926, 630, 264, 76, 0)
 	state.securityLabel = label("SECURITY", 926, 720, 264)
