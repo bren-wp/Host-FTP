@@ -18,7 +18,7 @@ const (
 	applicationSidebarCardGap     = 8
 	applicationSidebarUtilityH    = 38
 	applicationSidebarUtilityGap  = 7
-	applicationSidebarPrimaryTop  = 99
+	applicationSidebarPrimaryTop  = 104
 	applicationSidebarBrandIcon   = 54
 	applicationSidebarBrandGap    = 8
 	applicationSidebarBottomInset = 16
@@ -452,8 +452,8 @@ func (a *app) layoutSidebarRail(height int) {
 
 	y := applicationSidebarPrimaryTop
 	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
-		a.move(control, applicationSidebarControlX, y, applicationSidebarControlW, 44)
-		y += 52
+		a.move(control, applicationSidebarControlX, y, applicationSidebarControlW, applicationSidebarCardH)
+		y += applicationSidebarCardH + applicationSidebarCardGap
 	}
 
 	bookmarkY := y + 28
