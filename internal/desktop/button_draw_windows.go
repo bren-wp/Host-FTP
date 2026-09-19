@@ -53,6 +53,11 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 			return selectionColor(), accentColor(), textColor()
 		}
 		return panelColor(), borderColor(), mutedColor()
+	case buttonChrome:
+		if pressed {
+			return selectionColor(), selectionColor(), textColor()
+		}
+		return panelColor(), panelColor(), mutedColor()
 	default:
 		if pressed {
 			return selectionColor(), accentColor(), textColor()
