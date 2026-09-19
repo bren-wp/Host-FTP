@@ -51,6 +51,7 @@ const (
 type buttonVisual struct {
 	Icon     string
 	Label    string
+	SubLabel string
 	Variant  buttonVariant
 	Vertical bool
 	Badge    int
@@ -68,6 +69,17 @@ func (a *app) registerButtonVisual(hwnd uintptr, icon, label string, variant but
 		badge = previous.Badge
 	}
 	a.buttons[hwnd] = buttonVisual{Icon: icon, Label: label, Variant: variant, Vertical: vertical, Badge: badge}
+	return hwnd
+}
+
+func (a *app) registerButtonWithSubtitle(hwnd uintptr, icon, label, subLabel string, variant buttonVariant) uintptr {
+	if hwnd == 0 {
+		return hwnd
+	}
+	a.registerButtonVisual(hwnd, icon, label, variant, false)
+	visual := a.buttons[hwnd]
+	visual.SubLabel = subLabel
+	a.buttons[hwnd] = visual
 	return hwnd
 }
 

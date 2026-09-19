@@ -1,13 +1,13 @@
-# Ghost FTP 0.5.0
+# Ghost FTP 0.5.1
 
-Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built against the approved Ghost FTP reference boards.
+Ghost FTP 0.5.1 is a focused visual, workflow and release-quality pass built against the approved Ghost FTP reference boards.
 
 ## Reference UI
 
 - Refined the main Windows layout around the approved Sites / Transfers / Queue / Sync / Settings rail.
 - Added the handwritten **Move More / Do More** rail signature and kept the secure-transfer tagline below it.
 - Reworked the footer identity toward the approved **MORE ACCESS. A BRIGHTER TOMORROW.** treatment.
-- Kept the transparent Ghost mark, white **Ghost** wordmark and accent **FTP** lockup consistent across the desktop.
+- Replaced the approximate procedural ghost with the approved Ghost FTP transfer-arrow mark extracted from the supplied brand reference, and use the same source for PNG/ICO generation and in-app branding.
 - Uses Segoe UI Variable on supported Windows 11 systems with native Windows fallbacks.
 - Primary actions keep the cyan → electric-blue → violet Ghost FTP gradient.
 - The center compare/sync bridge is now a circular accent control as shown in the file-workspace reference.
@@ -15,7 +15,7 @@ Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built aga
 
 ## Connections
 
-- Split the reference side area into distinct Transfer & Sync, Sync Options, Saved Sites and Recent Connections cards.
+- Matched the Connections workspace to the supplied 1664×960 reference canvas and retained distinct Transfer & Sync, Sync Options, Saved Sites and Recent Connections regions.
 - Added a large Ghost brand mark and the **FILES MOVE FREELY / YOU STAY IN CONTROL** rail composition.
 - Recent Connections now reflects real successful sessions in memory only; passwords and passphrases are never recorded in recent history.
 - Quick Connect, Site Manager, Presets, Sync and Automation controls remain connected to maintained application functions.
@@ -35,7 +35,8 @@ Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built aga
 - About/info cards size to their real content instead of clipping longer product/security copy.
 - Prompt spacing and hierarchy were retuned to the same product system as the main application.
 - A production-copy CI audit blocks demo personas, sample servers, placeholder copy and development-only text from release UI strings.
-- English remains the primary/default product language.
+- English remains the primary/default product language; Croatian plus 22 additional maintained desktop languages remain available.
+- Removed the retired macOS application source and its macOS-only regression contracts from this Windows release branch.
 
 ## Repository presentation
 
@@ -44,10 +45,10 @@ Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built aga
 
 ## Windows downloads
 
-- `Ghost-FTP-0.5.0-Setup.exe`
-- `Ghost-FTP-0.5.0-Portable.exe`
-- `Ghost-FTP-0.5.0-Update.exe`
-- `Ghost-FTP-0.5.0-Source.zip`
+- `Ghost-FTP-0.5.1-Setup.exe`
+- `Ghost-FTP-0.5.1-Portable.exe`
+- `Ghost-FTP-0.5.1-Update.exe`
+- `Ghost-FTP-0.5.1-Source.zip`
 - `SHA256.txt`
 - `latest.json`
 

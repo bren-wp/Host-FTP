@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Secure transfers. Without a trace.</strong><br>
-  A modern Windows FTP, FTPS and SFTP client built around a fast dual-pane workflow, clear security decisions and a premium dark interface.
+  A modern Windows FTP, FTPS and SFTP client built around a fast dual-pane workflow, clear security decisions and the approved Ghost FTP dark interface.
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
   <img alt="Protocols" src="https://img.shields.io/badge/Protocols-FTP%20%7C%20FTPS%20%7C%20SFTP-00e5ff">
   <img alt="Telemetry" src="https://img.shields.io/badge/Telemetry-None-16c784">
   <img alt="License" src="https://img.shields.io/badge/License-GPL--3.0-8b5cf6">
-  <img alt="Version" src="https://img.shields.io/badge/Version-0.5.0-e5e7eb">
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.5.1-e5e7eb">
 </p>
 
 ---
@@ -71,7 +71,7 @@ The Connections workspace keeps quick access, saved sites and transfer behavior 
 
 ## A workspace built around your files
 
-Ghost FTP 0.5.0 uses a premium charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
+Ghost FTP 0.5.1 uses the approved charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
 
 The main workspace includes:
 
@@ -98,7 +98,7 @@ Ghost FTP keeps frequently changed preferences in one branded Windows surface: l
   <img src="docs/screenshots/Ghost-FTP-settings-reference.png" alt="Ghost FTP Settings" width="82%">
 </p>
 
-The Settings UI contains only working product actions. There is no subscription upsell, demo account or development-only control in the production build.
+The Settings UI contains only working product actions. There is no subscription upsell, demo account or development-only control in the production build. English is the default language, with Croatian and 22 additional maintained desktop languages available from Settings.
 
 ## Privacy without marketing theatre
 
@@ -126,10 +126,10 @@ Every production GitHub release publishes the same release set used by the updat
 
 | Artifact | Purpose |
 | --- | --- |
-| `Ghost-FTP-0.5.0-Setup.exe` | Standard Windows installation; uninstall is integrated into GhostFTP.exe via Windows Installed Apps, with no permanent Uninstall.exe |
-| `Ghost-FTP-0.5.0-Portable.exe` | Portable build with no installer |
-| `Ghost-FTP-0.5.0-Update.exe` | Verified first-party update helper |
-| `Ghost-FTP-0.5.0-Source.zip` | Exact source package for the release |
+| `Ghost-FTP-0.5.1-Setup.exe` | Standard Windows installation; uninstall is integrated into GhostFTP.exe via Windows Installed Apps, with no permanent Uninstall.exe |
+| `Ghost-FTP-0.5.1-Portable.exe` | Portable build with no installer |
+| `Ghost-FTP-0.5.1-Update.exe` | Verified first-party update helper |
+| `Ghost-FTP-0.5.1-Source.zip` | Exact source package for the release |
 | `SHA256.txt` | Release integrity manifest |
 | `latest.json` | `update.ghostftp.com` client manifest |
 
@@ -149,7 +149,7 @@ This keeps the published binaries, source package, update manifest and repositor
 | **Tagline** | Secure transfers. Without a trace. |
 | **Primary language** | English |
 | **Protocols** | FTP, FTPS, SFTP |
-| **Platform** | Windows 10 / 11 |
+| **Platform** | Windows 10 / 11 (the retired macOS application source is not shipped) |
 | **Website** | https://ghostftp.com/ |
 | **Update service** | https://update.ghostftp.com/ |
 | **Repository** | `bren-wp/Host-FTP` |

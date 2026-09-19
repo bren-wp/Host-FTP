@@ -39,12 +39,14 @@ type app struct {
 	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
 	status, statusVersion, transferSummary                                                                            uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
+	titleMinimize, titleMaximize, titleClose                                                                          uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
 
-	siteManagerBtn         uintptr
-	sidebarBookmarkHeading uintptr
-	sidebarMotto           uintptr
-	sidebarProfileButtons  []uintptr
+	siteManagerBtn          uintptr
+	sidebarBookmarkHeading  uintptr
+	sidebarMotto            uintptr
+	sidebarConnectionStatus uintptr
+	sidebarProfileButtons   []uintptr
 
 	mu                   sync.Mutex
 	dispatchQ            []func()
@@ -140,7 +142,7 @@ func Run(engine *api.Engine, version string) error {
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(wstr(brand.ProductName))),
-		wsOverlappedWindow,
+		ghostWindowStyle,
 		40, 30, 1200, 780,
 		0, 0, hinst, 0,
 	)
@@ -201,7 +203,13 @@ func Run(engine *api.Engine, version string) error {
 	} else {
 		a.loadSettings()
 	}
-	a.refreshLocal("")
+	initialLocalPath := ""
+	if referenceCaptureMode() {
+		// Reference captures must exercise the real local file manager without
+		// leaking the hosted runner account or its temporary working directory.
+		initialLocalPath = `C:\Users\Public\Documents`
+	}
+	a.refreshLocal(initialLocalPath)
 	if settingsErr == nil {
 		a.setStatus(a.tr("status.ready"))
 	}
@@ -240,7 +248,24 @@ func Run(engine *api.Engine, version string) error {
 	return nil
 }
 
-func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	// A panic must never cross a syscall callback boundary. Win32 callbacks are
+	// invoked by user32 outside Go's normal goroutine call tree; allowing a panic
+	// to escape here can terminate the whole desktop process. Recover at the
+	// outermost UI boundary, keep the window alive and report the fault in the
+	// in-app status area instead.
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		if value, ok := apps.Load(hwnd); ok {
+			if current, ok := value.(*app); ok && current != nil && !current.closing {
+				current.setStatus("Ghost FTP recovered from an internal UI error. Your session is still running.")
+			}
+		}
+		result = 0
+	}()
+
 	v, ok := apps.Load(hwnd)
 	if !ok {
 		r, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
@@ -251,12 +276,18 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmPaint:
 		a.paintReferenceWorkspace()
 		return 0
+	case wmNcHitTest:
+		return a.chromeHitTest(lParam)
 	case wmGetMinMaxInfo:
 		if lParam != 0 {
 			info := minMaxInfoFromLParam(lParam)
 			minWidth, minHeight := a.responsiveMinTrackSize()
 			info.MinTrackSize.X = int32(a.scale(minWidth))
 			info.MinTrackSize.Y = int32(a.scale(minHeight))
+			if referenceCaptureMode() {
+				info.MaxTrackSize.X = int32(a.scale(referenceMainCaptureWidth))
+				info.MaxTrackSize.Y = int32(a.scale(referenceMainCaptureHeight))
+			}
 			minMaxInfoToLParam(lParam, info)
 		}
 		return 0
@@ -279,6 +310,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmCommand:
 		id := int(wParam & 0xffff)
 		notify := int((wParam >> 16) & 0xffff)
+		if notify == bnClicked && a.windowChromeCommand(id) {
+			return 0
+		}
 		if id == idProtocol && notify == cbnSelChange {
 			a.syncDefaultPort()
 			a.updateProtocolControls()
@@ -366,6 +400,12 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			color = accentStrongColor()
 		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
 			color = mutedColor()
+		} else if lParam == a.sidebarConnectionStatus {
+			if a.connected {
+				color = successColor()
+			} else {
+				color = mutedColor()
+			}
 		} else if lParam == a.connectionBadge {
 			if a.connected {
 				color = successColor()
@@ -408,6 +448,7 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			a.remoteNavCancel()
 			a.remoteNavCancel = nil
 		}
+		a.cleanupWindowChrome()
 		// The master rail creates native child controls lazily. Clear every
 		// per-window rail handle here so a future Run in the same process cannot
 		// inherit stale HWNDs or button metadata from a destroyed window.

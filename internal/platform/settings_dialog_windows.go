@@ -26,26 +26,36 @@ const (
 	settingsIDDownload   = 4126
 	settingsIDWebsite    = 4128
 
-	settingsCBAdd       = 0x0143
-	settingsCBGet       = 0x0147
-	settingsCBSet       = 0x014E
-	settingsBMGetCheck  = 0x00F0
-	settingsBMSetCheck  = 0x00F1
-	settingsBSTChecked  = 1
-	settingsEMSetSel    = 0x00B1
-	settingsESNumber    = 0x2000
-	settingsAutoCheck   = 0x00000003
-	settingsWSBorder    = 0x00800000
-	settingsWSChild     = 0x40000000
-	settingsWSVisible   = 0x10000000
-	settingsWSTabStop   = 0x00010000
-	settingsWSVScroll   = 0x00200000
-	settingsCBSDropList = 0x0003
-	settingsDefButton   = 0x00000001
-	settingsEtchedHorz  = 0x00000010
-	settingsSSIcon      = 0x00000003
-	settingsSTMSetImage = 0x0172
-	settingsImageIcon   = 1
+	settingsCBAdd        = 0x0143
+	settingsCBGet        = 0x0147
+	settingsCBSet        = 0x014E
+	settingsBMGetCheck   = 0x00F0
+	settingsBMSetCheck   = 0x00F1
+	settingsBSTChecked   = 1
+	settingsEMSetSel     = 0x00B1
+	settingsESNumber     = 0x2000
+	settingsAutoCheck    = 0x00000003
+	settingsWSBorder     = 0x00800000
+	settingsWSChild      = 0x40000000
+	settingsWSVisible    = 0x10000000
+	settingsWSTabStop    = 0x00010000
+	settingsWSVScroll    = 0x00200000
+	settingsCBSDropList  = 0x0003
+	settingsDefButton    = 0x00000001
+	settingsEtchedHorz   = 0x00000010
+	settingsSSIcon       = 0x00000003
+	settingsSTMSetImage  = 0x0172
+	settingsImageIcon    = 1
+	settingsBSOwnerDraw  = 0x0000000B
+	settingsWMDrawItem   = 0x002B
+	settingsODSSelected  = 0x0001
+	settingsODSDisabled  = 0x0004
+	settingsODSFocus     = 0x0010
+	settingsDTCenter     = 0x00000001
+	settingsDTVCenter    = 0x00000004
+	settingsDTSingleLine = 0x00000020
+	settingsDTNoPrefix   = 0x00000800
+	settingsTransparent  = 1
 )
 
 // SettingsDialogNumber describes one bounded integer preference. InvalidText is
@@ -120,7 +130,106 @@ var (
 	settingsClass          = "GhostFTP.SettingsDialog"
 	settingsProc           = syscall.NewCallback(settingsWndProc)
 	settingsSetWindowTextW = user32.NewProc("SetWindowTextW")
+	settingsDrawTextW      = user32.NewProc("DrawTextW")
+	settingsDrawFocusRect  = user32.NewProc("DrawFocusRect")
+	settingsCreatePen      = premiumGdi32.NewProc("CreatePen")
+	settingsSelectObject   = premiumGdi32.NewProc("SelectObject")
+	settingsRoundRect      = premiumGdi32.NewProc("RoundRect")
+	settingsSetBkMode      = premiumGdi32.NewProc("SetBkMode")
+	settingsRtlMoveMemory  = syscall.NewLazyDLL("kernel32.dll").NewProc("RtlMoveMemory")
 )
+
+type settingsDrawItemStruct struct {
+	CtlType    uint32
+	CtlID      uint32
+	ItemID     uint32
+	ItemAction uint32
+	ItemState  uint32
+	HwndItem   uintptr
+	HDC        uintptr
+	RcItem     premiumRect
+	ItemData   uintptr
+}
+
+func settingsDrawItemFromLParam(lParam uintptr) settingsDrawItemStruct {
+	var item settingsDrawItemStruct
+	if lParam != 0 {
+		settingsRtlMoveMemory.Call(
+			uintptr(unsafe.Pointer(&item)),
+			lParam,
+			unsafe.Sizeof(item),
+		)
+	}
+	return item
+}
+
+func settingsDrawButton(dis *settingsDrawItemStruct) bool {
+	if dis == nil || dis.HDC == 0 {
+		return false
+	}
+	theme := premiumDialogTheme()
+	bg := premiumPaletteColor(theme.List)
+	border := premiumPaletteColor(theme.Border)
+	fg := premiumPaletteColor(theme.Text)
+	pressed := dis.ItemState&settingsODSSelected != 0
+	disabled := dis.ItemState&settingsODSDisabled != 0
+
+	if dis.CtlID == settingsIDApply && !disabled {
+		bg = premiumPaletteColor(theme.AccentStrong)
+		border = premiumPaletteColor(theme.Accent)
+		fg = premiumPaletteColor(theme.OnAccent)
+	} else if pressed && !disabled {
+		bg = premiumPaletteColor(theme.Selection)
+		border = premiumPaletteColor(theme.Accent)
+	}
+	if disabled {
+		fg = premiumPaletteColor(theme.Muted)
+		border = premiumPaletteColor(theme.Border)
+	}
+
+	brush, _, _ := premiumCreateSolidBrush.Call(bg)
+	pen, _, _ := settingsCreatePen.Call(0, 1, border)
+	oldBrush, _, _ := settingsSelectObject.Call(dis.HDC, brush)
+	oldPen, _, _ := settingsSelectObject.Call(dis.HDC, pen)
+	r := dis.RcItem
+	settingsRoundRect.Call(
+		dis.HDC,
+		uintptr(r.Left), uintptr(r.Top), uintptr(r.Right), uintptr(r.Bottom),
+		10, 10,
+	)
+	settingsSelectObject.Call(dis.HDC, oldBrush)
+	settingsSelectObject.Call(dis.HDC, oldPen)
+	if brush != 0 {
+		promptDeleteObject.Call(brush)
+	}
+	if pen != 0 {
+		promptDeleteObject.Call(pen)
+	}
+
+	settingsSetBkMode.Call(dis.HDC, settingsTransparent)
+	premiumSetTextColor.Call(dis.HDC, fg)
+	label := promptText(dis.HwndItem)
+	buf := syscall.StringToUTF16(label)
+	if len(buf) > 0 {
+		textRect := r
+		settingsDrawTextW.Call(
+			dis.HDC,
+			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(len(buf)-1),
+			uintptr(unsafe.Pointer(&textRect)),
+			settingsDTCenter|settingsDTVCenter|settingsDTSingleLine|settingsDTNoPrefix,
+		)
+	}
+	if dis.ItemState&settingsODSFocus != 0 && !disabled {
+		focus := r
+		focus.Left += 4
+		focus.Top += 4
+		focus.Right -= 4
+		focus.Bottom -= 4
+		settingsDrawFocusRect.Call(dis.HDC, uintptr(unsafe.Pointer(&focus)))
+	}
+	return true
+}
 
 func settingsSetText(hwnd uintptr, text string) {
 	if hwnd == 0 {
@@ -140,7 +249,15 @@ func settingsComboIndex(hwnd uintptr, fallback int) int {
 	return int(value)
 }
 
-func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	// Do not let a rendering/validation panic escape a syscall callback and take
+	// the entire desktop client down. Falling back to DefWindowProc keeps the
+	// modal responsive and lets the user cancel/reopen it safely.
+	defer func() {
+		if recover() != nil {
+			result, _, _ = promptDefWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+		}
+	}()
 	if v, ok := settingsStates.Load(hwnd); ok {
 		state := v.(*settingsDialogState)
 		switch message {
@@ -221,6 +338,13 @@ func settingsWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintp
 			case settingsIDCancel:
 				promptDestroyWindow.Call(hwnd)
 				return 0
+			}
+		case settingsWMDrawItem:
+			if lParam != 0 {
+				dis := settingsDrawItemFromLParam(lParam)
+				if settingsDrawButton(&dis) {
+					return 1
+				}
 			}
 		case premiumWMCtlColorEdit, premiumWMCtlColorListBox, premiumWMCtlColorBtn, premiumWMCtlColorStatic:
 			return premiumDialogControlColor(wParam)
@@ -391,6 +515,9 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		}
 		if child != 0 {
 			applyPremiumDialogControl(child, class)
+			if class == "EDIT" || class == "COMBOBOX" {
+				roundPremiumDialogControl(child, premiumScale(8, dpi))
+			}
 		}
 		return child
 	}
@@ -479,15 +606,15 @@ func SettingsDialog(config SettingsDialogConfig) (SettingsDialogResult, bool) {
 		if item.text == "" {
 			continue
 		}
-		makeControl("BUTTON", item.text, settingsWSTabStop, utilityX, utilityY, item.w, 36, item.id, font)
+		makeControl("BUTTON", item.text, settingsWSTabStop|settingsBSOwnerDraw, utilityX, utilityY, item.w, 36, item.id, font)
 		utilityX += item.w + 10
 	}
 
 	if config.ResetLabel != "" {
-		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop, 42, buttonY, 170, 38, settingsIDReset, font)
+		makeControl("BUTTON", config.ResetLabel, settingsWSTabStop|settingsBSOwnerDraw, 42, buttonY, 170, 38, settingsIDReset, font)
 	}
-	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton, 602, buttonY, 100, 38, settingsIDApply, font)
-	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop, 712, buttonY, 106, 38, settingsIDCancel, font)
+	applyButton := makeControl("BUTTON", config.ApplyLabel, settingsWSTabStop|settingsDefButton|settingsBSOwnerDraw, 602, buttonY, 100, 38, settingsIDApply, font)
+	makeControl("BUTTON", config.CancelLabel, settingsWSTabStop|settingsBSOwnerDraw, 712, buttonY, 106, 38, settingsIDCancel, font)
 
 	if state.language != 0 {
 		promptSetFocus.Call(state.language)

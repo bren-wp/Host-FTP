@@ -114,11 +114,19 @@ func (a *app) setConnectionUI(connected bool) {
 		for _, h := range []uintptr{a.keyPath, a.chooseKey, a.passphrase} {
 			setControlEnabled(h, false)
 		}
-		setText(a.connectionBadge, a.tr("badge.connected"))
+		host := strings.TrimSpace(getText(a.host))
+		if host == "" {
+			setText(a.connectionBadge, "●  "+a.tr("badge.connected"))
+		} else {
+			setText(a.connectionBadge, "●  "+a.tr("badge.connected")+"\r\n"+host)
+		}
+	} else if a.connectionBusy {
+		setText(a.connectionBadge, "●  Connecting…")
 	} else {
-		setText(a.connectionBadge, a.tr("badge.disconnected"))
+		setText(a.connectionBadge, "●  "+a.tr("badge.disconnected"))
 		a.updateProtocolControls()
 	}
+	a.refreshSidebarConnectionStatus()
 	a.setRemoteControls(connected)
 	a.updateActionControls()
 	// Repaint only the session badge. Erasing the entire parent on every

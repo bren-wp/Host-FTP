@@ -3,22 +3,25 @@
 package desktop
 
 import (
+	"strings"
 	"sync"
 	"unsafe"
 )
 
 const (
 	applicationSidebarX           = 16
-	applicationSidebarWidth       = 248
-	applicationContentLeft        = 286
+	applicationSidebarWidth       = 258
+	applicationSidebarControlX    = 30
+	applicationSidebarControlW    = 244
+	applicationContentLeft        = 304
 	applicationSidebarCardH       = 48
 	applicationSidebarCardGap     = 8
 	applicationSidebarUtilityH    = 38
 	applicationSidebarUtilityGap  = 7
-	applicationSidebarPrimaryTop  = 86
+	applicationSidebarPrimaryTop  = 99
 	applicationSidebarBrandIcon   = 54
 	applicationSidebarBrandGap    = 8
-	applicationSidebarBottomInset = 18
+	applicationSidebarBottomInset = 16
 )
 
 var (
@@ -117,6 +120,20 @@ func (a *app) ensureSidebarProfileControls() {
 			sendMessageW.Call(motto, wmSetFont, a.scriptFont, 1)
 		}
 		a.sidebarMotto = motto
+	}
+	if a.sidebarConnectionStatus == 0 {
+		status, _, _ := createWindowExW.Call(
+			0,
+			uintptr(unsafe.Pointer(wstr("STATIC"))),
+			uintptr(unsafe.Pointer(wstr("●  Disconnected"))),
+			uintptr(wsChild|wsVisible),
+			0, 0, 1, 1,
+			a.hwnd, 0, hinst, 0,
+		)
+		if status != 0 && a.smallFont != 0 {
+			sendMessageW.Call(status, wmSetFont, a.smallFont, 1)
+		}
+		a.sidebarConnectionStatus = status
 	}
 	if a.sidebarBookmarkHeading == 0 {
 		heading, _, _ := createWindowExW.Call(
@@ -295,6 +312,25 @@ func (a *app) focusTransferQueue() {
 	sidebarSetFocus.Call(a.transferList)
 }
 
+func (a *app) refreshSidebarConnectionStatus() {
+	if a == nil || a.sidebarConnectionStatus == 0 {
+		return
+	}
+	label := "●  Disconnected"
+	if a.connectionBusy {
+		label = "●  Connecting…"
+	} else if a.connected {
+		host := strings.TrimSpace(getText(a.host))
+		if host == "" {
+			label = "●  Connected"
+		} else {
+			label = "●  Connected to " + host
+		}
+	}
+	setText(a.sidebarConnectionStatus, label)
+	invalidateRect.Call(a.sidebarConnectionStatus, 0, 0)
+}
+
 func (a *app) cleanupSidebarControls() {
 	if a == nil || a.hwnd == 0 {
 		return
@@ -311,6 +347,7 @@ func (a *app) cleanupSidebarControls() {
 	a.sidebarProfileButtons = nil
 	a.sidebarBookmarkHeading = 0
 	a.sidebarMotto = 0
+	a.sidebarConnectionStatus = 0
 }
 
 func (a *app) sidebarLogicalRect(hwnd uintptr) (rect, bool) {
@@ -402,26 +439,26 @@ func (a *app) layoutSidebarRail(height int) {
 
 	logo := a.ensureBrandLogo()
 	if logo != 0 {
-		a.move(logo, applicationSidebarX+4, 15, applicationSidebarBrandIcon, applicationSidebarBrandIcon)
+		a.move(logo, applicationSidebarControlX+2, 15, applicationSidebarBrandIcon, applicationSidebarBrandIcon)
 	}
 	if a.titleFont != 0 {
 		sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)
 		sendMessageW.Call(a.brandFTP, wmSetFont, a.titleFont, 1)
 	}
-	titleX := applicationSidebarX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 2
+	titleX := applicationSidebarControlX + applicationSidebarBrandIcon + applicationSidebarBrandGap + 2
 	const ghostWordWidth = 72
 	a.move(a.brandTitle, titleX, 20, ghostWordWidth, 36)
 	a.move(a.brandFTP, titleX+ghostWordWidth+4, 20, 54, 36)
 
 	y := applicationSidebarPrimaryTop
 	for _, control := range []uintptr{a.siteManagerBtn, transfers, queue, syncButton, a.settingsBtn} {
-		a.move(control, applicationSidebarX, y, applicationSidebarWidth, 44)
+		a.move(control, applicationSidebarControlX, y, applicationSidebarControlW, 44)
 		y += 52
 	}
 
-	bookmarkY := y + 12
+	bookmarkY := y + 28
 	if a.sidebarBookmarkHeading != 0 {
-		a.move(a.sidebarBookmarkHeading, applicationSidebarX+10, bookmarkY, applicationSidebarWidth-20, 22)
+		a.move(a.sidebarBookmarkHeading, applicationSidebarControlX+10, bookmarkY, applicationSidebarControlW-20, 22)
 		showControls(true, a.sidebarBookmarkHeading)
 	}
 	profileY := bookmarkY + 28
@@ -430,7 +467,7 @@ func (a *app) layoutSidebarRail(height int) {
 		if hwnd == 0 || index >= len(a.profiles) {
 			continue
 		}
-		a.move(hwnd, applicationSidebarX, profileY, applicationSidebarWidth, 36)
+		a.move(hwnd, applicationSidebarControlX, profileY, applicationSidebarControlW, 36)
 		profileY += 42
 	}
 
@@ -438,13 +475,14 @@ func (a *app) layoutSidebarRail(height int) {
 	if a.smallFont != 0 {
 		sendMessageW.Call(a.brandSubtitle, wmSetFont, a.smallFont, 1)
 	}
-	footerY := height - applicationSidebarBottomInset - 58
-	mottoY := footerY - 104
+	connectionY := height - applicationSidebarBottomInset - 28
+	footerY := connectionY - 68
+	mottoY := footerY - 112
 	if a.sidebarMotto != 0 && mottoY >= profileY+8 {
 		if a.scriptFont != 0 {
 			sendMessageW.Call(a.sidebarMotto, wmSetFont, a.scriptFont, 1)
 		}
-		a.move(a.sidebarMotto, applicationSidebarX+18, mottoY, applicationSidebarWidth-36, 86)
+		a.move(a.sidebarMotto, applicationSidebarControlX+12, mottoY, applicationSidebarControlW-24, 92)
 		showControls(true, a.sidebarMotto)
 	} else {
 		showControls(false, a.sidebarMotto)
@@ -452,8 +490,13 @@ func (a *app) layoutSidebarRail(height int) {
 	if footerY < profileY+10 {
 		footerY = profileY + 10
 	}
-	a.move(a.brandSubtitle, applicationSidebarX+10, footerY, applicationSidebarWidth-20, 48)
+	a.move(a.brandSubtitle, applicationSidebarControlX+10, footerY, applicationSidebarControlW-20, 48)
 	showControls(true, a.brandSubtitle)
+	if a.sidebarConnectionStatus != 0 {
+		a.move(a.sidebarConnectionStatus, applicationSidebarControlX+10, connectionY, applicationSidebarControlW-20, 24)
+		showControls(true, a.sidebarConnectionStatus)
+		a.refreshSidebarConnectionStatus()
+	}
 	showControls(false, a.languageCombo)
 }
 

@@ -246,6 +246,44 @@ func (a *app) drawButtonBadge(hdc uintptr, content rect, count int, disabled boo
 func (a *app) drawHorizontalButtonContent(hdc uintptr, content rect, visual buttonVisual) {
 	contentWidth := int(content.Right - content.Left)
 
+	if visual.SubLabel != "" {
+		textArea := content
+		if visual.Icon != "" && a.iconFont != 0 && contentWidth >= a.scale(96) {
+			iconRect := content
+			iconRect.Right = iconRect.Left + int32(a.scale(34))
+			old, _, _ := selectObject.Call(hdc, a.iconFont)
+			drawText(hdc, visual.Icon, &iconRect, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix)
+			selectObject.Call(hdc, old)
+			textArea.Left += int32(a.scale(42))
+		}
+
+		mid := textArea.Top + (textArea.Bottom-textArea.Top)/2
+		labelRect := textArea
+		labelRect.Bottom = mid + int32(a.scale(2))
+		subRect := textArea
+		subRect.Top = mid - int32(a.scale(1))
+
+		oldFont := uintptr(0)
+		if a.font != 0 {
+			oldFont, _, _ = selectObject.Call(hdc, a.font)
+		}
+		drawText(hdc, visual.Label, &labelRect, dtLeft|dtVCenter|dtSingleLine|dtNoPrefix|dtEndEllipsis)
+		if oldFont != 0 {
+			selectObject.Call(hdc, oldFont)
+		}
+
+		previousColor, _, _ := setTextColor.Call(hdc, mutedColor())
+		if a.smallFont != 0 {
+			oldFont, _, _ = selectObject.Call(hdc, a.smallFont)
+		}
+		drawText(hdc, visual.SubLabel, &subRect, dtLeft|dtVCenter|dtSingleLine|dtNoPrefix|dtEndEllipsis)
+		if oldFont != 0 {
+			selectObject.Call(hdc, oldFont)
+		}
+		setTextColor.Call(hdc, previousColor)
+		return
+	}
+
 	// Prefer icon + readable text for navigation-sized controls. Compact file
 	// actions still collapse to label-only or icon-only rather than clipping.
 	if visual.Icon != "" && visual.Label != "" {

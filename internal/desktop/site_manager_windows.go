@@ -59,6 +59,13 @@ const (
 	siteIDSyncSkip       = 8140
 	siteIDSyncConfirm    = 8141
 	siteIDTestConnection = 8142
+	siteIDTitleMinimize  = 8143
+	siteIDTitleMaximize  = 8144
+	siteIDTitleClose     = 8145
+	siteIDNavSiteManager = 8146
+	siteIDNavAutomation  = 8147
+	siteIDSavedSearch    = 8148
+	siteIDRecentClear    = 8149
 
 	siteLBSNotify           = 0x0001
 	siteLBSNoIntegralHeight = 0x0100
@@ -73,7 +80,7 @@ const (
 	siteBMGetCheck          = 0x00F0
 	siteBMSetCheck          = 0x00F1
 	siteBSTChecked          = 1
-	siteWindowStyle         = 0x00C80000 // WS_CAPTION | WS_SYSMENU
+	siteWindowStyle         = ghostWindowStyle
 	siteWMCtlColorListBox   = 0x0134
 )
 
@@ -167,8 +174,12 @@ type siteManagerState struct {
 	navSync         uintptr
 	navRemote       uintptr
 	navLocal        uintptr
+	navSiteManager  uintptr
+	navAutomation   uintptr
 	navSettings     uintptr
 	newSite         uintptr
+	savedSearch     uintptr
+	recentClear     uintptr
 	globalSearch    uintptr
 	brandIcon       uintptr
 	brandHero       uintptr
@@ -183,6 +194,8 @@ type siteManagerState struct {
 	securityLabel   uintptr
 	savedLabel      uintptr
 	recentLabel     uintptr
+	footerReady     uintptr
+	footerStats     uintptr
 	quickConnectTab uintptr
 	siteManagerTab  uintptr
 	importExportTab uintptr
@@ -197,7 +210,12 @@ type siteManagerState struct {
 	syncSkip        uintptr
 	syncConfirm     uintptr
 	testConnection  uintptr
+	titleMinimize   uintptr
+	titleMaximize   uintptr
+	titleClose      uintptr
 	testing         bool
+	testCancel      context.CancelFunc
+	closeAfterTest  bool
 }
 
 var (
@@ -207,13 +225,44 @@ var (
 	siteManagerProc   = syscall.NewCallback(siteManagerWndProc)
 )
 
-func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
+func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintptr) {
+	defer func() {
+		if recover() == nil {
+			return
+		}
+		if value, ok := siteManagerStates.Load(hwnd); ok {
+			if state, ok := value.(*siteManagerState); ok && state != nil && state.parent != nil && !state.closed {
+				state.parent.setStatus("Connections recovered from an internal UI error.")
+			}
+		}
+		result = 0
+	}()
+
 	value, ok := siteManagerStates.Load(hwnd)
 	if ok {
 		state := value.(*siteManagerState)
 		switch message {
 		case wmPaint:
 			state.paintReferenceConnections()
+			return 0
+		case wmNcHitTest:
+			base, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+			if base != htClient {
+				return base
+			}
+			point := chromePoint{X: signedWord(lParam), Y: signedHighWord(lParam)}
+			chromeScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&point)))
+			if point.Y >= 0 && point.Y < int32(state.parent.scale(42)) && point.X >= 0 && point.X < int32(state.parent.scale(540)) {
+				return htCaption
+			}
+			return htClient
+		case wmGetMinMaxInfo:
+			if lParam != 0 && referenceCaptureMode() {
+				info := minMaxInfoFromLParam(lParam)
+				info.MaxTrackSize.X = int32(state.parent.scale(referenceConnectionsCaptureWidth))
+				info.MaxTrackSize.Y = int32(state.parent.scale(referenceConnectionsCaptureHeight))
+				minMaxInfoToLParam(lParam, info)
+			}
 			return 0
 		case wmSize:
 			width := state.parent.unscale(int(lParam & 0xffff))
@@ -243,6 +292,26 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			}
 			if notify == bnClicked {
 				switch id {
+				case siteIDTitleMinimize:
+					showWindow.Call(hwnd, chromeSWMinimize)
+					return 0
+				case siteIDTitleMaximize:
+					zoomed, _, _ := chromeIsZoomed.Call(hwnd)
+					if zoomed != 0 {
+						showWindow.Call(hwnd, chromeSWRestore)
+					} else {
+						showWindow.Call(hwnd, chromeSWMaximize)
+					}
+					return 0
+				case siteIDTitleClose:
+					if state.testing {
+						state.closeAfterTest = true
+						state.cancelConnectionTest()
+						state.parent.setStatus("Cancelling connection test…")
+						return 0
+					}
+					destroyWindow.Call(hwnd)
+					return 0
 				case siteIDNavConnections:
 					return 0
 				case siteIDNavTransfers:
@@ -261,9 +330,22 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 					state.postAction = siteIDNavLocal
 					destroyWindow.Call(hwnd)
 					return 0
+				case siteIDNavSiteManager:
+					sidebarSetFocus.Call(state.list)
+					return 0
+				case siteIDNavAutomation:
+					state.parent.openSettings()
+					state.refreshOptionsSummary()
+					return 0
 				case siteIDNavSettings:
 					state.postAction = siteIDNavSettings
 					destroyWindow.Call(hwnd)
+					return 0
+				case siteIDSavedSearch:
+					state.searchSavedSite()
+					return 0
+				case siteIDRecentClear:
+					state.clearRecentConnections()
 					return 0
 				case siteIDNewSite:
 					sendMessageW.Call(state.list, siteLBSetCurSel, 0, 0)
@@ -364,6 +446,10 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 				color = mutedColor()
 			} else if lParam == state.mottoAccent {
 				color = accentColor()
+			} else if lParam == state.footerReady {
+				color = successColor()
+			} else if lParam == state.footerStats {
+				color = mutedColor()
 			}
 			setTextColor.Call(wParam, color)
 			setBkColor.Call(wParam, panelColor())
@@ -373,16 +459,24 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			setBkColor.Call(wParam, panelColor())
 			return state.parent.panelBrush
 		case wmClose:
+			if state.testing {
+				state.closeAfterTest = true
+				state.cancelConnectionTest()
+				state.parent.setStatus("Cancelling connection test…")
+				return 0
+			}
 			destroyWindow.Call(hwnd)
 			return 0
 		case wmDestroy:
+			state.cancelConnectionTest()
 			for _, button := range []uintptr{
 				state.duplicate, state.save, state.delete, state.connect, state.close, state.settings, state.newSite,
-				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
-				state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
+				state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
+				state.globalSearch, state.savedSearch, state.recentClear, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 				state.presetsTab, state.syncTab, state.automationTab,
 				state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 				state.syncBackup, state.syncSkip, state.syncConfirm, state.testConnection,
+				state.titleMinimize, state.titleMaximize, state.titleClose,
 			} {
 				delete(state.parent.buttons, button)
 			}
@@ -394,7 +488,7 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) ui
 			return 0
 		}
 	}
-	result, _, _ := defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
+	result, _, _ = defWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
 	return result
 }
 
@@ -436,6 +530,102 @@ func (state *siteManagerState) syncProtocolPort() {
 	state.syncProtocolControls()
 }
 
+func (state *siteManagerState) searchSavedSite() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	query, ok := platform.PromptDialog(
+		"Ghost FTP — Saved Sites",
+		"Search saved connections",
+		"",
+	)
+	if !ok {
+		return
+	}
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return
+	}
+	for index, profile := range state.profiles {
+		material := strings.ToLower(profile.Name + "\n" + profile.Host + "\n" + profile.Username + "\n" + profile.Protocol)
+		if strings.Contains(material, query) {
+			sendMessageW.Call(state.list, siteLBSetCurSel, uintptr(index+1), 0)
+			state.loadSelection(index + 1)
+			sidebarSetFocus.Call(state.list)
+			state.parent.setStatus("Saved site found: " + profile.Name)
+			return
+		}
+	}
+	platform.InfoDialog(
+		"Ghost FTP — Saved Sites",
+		"No matching saved site",
+		"No saved connection matched that search. Try a profile name, host, username or protocol.",
+	)
+}
+
+func (state *siteManagerState) clearRecentConnections() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	state.parent.recentConnections = nil
+	state.refillRecentConnections()
+	state.refreshFooter()
+	state.parent.setStatus("Recent connection history cleared")
+}
+
+func siteManagerRate(bytesPerSecond float64) string {
+	if bytesPerSecond <= 0 {
+		return "0 B/s"
+	}
+	const (
+		kiB = 1024.0
+		miB = 1024.0 * 1024.0
+	)
+	switch {
+	case bytesPerSecond >= miB:
+		return fmt.Sprintf("%.1f MB/s", bytesPerSecond/miB)
+	case bytesPerSecond >= kiB:
+		return fmt.Sprintf("%.1f KB/s", bytesPerSecond/kiB)
+	default:
+		return fmt.Sprintf("%.0f B/s", bytesPerSecond)
+	}
+}
+
+func (state *siteManagerState) refreshFooter() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	active := 0
+	uploadRate := 0.0
+	downloadRate := 0.0
+	for _, job := range state.parent.transferJobs {
+		if job.Status != "running" {
+			continue
+		}
+		active++
+		if strings.EqualFold(job.Direction, "upload") {
+			uploadRate += job.BytesPerSecond
+		} else if strings.EqualFold(job.Direction, "download") {
+			downloadRate += job.BytesPerSecond
+		}
+	}
+	ready := "●  Ready"
+	if state.testing {
+		ready = "●  Testing connection…"
+	}
+	activity := "No active transfers"
+	if active == 1 {
+		activity = "1 active transfer"
+	} else if active > 1 {
+		activity = fmt.Sprintf("%d active transfers", active)
+	}
+	setText(state.footerReady, ready+"     "+activity)
+	setText(
+		state.footerStats,
+		fmt.Sprintf("%d connections saved     %d active transfers     ↓ %s     ↑ %s", len(state.profiles), active, siteManagerRate(downloadRate), siteManagerRate(uploadRate)),
+	)
+}
+
 func (state *siteManagerState) refillProfiles(selectedID string) {
 	sendMessageW.Call(state.list, siteLBResetContent, 0, 0)
 	quick := "+  " + state.parent.tr("profile.quick")
@@ -463,6 +653,7 @@ func (state *siteManagerState) refillRecentConnections() {
 		label := recentConnectionLabel(entry, now)
 		sendMessageW.Call(state.recentList, siteLBAddString, 0, uintptr(unsafe.Pointer(wstr(label))))
 	}
+	state.refreshFooter()
 }
 
 func (state *siteManagerState) loadRecentSelection() bool {
@@ -625,6 +816,16 @@ func (state *siteManagerState) connectionDraft() (string, model.ConnectionConfig
 	}, nil
 }
 
+func (state *siteManagerState) cancelConnectionTest() {
+	if state == nil {
+		return
+	}
+	if state.testCancel != nil {
+		state.testCancel()
+		state.testCancel = nil
+	}
+}
+
 func (state *siteManagerState) setTesting(testing bool) {
 	if state == nil {
 		return
@@ -642,13 +843,20 @@ func (state *siteManagerState) setTesting(testing bool) {
 	}
 	setControlEnabled(state.connect, !testing)
 	setControlEnabled(state.save, !testing)
+	state.refreshFooter()
 }
 
 func (state *siteManagerState) finishConnectionTest(host string, err error) {
 	if state == nil || state.parent == nil || state.closed {
 		return
 	}
+	state.testCancel = nil
 	state.setTesting(false)
+	if state.closeAfterTest {
+		state.closeAfterTest = false
+		destroyWindow.Call(state.hwnd)
+		return
+	}
 	if err != nil {
 		state.parent.setStatus("Connection test failed")
 		platform.ErrorDialog(
@@ -673,6 +881,8 @@ func (state *siteManagerState) runConnectionTest(profileID string, cfg model.Con
 	host := cfg.Host
 	timeout := connectionTimeoutDuration(state.parent.settings)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.cancelConnectionTest()
+	state.testCancel = cancel
 	state.parent.goSafe(func() {
 		defer cancel()
 		result, err := state.parent.engine.Connect(ctx, profileID, cfg, fingerprint, false)
@@ -720,6 +930,8 @@ func (state *siteManagerState) testCurrentConnection() {
 
 	timeout := connectionTimeoutDuration(state.parent.settings)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	state.cancelConnectionTest()
+	state.testCancel = cancel
 	state.parent.goSafe(func() {
 		defer cancel()
 		result, connectErr := state.parent.engine.Connect(ctx, profileID, cfg, "", false)
@@ -1079,6 +1291,13 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	if state == nil || state.parent == nil {
 		return
 	}
+	chromeX := width - 126
+	if chromeX < 830 {
+		chromeX = 830
+	}
+	state.parent.move(state.titleMinimize, chromeX, 4, 38, 32)
+	state.parent.move(state.titleMaximize, chromeX+40, 4, 38, 32)
+	state.parent.move(state.titleClose, chromeX+80, 4, 38, 32)
 	var client rect
 	height := 0
 	if ok, _, _ := getClientRect.Call(state.hwnd, uintptr(unsafe.Pointer(&client))); ok != 0 {
@@ -1086,8 +1305,8 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	}
 
 	const (
-		fullReferenceWidth  = 1580
-		fullReferenceHeight = 820
+		fullReferenceWidth  = 1600
+		fullReferenceHeight = 900
 	)
 	compact := (width > 0 && width < fullReferenceWidth) || (height > 0 && height < fullReferenceHeight)
 	if compact {
@@ -1101,7 +1320,8 @@ func (state *siteManagerState) layoutResponsive(width int) {
 			state.presetsTab, state.syncTab, state.automationTab,
 			state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 			state.syncBackup, state.syncSkip, state.syncConfirm,
-			state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
+			state.options, state.securityInfo, state.newSite, state.savedSearch, state.recentClear,
+			state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 		)
 		state.parent.move(state.globalSearch, 560, 18, 320, 38)
 		actionY := 738
@@ -1115,7 +1335,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 			}
 		}
 		state.parent.move(state.testConnection, 262, actionY, 166, 42)
-		state.parent.move(state.save, 742, 50, 138, 38)
+		state.parent.move(state.save, 742, 90, 138, 38)
 		showControls(false, state.close)
 		state.parent.move(state.connect, 646, actionY, 234, 42)
 		invalidateRect.Call(state.hwnd, 0, 1)
@@ -1128,14 +1348,22 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 		state.syncBackup, state.syncSkip, state.syncConfirm,
-		state.options, state.securityInfo, state.newSite, state.list, state.recentList, state.duplicate, state.delete,
+		state.options, state.securityInfo, state.newSite, state.savedSearch, state.recentClear,
+		state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 	)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
-	state.parent.move(state.settings, 926, 738, 264, 42)
-	state.parent.move(state.testConnection, 262, 738, 166, 42)
+	state.parent.move(state.settings, 926, 824, 264, 42)
+	state.parent.move(state.testConnection, 262, 824, 166, 42)
 	state.parent.move(state.save, 742, 50, 138, 38)
 	showControls(false, state.close)
-	state.parent.move(state.connect, 646, 738, 234, 42)
+	state.parent.move(state.connect, 646, 824, 234, 42)
+	footerY := height - 38
+	if footerY < 904 {
+		footerY = 904
+	}
+	state.parent.move(state.footerReady, 250, footerY, 410, 28)
+	state.parent.move(state.footerStats, 892, footerY, 672, 28)
+	state.refreshFooter()
 	invalidateRect.Call(state.hwnd, 0, 1)
 }
 
@@ -1198,15 +1426,23 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		mk("BUTTON", "Search sites, history, or files…    Ctrl+K", wsTabStop|bsOwnerDraw, 560, 18, 494, 38, siteIDGlobalSearch),
 		iconSearch, "Search sites, history, or files…    Ctrl+K", buttonSubtle,
 	)
+	state.titleMinimize = parent.registerButton(mk("BUTTON", "—", bsOwnerDraw, 1448, 4, 38, 32, siteIDTitleMinimize), "", "—", buttonSubtle)
+	state.titleMaximize = parent.registerButton(mk("BUTTON", "□", bsOwnerDraw, 1488, 4, 38, 32, siteIDTitleMaximize), "", "□", buttonSubtle)
+	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonSubtle)
 	state.privacyLabel = mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
 	state.navSync = nav(siteIDNavSync, "Synchronize", iconSync, false)
 	state.navRemote = nav(siteIDNavRemote, "Remote Files", iconDownload, false)
 	state.navLocal = nav(siteIDNavLocal, "Local Files", iconOpenLocal, false)
+	state.navSiteManager = nav(siteIDNavSiteManager, "Site Manager", iconSave, false)
+	state.navAutomation = nav(siteIDNavAutomation, "Automation", iconSync, false)
 	state.navSettings = nav(siteIDNavSettings, "Settings", iconSettings, false)
 	navY := 102
-	for _, control := range []uintptr{state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings} {
+	for _, control := range []uintptr{
+		state.navConnections, state.navTransfers, state.navSync, state.navRemote,
+		state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
+	} {
 		parent.move(control, 28, navY, 184, 42)
 		navY += 50
 	}
@@ -1227,97 +1463,116 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	}
 
 	// Main connection card.
-	heading("New Connection", 262, 54, 420)
-	state.quickConnectTab = parent.registerButton(mk("BUTTON", "Quick Connect", wsTabStop|bsOwnerDraw, 262, 96, 150, 40, siteIDQuickConnect), iconConnect, "Quick Connect", buttonNavActive)
-	state.siteManagerTab = parent.registerButton(mk("BUTTON", "Site Manager", wsTabStop|bsOwnerDraw, 420, 96, 150, 40, siteIDSiteManagerTab), iconOpenLocal, "Site Manager", buttonNav)
-	state.importExportTab = parent.registerButton(mk("BUTTON", "Import / Export", wsTabStop|bsOwnerDraw, 578, 96, 164, 40, siteIDImportExport), iconUpload, "Import / Export", buttonNav)
+	heading("New Connection", 262, 94, 420)
+	state.quickConnectTab = parent.registerButton(mk("BUTTON", "Quick Connect", wsTabStop|bsOwnerDraw, 262, 136, 150, 40, siteIDQuickConnect), iconConnect, "Quick Connect", buttonNavActive)
+	state.siteManagerTab = parent.registerButton(mk("BUTTON", "Site Manager", wsTabStop|bsOwnerDraw, 420, 136, 150, 40, siteIDSiteManagerTab), iconOpenLocal, "Site Manager", buttonNav)
+	state.importExportTab = parent.registerButton(mk("BUTTON", "Import / Export", wsTabStop|bsOwnerDraw, 578, 136, 164, 40, siteIDImportExport), iconUpload, "Import / Export", buttonNav)
 
-	label("Connection Name", 262, 148, 220)
-	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 170, 618, 34, siteIDName)
+	label("Connection Name", 262, 712, 220)
+	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 734, 618, 34, siteIDName)
 
-	label(parent.tr("terminal.protocol"), 262, 216, 150)
-	label("Host / Address", 502, 216, 190)
-	label(parent.tr("terminal.port"), 796, 216, 70)
-	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 238, 224, 240, siteIDProtocol)
+	label(parent.tr("terminal.protocol"), 262, 196, 150)
+	label("Host / Address", 502, 196, 190)
+	label(parent.tr("terminal.port"), 796, 196, 70)
+	state.protocol = mk("COMBOBOX", "", cbsDropDownList|wsTabStop|wsVScroll, 262, 218, 224, 240, siteIDProtocol)
 	for _, spec := range protocolSpecs {
 		sendMessageW.Call(state.protocol, cbAddString, 0, uintptr(unsafe.Pointer(wstr(protocolLabel(parent.languageCode(), spec.Value)))))
 	}
-	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 238, 278, 34, siteIDHost)
-	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 238, 84, 34, siteIDPort)
+	state.host = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 502, 218, 278, 34, siteIDHost)
+	state.port = mk("EDIT", protocolSpecs[0].Port, wsBorder|wsTabStop|esAutoHScroll, 796, 218, 84, 34, siteIDPort)
 
-	label(parent.tr("terminal.username"), 262, 290, 260)
-	label(parent.tr("terminal.password"), 578, 290, 260)
-	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 312, 300, 34, siteIDUser)
-	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 312, 302, 34, siteIDPassword)
+	label(parent.tr("terminal.username"), 262, 270, 260)
+	label(parent.tr("terminal.password"), 578, 270, 260)
+	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 292, 300, 34, siteIDUser)
+	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 292, 302, 34, siteIDPassword)
 
-	label(sitePathLabel(parent.languageCode(), false), 262, 364, 260)
-	label(sitePathLabel(parent.languageCode(), true), 578, 364, 260)
-	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 386, 300, 34, siteIDLocal)
-	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 386, 302, 34, siteIDRemote)
+	label("Advanced Settings", 262, 350, 618)
+	label(sitePathLabel(parent.languageCode(), false), 262, 384, 260)
+	label(sitePathLabel(parent.languageCode(), true), 578, 384, 260)
+	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 412, 300, 34, siteIDLocal)
+	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 412, 302, 34, siteIDRemote)
 
-	label(parent.tr("terminal.private_key"), 262, 438, 260)
-	label(parent.tr("cue.passphrase"), 646, 438, 210)
-	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 460, 368, 34, siteIDKey)
-	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 460, 234, 34, siteIDPassphrase)
+	label(parent.tr("terminal.private_key"), 262, 464, 260)
+	label(parent.tr("cue.passphrase"), 646, 464, 210)
+	state.keyPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 486, 368, 34, siteIDKey)
+	state.passphrase = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 646, 486, 234, 34, siteIDPassphrase)
 
-	label(cleanConnectionSecurityTitle(parent.tr("sftp.security")), 262, 512, 618)
-	state.security = mk("STATIC", "", wsBorder, 262, 534, 618, 72, siteIDSecurity)
+	label("Security", 262, 538, 618)
+	state.security = mk("STATIC", "", wsBorder, 262, 560, 618, 72, siteIDSecurity)
 
-	label("PROFILE BEHAVIOR", 262, 618, 618)
+	label("PROFILE BEHAVIOR", 262, 646, 618)
 	profileNote := "Quick Connect uses credentials only for this session. Saving a profile asks before secrets are stored in the protected Windows credential layer."
-	mk("STATIC", profileNote, 0, 262, 642, 618, 48, 0)
+	mk("STATIC", profileNote, 0, 262, 666, 618, 40, 0)
 
-	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 742, 50, 138, 38, siteIDSave), iconSave, "Save as Profile", buttonDefault)
-	state.testConnection = parent.registerButton(mk("BUTTON", "Test Connection", wsTabStop|bsOwnerDraw, 262, 738, 166, 42, siteIDTestConnection), iconConnect, "Test Connection", buttonDefault)
-	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 738, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
-	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 738, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
+	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 742, 90, 138, 38, siteIDSave), iconSave, "Save as Profile", buttonDefault)
+	state.testConnection = parent.registerButton(mk("BUTTON", "Test Connection", wsTabStop|bsOwnerDraw, 262, 824, 166, 42, siteIDTestConnection), iconConnect, "Test Connection", buttonDefault)
+	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 824, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
+	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 824, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
 	showControls(false, state.close)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
-	state.transferHeading = heading("Transfer & Sync Options", 924, 54, 270)
-	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 96, 86, 38, siteIDPresetsTab), iconSave, "Presets", buttonNavActive)
-	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 96, 82, 38, siteIDSyncTab), iconSync, "Sync", buttonNav)
-	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 96, 84, 38, siteIDAutomationTab), iconSettings, "Automation", buttonNav)
-	state.presetStandard = parent.registerButton(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 150, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", buttonNavActive)
-	state.presetWebsite = parent.registerButton(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 216, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", buttonNav)
-	state.presetBackup = parent.registerButton(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 282, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", buttonNav)
-	state.presetMedia = parent.registerButton(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 348, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", buttonNav)
-	state.syncHeading = heading("Sync Options", 926, 422, 264)
-	state.syncBackup = mk("BUTTON", "Backup before overwrite", wsTabStop|siteBSAutoCheckBox, 926, 458, 264, 28, siteIDSyncBackup)
-	state.syncSkip = mk("BUTTON", "Skip existing files", wsTabStop|siteBSAutoCheckBox, 926, 492, 264, 28, siteIDSyncSkip)
-	state.syncConfirm = mk("BUTTON", "Confirm destructive actions", wsTabStop|siteBSAutoCheckBox, 926, 526, 264, 28, siteIDSyncConfirm)
-	state.activeLabel = label("ACTIVE TRANSFER SETTINGS", 926, 568, 262)
-	state.options = mk("STATIC", "", wsBorder, 926, 592, 264, 72, 0)
-	state.securityLabel = label("SECURITY", 926, 674, 264)
+	state.transferHeading = heading("Transfer && Sync Options", 924, 94, 318)
+	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 136, 82, 38, siteIDPresetsTab), "", "Presets", buttonNavActive)
+	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1014, 136, 72, 38, siteIDSyncTab), "", "Sync", buttonNav)
+	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1092, 136, 98, 38, siteIDAutomationTab), "", "Automation", buttonNav)
+	state.presetStandard = parent.registerButtonWithSubtitle(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 188, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", "3 parallel · replace existing", buttonNavActive)
+	state.presetWebsite = parent.registerButtonWithSubtitle(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 254, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", "Backup before overwrite · retry twice", buttonNav)
+	state.presetBackup = parent.registerButtonWithSubtitle(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 320, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", "Skip existing · preserve current files", buttonNav)
+	state.presetMedia = parent.registerButtonWithSubtitle(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 386, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", "2 parallel · replace existing", buttonNav)
+	state.syncHeading = heading("Sync Options", 926, 460, 264)
+	state.syncBackup = mk("BUTTON", "Backup before overwrite", wsTabStop|siteBSAutoCheckBox, 926, 496, 264, 28, siteIDSyncBackup)
+	state.syncSkip = mk("BUTTON", "Skip existing files", wsTabStop|siteBSAutoCheckBox, 926, 530, 264, 28, siteIDSyncSkip)
+	state.syncConfirm = mk("BUTTON", "Confirm destructive actions", wsTabStop|siteBSAutoCheckBox, 926, 564, 264, 28, siteIDSyncConfirm)
+	state.activeLabel = label("ACTIVE TRANSFER SETTINGS", 926, 606, 262)
+	state.options = mk("STATIC", "", wsBorder, 926, 630, 264, 76, 0)
+	state.securityLabel = label("SECURITY", 926, 720, 264)
 	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain protected by Windows."
-	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 696, 264, 34, 0)
-	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 738, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
+	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 744, 264, 42, 0)
+	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 824, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
 	// Saved Sites and private session history share the right reference column.
-	state.savedHeading = heading("Saved Sites", 1240, 54, 190)
-	state.newSite = parent.registerButton(mk("BUTTON", "New Site", wsTabStop|bsOwnerDraw, 1460, 50, 104, 38, siteIDNewSite), iconNewFolder, "New Site", buttonAccent)
-	state.savedLabel = label("SAVED CONNECTIONS", 1240, 100, 300)
-	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 124, 324, 314, siteIDList)
+	state.savedHeading = heading("Saved Sites", 1240, 94, 190)
+	state.newSite = parent.registerButton(mk("BUTTON", "New Site", wsTabStop|bsOwnerDraw, 1460, 90, 104, 38, siteIDNewSite), iconNewFolder, "New Site", buttonAccent)
+	state.savedLabel = label("SAVED CONNECTIONS", 1240, 136, 300)
+	state.savedSearch = parent.registerButton(
+		mk("BUTTON", "Search saved connections…", wsTabStop|bsOwnerDraw, 1240, 158, 324, 36, siteIDSavedSearch),
+		iconSearch, "Search saved connections…", buttonSubtle,
+	)
+	state.list = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight|siteLBSOwnerDrawFixed|siteLBSHasStrings, 1240, 204, 324, 286, siteIDList)
 	if state.list != 0 {
 		applySiteManagerNavigationTheme(state.list)
 		state.listBrush, _, _ = createSolidBrush.Call(listColor())
 	}
 	duplicateLabel := siteManagerDuplicateLabel(parent.languageCode())
-	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 450, 154, 36, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
-	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 450, 160, 36, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
+	state.duplicate = parent.registerButton(mk("BUTTON", duplicateLabel, wsTabStop|bsOwnerDraw, 1240, 502, 154, 36, siteIDDuplicate), iconCopy, duplicateLabel, buttonDefault)
+	state.delete = parent.registerButton(mk("BUTTON", parent.tr("profile.delete"), wsTabStop|bsOwnerDraw, 1404, 502, 160, 36, siteIDDelete), iconDelete, parent.tr("profile.delete"), buttonDanger)
 
-	state.recentHeading = heading("Recent Connections", 1240, 514, 250)
-	state.recentLabel = label("SESSION HISTORY · NO PASSWORDS", 1240, 550, 310)
-	state.recentList = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight, 1240, 576, 324, 148, siteIDRecentList)
+	state.recentHeading = heading("Recent Connections", 1240, 566, 224)
+	state.recentClear = parent.registerButton(
+		mk("BUTTON", "Clear All", wsTabStop|bsOwnerDraw, 1470, 562, 94, 34, siteIDRecentClear),
+		iconClear, "Clear All", buttonSubtle,
+	)
+	state.recentLabel = label("SESSION HISTORY · NO PASSWORDS", 1240, 602, 310)
+	state.recentList = mk("LISTBOX", "", wsBorder|wsTabStop|wsVScroll|siteLBSNotify|siteLBSNoIntegralHeight, 1240, 628, 324, 172, siteIDRecentList)
 	if state.recentList != 0 {
 		applySiteManagerNavigationTheme(state.recentList)
+	}
+
+	// Reference footer uses real runtime data instead of sample telemetry.
+	state.footerReady = mk("STATIC", "", 0, 250, 834, 410, 28, 0)
+	state.footerStats = mk("STATIC", "", 0, 892, 834, 672, 28, 0)
+	if parent.smallFont != 0 {
+		sendMessageW.Call(state.footerReady, wmSetFont, parent.smallFont, 1)
+		sendMessageW.Call(state.footerStats, wmSetFont, parent.smallFont, 1)
 	}
 
 	for _, control := range []uintptr{
 		state.list, state.recentList, state.duplicate, state.name, state.protocol, state.host, state.port, state.user, state.password,
 		state.localPath, state.remotePath, state.keyPath, state.passphrase, state.security, state.options, state.securityInfo,
 		state.settings, state.save, state.testConnection, state.delete, state.connect, state.close, state.newSite,
-		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSettings,
+		state.savedSearch, state.recentClear, state.footerReady, state.footerStats,
+		state.titleMinimize, state.titleMaximize, state.titleClose,
+		state.navConnections, state.navTransfers, state.navSync, state.navRemote, state.navLocal, state.navSiteManager, state.navAutomation, state.navSettings,
 		state.globalSearch, state.quickConnectTab, state.siteManagerTab, state.importExportTab,
 		state.presetsTab, state.syncTab, state.automationTab, state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 		state.syncBackup, state.syncSkip, state.syncConfirm,
@@ -1335,12 +1590,13 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	limitEdit(state.remotePath, 4096)
 	limitEdit(state.keyPath, 32767)
 	limitEdit(state.passphrase, 8192)
-	cue(state.host, "server.yourdomain.com")
+	cue(state.host, "Host or address")
 	cue(state.password, parent.tr("terminal.password"))
 	cue(state.passphrase, parent.tr("cue.passphrase"))
 	state.refreshOptionsSummary()
 	state.refreshSyncOptions()
 	state.refillRecentConnections()
+	state.refreshFooter()
 	return nil
 }
 
@@ -1365,22 +1621,27 @@ func (a *app) openSiteManager() {
 		registerClassExW.Call(uintptr(unsafe.Pointer(&class)))
 	})
 
-	logicalW, logicalH := 1590, 850
+	logicalW, logicalH := 1664, 960
+	if referenceCaptureMode() {
+		logicalW, logicalH = referenceConnectionsCaptureWidth, referenceConnectionsCaptureHeight
+	}
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
-	screenLogicalW := a.unscale(int(screenW))
-	screenLogicalH := a.unscale(int(screenH))
-	if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
-		logicalW = screenLogicalW - 24
-	}
-	if screenLogicalH > 0 && logicalH > screenLogicalH-48 {
-		logicalH = screenLogicalH - 48
-	}
-	if logicalW < 960 {
-		logicalW = 960
-	}
-	if logicalH < 700 {
-		logicalH = 700
+	if !referenceCaptureMode() {
+		screenLogicalW := a.unscale(int(screenW))
+		screenLogicalH := a.unscale(int(screenH))
+		if screenLogicalW > 0 && logicalW > screenLogicalW-24 {
+			logicalW = screenLogicalW - 24
+		}
+		if screenLogicalH > 0 && logicalH > screenLogicalH-16 {
+			logicalH = screenLogicalH - 16
+		}
+		if logicalW < 960 {
+			logicalW = 960
+		}
+		if logicalH < 700 {
+			logicalH = 700
+		}
 	}
 	pixelW, pixelH := a.scale(logicalW), a.scale(logicalH)
 	x := (int(screenW) - pixelW) / 2

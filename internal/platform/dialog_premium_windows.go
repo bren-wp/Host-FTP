@@ -14,6 +14,8 @@ import (
 var premiumGetSystemMetrics = user32.NewProc("GetSystemMetrics")
 var premiumGetActiveWindow = user32.NewProc("GetActiveWindow")
 var premiumGetWindowRect = user32.NewProc("GetWindowRect")
+var premiumGetClientRect = user32.NewProc("GetClientRect")
+var premiumSetWindowRgn = user32.NewProc("SetWindowRgn")
 var premiumGetDpiForWindow = user32.NewProc("GetDpiForWindow")
 var premiumGetDpiForSystem = user32.NewProc("GetDpiForSystem")
 var premiumAdjustWindowRectEx = user32.NewProc("AdjustWindowRectEx")
@@ -29,6 +31,7 @@ var premiumDwmapi = syscall.NewLazyDLL("dwmapi.dll")
 var premiumDwmSetAttribute = premiumDwmapi.NewProc("DwmSetWindowAttribute")
 var premiumGdi32 = syscall.NewLazyDLL("gdi32.dll")
 var premiumCreateSolidBrush = premiumGdi32.NewProc("CreateSolidBrush")
+var premiumCreateRoundRectRgn = premiumGdi32.NewProc("CreateRoundRectRgn")
 var premiumSetTextColor = premiumGdi32.NewProc("SetTextColor")
 var premiumSetBkColor = premiumGdi32.NewProc("SetBkColor")
 var premiumUxTheme = syscall.NewLazyDLL("uxtheme.dll")
@@ -156,6 +159,33 @@ func applyPremiumDialogControl(hwnd uintptr, class string) {
 	}
 	if theme != "" {
 		premiumSetWindowTheme.Call(hwnd, uintptr(unsafe.Pointer(promptWstr(theme))), 0)
+	}
+}
+
+func roundPremiumDialogControl(hwnd uintptr, radius int) {
+	if hwnd == 0 || radius <= 0 {
+		return
+	}
+	var r premiumRect
+	if ok, _, _ := premiumGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&r))); ok == 0 {
+		return
+	}
+	width := r.Right - r.Left
+	height := r.Bottom - r.Top
+	if width <= 1 || height <= 1 {
+		return
+	}
+	region, _, _ := premiumCreateRoundRectRgn.Call(
+		0, 0,
+		uintptr(width+1), uintptr(height+1),
+		uintptr(radius), uintptr(radius),
+	)
+	if region == 0 {
+		return
+	}
+	// SetWindowRgn takes ownership of a successful region.
+	if ok, _, _ := premiumSetWindowRgn.Call(hwnd, region, 1); ok == 0 {
+		promptDeleteObject.Call(region)
 	}
 }
 

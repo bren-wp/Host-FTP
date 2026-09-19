@@ -61,7 +61,7 @@ func (a *app) paintReferenceWorkspace() {
 	// Integrated application rail.
 	a.drawReferenceCard(
 		hdc,
-		10, 10,
+		14, 10,
 		applicationSidebarWidth+18,
 		height-20,
 		18,
@@ -77,16 +77,16 @@ func (a *app) paintReferenceWorkspace() {
 	}
 
 	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 100, 16, panelColor(), borderColor())
+	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 126, 16, panelColor(), borderColor())
 
 	paneGap := 14
 	paneW := (contentWidth - paneGap) / 2
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 128, 184)
+	queueH := clampInt(height/6, 132, 152)
 	queueY := statusY - queueH - 10
 	queueButtonsY := queueY - 38
 	queueLabelY := queueButtonsY - 25
-	paneTop := 118
+	paneTop := 144
 	paneBottom := queueLabelY - 9
 	paneH := paneBottom - paneTop
 	if paneH > 120 {
@@ -129,17 +129,13 @@ func (state *siteManagerState) paintReferenceConnections() {
 	logicalHeight := state.parent.unscale(int(client.Bottom - client.Top))
 	compact := logicalWidth < 1580 || logicalHeight < 820
 
-	railHeight := 818
-	editorHeight := 770
-	if compact {
-		railHeight = logicalHeight - 24
-		editorHeight = logicalHeight - 60
-		if railHeight < 620 {
-			railHeight = 620
-		}
-		if editorHeight < 620 {
-			editorHeight = 620
-		}
+	railHeight := logicalHeight - 24
+	editorHeight := logicalHeight - 92
+	if railHeight < 620 {
+		railHeight = 620
+	}
+	if editorHeight < 620 {
+		editorHeight = 620
 	}
 	state.parent.drawReferenceCard(hdc, 12, 12, 220, railHeight, 18, panelColor(), borderColor())
 	state.parent.drawReferenceCard(hdc, 244, 44, 654, editorHeight, 16, panelColor(), borderColor())
@@ -149,5 +145,7 @@ func (state *siteManagerState) paintReferenceConnections() {
 		state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
 		state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
 		state.parent.drawReferenceCard(hdc, 1222, 516, 354, 298, 16, panelColor(), borderColor())
+		footerY := logicalHeight - 54
+		state.parent.drawReferenceCard(hdc, 244, footerY, 1332, 42, 12, panelColor(), borderColor())
 	}
 }

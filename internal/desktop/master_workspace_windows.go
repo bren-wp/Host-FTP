@@ -279,6 +279,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	contentLeft := applicationContentLeft
 	contentRight := width - premiumOuterGap
 	contentWidth := contentRight - contentLeft
+	a.layoutWindowChrome(width)
 	if contentWidth < 620 {
 		return
 	}
@@ -310,10 +311,10 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Global search / command field.
 	searchY, searchH := 18, 40
-	badgeW := 230
+	badgeW := 214
 	searchW := contentWidth - badgeW - 18
-	if searchW > 650 {
-		searchW = 650
+	if searchW > 640 {
+		searchW = 640
 	}
 	if searchW < 340 {
 		searchW = 340
@@ -323,7 +324,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
-	toolbarY, toolbarH := 70, 40
+	toolbarY, toolbarH := 84, 42
 	gap := 8
 	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 146, 140, 132, 110, 120, 108
 	if contentWidth < 1050 {
@@ -366,7 +367,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	paneW := (contentWidth - paneGap) / 2
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
-	sectionY, pathY := 132, 162
+	sectionY, pathY := 150, 180
 	a.move(a.sectionLocal, leftX+8, sectionY, paneW-16, 22)
 	a.move(a.sectionRemote, rightX+8, sectionY, paneW-16, 22)
 
@@ -397,7 +398,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	a.move(a.remotePath, rx, pathY, remotePathW, 34)
 
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 132, 184)
+	queueH := clampInt(height/6, 132, 152)
 	queueY := statusY - queueH - 10
 	queueToolbarY := queueY - 38
 	queueLabelY := queueToolbarY - 25
@@ -440,7 +441,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		{a.resumeQueue, 94},
 		{a.cancelJob, 90},
 		{a.retryJob, 86},
-		{a.clearQueue, 136},
+		{a.clearQueue, 156},
 	}
 	qx := contentRight - 8
 	for i := len(queueControls) - 1; i >= 0; i-- {
