@@ -1,6 +1,6 @@
-# Ghost FTP 0.5.0
+# Ghost FTP 0.5.1
 
-Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built against the approved Ghost FTP reference boards.
+Ghost FTP 0.5.1 is a focused visual, workflow and release-quality pass built against the approved Ghost FTP reference boards.
 
 ## Reference UI
 
@@ -45,10 +45,10 @@ Ghost FTP 0.5.0 is a focused visual, workflow and release-quality pass built aga
 
 ## Windows downloads
 
-- `Ghost-FTP-0.5.0-Setup.exe`
-- `Ghost-FTP-0.5.0-Portable.exe`
-- `Ghost-FTP-0.5.0-Update.exe`
-- `Ghost-FTP-0.5.0-Source.zip`
+- `Ghost-FTP-0.5.1-Setup.exe`
+- `Ghost-FTP-0.5.1-Portable.exe`
+- `Ghost-FTP-0.5.1-Update.exe`
+- `Ghost-FTP-0.5.1-Source.zip`
 - `SHA256.txt`
 - `latest.json`
 
