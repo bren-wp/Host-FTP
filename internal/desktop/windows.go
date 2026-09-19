@@ -38,7 +38,7 @@ type app struct {
 	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                                            uintptr
 	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
 	status, statusVersion, transferSummary                                                                            uintptr
-	localPaneSummary, localPanePath, remotePaneSummary, remotePanePath                                                  uintptr
+	localPaneSummary, localPanePath, remotePaneSummary, remotePanePath                                                uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	titleMinimize, titleMaximize, titleClose                                                                          uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
