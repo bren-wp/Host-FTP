@@ -136,7 +136,7 @@ func (a *app) paintReferenceWorkspace() {
 	// The icons are painted by Ghost FTP, while the file lists remain native
 	// functional ListViews.
 	a.drawReferencePaneGlyph(hdc, iconOpenLocal, contentLeft+10, paneTop+8, 24, 24)
-	a.drawReferencePaneGlyph(hdc, iconDownload, contentLeft+paneW+paneGap+10, paneTop+8, 24, 24)
+	a.drawReferencePaneGlyph(hdc, iconCloud, contentLeft+paneW+paneGap+10, paneTop+8, 24, 24)
 	if paneH > 180 {
 		footerLineY := paneBottom - 34
 		a.drawReferenceDivider(hdc, contentLeft+4, footerLineY, paneW-8, borderColor())
