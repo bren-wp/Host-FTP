@@ -259,8 +259,8 @@ func siteManagerWndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (r
 		case wmGetMinMaxInfo:
 			if lParam != 0 && referenceCaptureMode() {
 				info := minMaxInfoFromLParam(lParam)
-				info.MaxTrackSize.X = int32(state.parent.scale(referenceCaptureWidth))
-				info.MaxTrackSize.Y = int32(state.parent.scale(referenceCaptureHeight))
+				info.MaxTrackSize.X = int32(state.parent.scale(referenceConnectionsCaptureWidth))
+				info.MaxTrackSize.Y = int32(state.parent.scale(referenceConnectionsCaptureHeight))
 				minMaxInfoToLParam(lParam, info)
 			}
 			return 0
@@ -1622,7 +1622,7 @@ func (a *app) openSiteManager() {
 
 	logicalW, logicalH := 1590, 880
 	if referenceCaptureMode() {
-		logicalW, logicalH = referenceCaptureWidth, referenceCaptureHeight
+		logicalW, logicalH = referenceConnectionsCaptureWidth, referenceConnectionsCaptureHeight
 	}
 	screenW, _, _ := getSystemMetrics.Call(smCxScreen)
 	screenH, _, _ := getSystemMetrics.Call(smCyScreen)
