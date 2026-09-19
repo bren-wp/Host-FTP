@@ -80,7 +80,7 @@ func (a *app) paintReferenceWorkspace() {
 		hdc,
 		14, 10,
 		applicationSidebarWidth+18,
-		height-20,
+		height-35,
 		18,
 		panelColor(),
 		borderColor(),
@@ -95,27 +95,26 @@ func (a *app) paintReferenceWorkspace() {
 	}
 
 	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 132, 16, panelColor(), borderColor())
+	a.drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132, 16, panelColor(), borderColor())
 
-	paneGap := 14
+	paneGap := 32
 	paneW := (contentWidth - paneGap) / 2
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/6, 132, 152)
-	queueY := statusY - queueH - 10
-	queueButtonsY := queueY - 38
-	queueLabelY := queueButtonsY - 25
-	paneTop := 146
+	queueH := clampInt(height/7, 124, 136)
+	queueY := statusY - queueH - 14
+	queueLabelY := queueY - 42
+	paneTop := 148
 	paneBottom := queueLabelY - 9
 	paneH := paneBottom - paneTop
 	if paneH > 120 {
-		a.drawReferenceCard(hdc, contentLeft-8, paneTop, paneW+8, paneH, 16, panelColor(), borderColor())
-		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-8, paneTop, paneW+8, paneH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 	}
 
 	queueCardY := queueLabelY - 10
 	queueCardH := statusY - queueCardY - 6
 	if queueCardH > 80 {
-		a.drawReferenceCard(hdc, contentLeft-8, queueCardY, contentWidth+8, queueCardH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft-2, queueCardY, contentWidth+2, queueCardH, 16, panelColor(), borderColor())
 	}
 }
 
