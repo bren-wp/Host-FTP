@@ -352,6 +352,9 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			if h.Code == nmCustomDraw && a.isWorkspaceHeader(h.HwndFrom) {
 				return a.drawWorkspaceHeader(lParam)
 			}
+			if h.Code == nmCustomDraw && a.isWorkspaceList(h.HwndFrom) {
+				return a.drawWorkspaceList(lParam)
+			}
 			if h.Code == lvnColumnClick && (h.HwndFrom == a.localList || h.HwndFrom == a.remoteList) {
 				n := nmListViewFromLParam(lParam)
 				a.handleFileColumnClick(h.HwndFrom, int(n.SubItem))
