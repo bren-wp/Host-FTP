@@ -271,7 +271,7 @@ func (a *app) applyDPI(dpi uint32) {
 			sendMessageW.Call(h, wmSetFont, a.font, 1)
 		}
 	}
-	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.status, a.statusVersion, a.transferSummary} {
+	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.status, a.statusVersion, a.transferSummary, a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath} {
 		if h != 0 && a.smallFont != 0 {
 			sendMessageW.Call(h, wmSetFont, a.smallFont, 1)
 		}
