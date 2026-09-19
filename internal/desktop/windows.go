@@ -138,12 +138,16 @@ func Run(engine *api.Engine, version string) error {
 		brush: brush, panelBrush: panelBrush, buttons: make(map[uintptr]buttonVisual),
 		settings: startupSettings,
 	}
+	initialWidth, initialHeight := 1200, 780
+	if referenceCaptureMode() {
+		initialWidth, initialHeight = referenceMainCaptureWidth, referenceMainCaptureHeight
+	}
 	hwnd, _, err := createWindowExW.Call(
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(wstr(brand.ProductName))),
 		ghostWindowStyle,
-		40, 30, 1200, 780,
+		40, 30, uintptr(initialWidth), uintptr(initialHeight),
 		0, 0, hinst, 0,
 	)
 	if hwnd == 0 {
