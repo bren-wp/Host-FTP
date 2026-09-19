@@ -367,7 +367,7 @@ func premiumDialogFontForDPI(height int32, dpi uint32, weight uintptr) uintptr {
 		weight,
 		0, 0, 0,
 		1, 0, 0, 5, 0,
-		uintptr(unsafe.Pointer(promptWstr("Segoe UI Variable Text"))),
+		uintptr(unsafe.Pointer(promptWstr("Segoe UI"))),
 	)
 	return font
 }
