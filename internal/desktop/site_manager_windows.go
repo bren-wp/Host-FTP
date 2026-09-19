@@ -1511,10 +1511,10 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	showControls(false, state.close)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
-	state.transferHeading = heading("Transfer && Sync Options", 924, 94, 292)
-	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 136, 86, 38, siteIDPresetsTab), "", "Presets", buttonNavActive)
-	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 136, 82, 38, siteIDSyncTab), "", "Sync", buttonNav)
-	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 136, 84, 38, siteIDAutomationTab), "", "Automation", buttonNav)
+	state.transferHeading = heading("Transfer && Sync Options", 924, 94, 318)
+	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 136, 82, 38, siteIDPresetsTab), "", "Presets", buttonNavActive)
+	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1014, 136, 72, 38, siteIDSyncTab), "", "Sync", buttonNav)
+	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1092, 136, 98, 38, siteIDAutomationTab), "", "Automation", buttonNav)
 	state.presetStandard = parent.registerButtonWithSubtitle(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 188, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", "3 parallel · replace existing", buttonNavActive)
 	state.presetWebsite = parent.registerButtonWithSubtitle(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 254, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", "Backup before overwrite · retry twice", buttonNav)
 	state.presetBackup = parent.registerButtonWithSubtitle(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 320, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", "Skip existing · preserve current files", buttonNav)
