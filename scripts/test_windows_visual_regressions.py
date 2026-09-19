@@ -159,6 +159,14 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("windowsOpenSSHCandidates", sftp)
         self.assertIn('"Sysnative", "OpenSSH", name', sftp)
 
+    def test_list_selection_uses_real_listview_state(self):
+        defs = self.read("internal/desktop/win32_defs_windows.go")
+        rows = self.read("internal/desktop/list_draw_windows.go")
+        self.assertIn("lvmGetItemState             = lvmFirst + 44", defs)
+        self.assertIn("workspaceListActualDrawState", rows)
+        self.assertIn("lvmGetItemState", rows)
+        self.assertIn("selected&lvisSelected", rows)
+
     def test_reference_typography_is_stable_on_windows_runners(self):
         ui = self.read("internal/desktop/ui_windows.go")
         dialogs = self.read("internal/platform/dialog_premium_windows.go")
@@ -175,7 +183,7 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         paint = self.read("internal/desktop/reference_paint_windows.go")
         self.assertIn("drawReferencePaneGlyph", paint)
         self.assertIn("iconOpenLocal", paint)
-        self.assertIn("iconDownload", paint)
+        self.assertIn("iconCloud", paint)
         self.assertIn("a.move(a.sectionLocal, leftX+40", workspace)
         self.assertIn("a.move(a.sectionRemote, rightX+40", workspace)
         self.assertIn("searchY, searchH := 23, 40", workspace)
