@@ -159,6 +159,36 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("windowsOpenSSHCandidates", sftp)
         self.assertIn('"Sysnative", "OpenSSH", name', sftp)
 
+    def test_list_selection_uses_real_listview_state(self):
+        defs = self.read("internal/desktop/win32_defs_windows.go")
+        rows = self.read("internal/desktop/list_draw_windows.go")
+        self.assertIn("lvmGetItemState             = lvmFirst + 44", defs)
+        self.assertIn("workspaceListActualDrawState", rows)
+        self.assertIn("lvmGetItemState", rows)
+        self.assertIn("selected&lvisSelected", rows)
+
+    def test_reference_typography_is_stable_on_windows_runners(self):
+        ui = self.read("internal/desktop/ui_windows.go")
+        dialogs = self.read("internal/platform/dialog_premium_windows.go")
+        self.assertIn('return createNamedUIFont("Segoe UI", height, weight, false)', ui)
+        self.assertNotIn('name = "Segoe UI Variable Text"', ui)
+        self.assertIn('a.font = createUIFont(int32(-a.scale(14)), 400)', ui)
+        self.assertIn('a.titleFont = createUIFont(int32(-a.scale(26)), 700)', ui)
+        self.assertIn('a.smallFont = createUIFont(int32(-a.scale(12)), 400)', ui)
+        self.assertIn('promptWstr("Segoe UI")', dialogs)
+        self.assertNotIn('promptWstr("Segoe UI Variable Text")', dialogs)
+
+    def test_main_reference_panes_keep_icon_title_composition(self):
+        workspace = self.read("internal/desktop/master_workspace_windows.go")
+        paint = self.read("internal/desktop/reference_paint_windows.go")
+        self.assertIn("drawReferencePaneGlyph", paint)
+        self.assertIn("iconOpenLocal", paint)
+        self.assertIn("iconCloud", paint)
+        self.assertIn("a.move(a.sectionLocal, leftX+40", workspace)
+        self.assertIn("a.move(a.sectionRemote, rightX+40", workspace)
+        self.assertIn("searchY, searchH := 23, 40", workspace)
+        self.assertIn("toolbarY, toolbarH := 91, 42", workspace)
+
     def test_windows_build_captures_and_packages_authentic_reference_ui(self):
         workflow = self.read(".github/workflows/windows-build.yml")
         self.assertIn("- 'work/**'", workflow)

@@ -48,6 +48,25 @@ func (a *app) drawReferenceDivider(hdc uintptr, x, y, width int, color uintptr) 
 	}
 }
 
+func (a *app) drawReferencePaneGlyph(hdc uintptr, glyph string, x, y, width, height int) {
+	if a == nil || hdc == 0 || glyph == "" || a.iconFont == 0 {
+		return
+	}
+	r := rect{
+		Left:   int32(a.scale(x)),
+		Top:    int32(a.scale(y)),
+		Right:  int32(a.scale(x + width)),
+		Bottom: int32(a.scale(y + height)),
+	}
+	setBkMode.Call(hdc, transparentBkMode)
+	setTextColor.Call(hdc, accentColor())
+	old, _, _ := selectObject.Call(hdc, a.iconFont)
+	drawText(hdc, glyph, &r, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix)
+	if old != 0 {
+		selectObject.Call(hdc, old)
+	}
+}
+
 func (a *app) paintReferenceWorkspace() {
 	if a == nil || a.hwnd == 0 {
 		return
@@ -113,6 +132,11 @@ func (a *app) paintReferenceWorkspace() {
 		a.drawReferenceCard(hdc, contentLeft-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 	}
+	// Reference pane headings use a compact cyan icon followed by the title.
+	// The icons are painted by Ghost FTP, while the file lists remain native
+	// functional ListViews.
+	a.drawReferencePaneGlyph(hdc, iconOpenLocal, contentLeft+10, paneTop+8, 24, 24)
+	a.drawReferencePaneGlyph(hdc, iconCloud, contentLeft+paneW+paneGap+10, paneTop+8, 24, 24)
 	if paneH > 180 {
 		footerLineY := paneBottom - 34
 		a.drawReferenceDivider(hdc, contentLeft+4, footerLineY, paneW-8, borderColor())

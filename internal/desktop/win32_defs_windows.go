@@ -71,6 +71,7 @@ const (
 	lvmSetTextColor             = lvmFirst + 36
 	lvmSetTextBkColor           = lvmFirst + 38
 	lvmSetItemState             = lvmFirst + 43
+	lvmGetItemState             = lvmFirst + 44
 	lvmSetExtendedListViewStyle = lvmFirst + 54
 	lvmInsertItemW              = lvmFirst + 77
 	lvmInsertColumnW            = lvmFirst + 97

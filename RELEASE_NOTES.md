@@ -1,8 +1,15 @@
-# Ghost FTP 0.6.1
+# Ghost FTP 0.6.2
 
-Ghost FTP 0.6.1 is the next reference-UI production pass built directly against the supplied 1672×941 Ghost FTP workspace and Connections boards.
+Ghost FTP 0.6.2 is a further reference-UI production pass built directly against the supplied 1672×941 Ghost FTP workspace, Connections board and brand system.
 
 ## Reference UI
+
+- Standardized application and modal typography on the stable **Segoe UI** face so Windows Server/CI font substitution cannot distort captures or production spacing.
+- Retuned the reference body/metadata font metrics and kept title/section weights aligned to the supplied board.
+- Added real painted cyan pane glyphs for **Local Files** and **Remote Files** while leaving the underlying file lists fully functional native controls.
+- Corrected ListView selection rendering to query the real selected-row state, preventing full-table blue selection artifacts in PrintWindow/remote-session captures.
+- Replaced the temporary remote-pane arrow glyph with the native Windows cloud glyph used by the supplied reference.
+- Shifted pane headings and the top search/command row to the supplied reference offsets.
 
 - Adopted the supplied **1672×941** application canvas as the exact Windows visual target for Main and Connections captures.
 - Converted the top-level Windows frame to a full-client custom surface so title-bar spacing, search, status and window controls align with the reference instead of reserving stock non-client chrome.
@@ -57,10 +64,10 @@ Ghost FTP 0.6.1 is the next reference-UI production pass built directly against 
 
 ## Windows downloads
 
-- `Ghost-FTP-0.6.1-Setup.exe`
-- `Ghost-FTP-0.6.1-Portable.exe`
-- `Ghost-FTP-0.6.1-Update.exe`
-- `Ghost-FTP-0.6.1-Source.zip`
+- `Ghost-FTP-0.6.2-Setup.exe`
+- `Ghost-FTP-0.6.2-Portable.exe`
+- `Ghost-FTP-0.6.2-Update.exe`
+- `Ghost-FTP-0.6.2-Source.zip`
 - `SHA256.txt`
 - `latest.json`
 

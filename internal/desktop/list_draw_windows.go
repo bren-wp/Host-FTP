@@ -81,6 +81,22 @@ func workspaceListRowColors(state uint32) (background, foreground uintptr) {
 	return
 }
 
+func workspaceListActualDrawState(list uintptr, item uintptr, drawState uint32) uint32 {
+	if list == 0 {
+		return drawState
+	}
+	// NMLVCUSTOMDRAW can report CDIS_SELECTED for an entire full-row paint pass
+	// under PrintWindow/remote-session rendering. Ask the ListView for the real
+	// LVIS_SELECTED bit so only genuinely selected rows receive the blue reference
+	// highlight in screenshots and on users' desktops.
+	drawState &^= cdisSelected
+	selected, _, _ := sendMessageW.Call(list, lvmGetItemState, item, lvisSelected)
+	if selected&lvisSelected != 0 {
+		drawState |= cdisSelected
+	}
+	return drawState
+}
+
 func (a *app) transferProgressPercent(index int) (float64, string, bool, bool) {
 	if a == nil || index < 0 || index >= len(a.transferViewJobs) {
 		return 0, "", false, false
@@ -223,6 +239,7 @@ func (a *app) drawWorkspaceList(lParam uintptr) uintptr {
 	case cddsPrepaint:
 		return cdrfNotifyItemDraw
 	case cddsItemPrepaint:
+		draw.Draw.ItemState = workspaceListActualDrawState(draw.Draw.Hdr.HwndFrom, draw.Draw.ItemSpec, draw.Draw.ItemState)
 		background, foreground := workspaceListRowColors(draw.Draw.ItemState)
 		draw.ClrText = uint32(foreground)
 		draw.ClrTextBk = uint32(background)
@@ -232,6 +249,7 @@ func (a *app) drawWorkspaceList(lParam uintptr) uintptr {
 		}
 		return cdrfNewFont
 	case cddsSubItemPrepaint:
+		draw.Draw.ItemState = workspaceListActualDrawState(draw.Draw.Hdr.HwndFrom, draw.Draw.ItemSpec, draw.Draw.ItemState)
 		background, foreground := workspaceListRowColors(draw.Draw.ItemState)
 		draw.ClrText = uint32(foreground)
 		draw.ClrTextBk = uint32(background)

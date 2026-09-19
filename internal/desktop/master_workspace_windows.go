@@ -345,7 +345,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	}
 
 	// Global search / command field.
-	searchY, searchH := 24, 40
+	searchY, searchH := 23, 40
 	badgeW := 224
 	searchW := contentWidth - badgeW - 18
 	if searchW > 640 {
@@ -359,7 +359,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
-	toolbarY, toolbarH := 90, 42
+	toolbarY, toolbarH := 91, 42
 	gap := 8
 	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 146, 140, 132, 110, 120, 108
 	if contentWidth < 1050 {
@@ -410,8 +410,8 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
 	sectionY, pathY := 158, 190
-	a.move(a.sectionLocal, leftX+12, sectionY, paneW-24, 26)
-	a.move(a.sectionRemote, rightX+12, sectionY, paneW-24, 26)
+	a.move(a.sectionLocal, leftX+40, sectionY, paneW-52, 26)
+	a.move(a.sectionRemote, rightX+40, sectionY, paneW-52, 26)
 
 	// Breadcrumb-style local path row.
 	miniW, miniGap := 40, 6
