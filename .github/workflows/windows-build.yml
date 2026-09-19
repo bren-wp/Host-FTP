@@ -90,6 +90,13 @@ jobs:
           python .\scripts\audit_product_copy.py
           if ($LASTEXITCODE -ne 0) { throw 'Production UI copy audit failed.' }
 
+      - name: Guard Windows reference UI contracts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python .\scripts\test_windows_visual_regressions.py
+          if ($LASTEXITCODE -ne 0) { throw 'Windows reference UI contract tests failed.' }
+
       - name: Generate canonical Ghost FTP brand assets
         shell: pwsh
         run: |
