@@ -10,6 +10,7 @@ import "unsafe"
 // or other network-fetched UI assets.
 const (
 	iconConnect     = "\uE703"
+	iconCloud       = "\uE753"
 	iconMore        = "\uE712"
 	iconCancel      = "\uE711"
 	iconForward     = "\uE72A"
