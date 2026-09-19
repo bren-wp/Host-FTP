@@ -1,6 +1,6 @@
 # Ghost FTP build and audit scripts
 
-This directory contains the maintained build, packaging, privacy, security and release helpers used by Ghost FTP **0.6.0**.
+This directory contains the maintained build, packaging, privacy, security and release helpers used by Ghost FTP **0.6.1**.
 
 ## Production release path
 
@@ -8,7 +8,7 @@ The active production workflow is:
 
 `.github/workflows/windows-build.yml`
 
-Ghost FTP 0.6.0 is a Windows 10/11 desktop release. The retired macOS application source and macOS-only distribution contracts are intentionally not part of this branch.
+Ghost FTP 0.6.1 is a Windows 10/11 desktop release. The retired macOS application source and macOS-only distribution contracts are intentionally not part of this branch.
 
 The workflow performs, in order:
 
@@ -27,13 +27,13 @@ The workflow performs, in order:
 
 ## Windows artifacts
 
-For version 0.6.0 the workflow produces:
+For version 0.6.1 the workflow produces:
 
 ```text
-Ghost-FTP-0.6.0-Setup.exe
-Ghost-FTP-0.6.0-Portable.exe
-Ghost-FTP-0.6.0-Update.exe
-Ghost-FTP-0.6.0-Source.zip
+Ghost-FTP-0.6.1-Setup.exe
+Ghost-FTP-0.6.1-Portable.exe
+Ghost-FTP-0.6.1-Update.exe
+Ghost-FTP-0.6.1-Source.zip
 SHA256.txt
 latest.json
 ```
