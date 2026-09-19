@@ -1487,7 +1487,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 292, 302, 34, siteIDPassword)
 
 	label("Advanced Settings", 262, 350, 618)
-	label(sitePathLabel(parent.languageCode(), false), 262, 384, 260)\n\tlabel(sitePathLabel(parent.languageCode(), true), 578, 384, 260)
+	label(sitePathLabel(parent.languageCode(), false), 262, 384, 260)
+	label(sitePathLabel(parent.languageCode(), true), 578, 384, 260)
 	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 412, 300, 34, siteIDLocal)
 	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 412, 302, 34, siteIDRemote)
 
