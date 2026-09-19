@@ -53,6 +53,11 @@ func buttonColors(v buttonVariant, pressed, disabled bool) (bg, border, fg uintp
 			return selectionColor(), accentColor(), textColor()
 		}
 		return panelColor(), borderColor(), mutedColor()
+	case buttonChrome:
+		if pressed {
+			return selectionColor(), selectionColor(), textColor()
+		}
+		return panelColor(), panelColor(), mutedColor()
 	default:
 		if pressed {
 			return selectionColor(), accentColor(), textColor()
@@ -115,6 +120,10 @@ func (a *app) drawButton(dis *drawItemStruct) bool {
 	}
 	pressed := dis.ItemState&odsSelected != 0
 	disabled := dis.ItemState&odsDisabled != 0
+	if visual.Variant == buttonToggle {
+		a.drawToggleButton(dis, visual, disabled)
+		return true
+	}
 	bg, border, fg := buttonColors(visual.Variant, pressed, disabled)
 	brush, _, _ := createSolidBrush.Call(bg)
 	pen, _, _ := createPen.Call(psSolid, 1, border)
@@ -186,6 +195,85 @@ func (a *app) drawButton(dis *drawItemStruct) bool {
 		drawFocusRect.Call(dis.HDC, uintptr(unsafe.Pointer(&focus)))
 	}
 	return true
+}
+
+func (a *app) drawToggleButton(dis *drawItemStruct, visual buttonVisual, disabled bool) {
+	if a == nil || dis == nil || dis.HDC == 0 {
+		return
+	}
+	checked, _, _ := sendMessageW.Call(dis.HwndItem, siteBMGetCheck, 0, 0)
+	on := checked == siteBSTChecked
+	r := dis.RcItem
+	setBkMode.Call(dis.HDC, transparentBkMode)
+
+	track := r
+	track.Left += int32(a.scale(4))
+	track.Right = track.Left + int32(a.scale(38))
+	centerY := (track.Top + track.Bottom) / 2
+	track.Top = centerY - int32(a.scale(10))
+	track.Bottom = centerY + int32(a.scale(10))
+	trackColor := borderColor()
+	if on && !disabled {
+		trackColor = accentStrongColor()
+	}
+	trackBrush, _, _ := createSolidBrush.Call(trackColor)
+	trackPen, _, _ := createPen.Call(psSolid, 1, trackColor)
+	oldBrush, _, _ := selectObject.Call(dis.HDC, trackBrush)
+	oldPen, _, _ := selectObject.Call(dis.HDC, trackPen)
+	roundRect.Call(dis.HDC, uintptr(track.Left), uintptr(track.Top), uintptr(track.Right), uintptr(track.Bottom), uintptr(a.scale(18)), uintptr(a.scale(18)))
+	selectObject.Call(dis.HDC, oldBrush)
+	selectObject.Call(dis.HDC, oldPen)
+	if trackBrush != 0 {
+		deleteObject.Call(trackBrush)
+	}
+	if trackPen != 0 {
+		deleteObject.Call(trackPen)
+	}
+
+	knob := track
+	knob.Top += int32(a.scale(3))
+	knob.Bottom -= int32(a.scale(3))
+	knobW := int32(a.scale(14))
+	if on {
+		knob.Left = track.Right - knobW - int32(a.scale(3))
+	} else {
+		knob.Left = track.Left + int32(a.scale(3))
+	}
+	knob.Right = knob.Left + knobW
+	knobColor := textColor()
+	if disabled {
+		knobColor = mutedColor()
+	}
+	knobBrush, _, _ := createSolidBrush.Call(knobColor)
+	knobPen, _, _ := createPen.Call(psSolid, 1, knobColor)
+	oldBrush, _, _ = selectObject.Call(dis.HDC, knobBrush)
+	oldPen, _, _ = selectObject.Call(dis.HDC, knobPen)
+	roundRect.Call(dis.HDC, uintptr(knob.Left), uintptr(knob.Top), uintptr(knob.Right), uintptr(knob.Bottom), uintptr(a.scale(14)), uintptr(a.scale(14)))
+	selectObject.Call(dis.HDC, oldBrush)
+	selectObject.Call(dis.HDC, oldPen)
+	if knobBrush != 0 {
+		deleteObject.Call(knobBrush)
+	}
+	if knobPen != 0 {
+		deleteObject.Call(knobPen)
+	}
+
+	labelRect := r
+	labelRect.Left += int32(a.scale(54))
+	labelRect.Right -= int32(a.scale(4))
+	fg := textColor()
+	if disabled {
+		fg = mutedColor()
+	}
+	setTextColor.Call(dis.HDC, fg)
+	oldFont := uintptr(0)
+	if a.font != 0 {
+		oldFont, _, _ = selectObject.Call(dis.HDC, a.font)
+	}
+	drawText(dis.HDC, visual.Label, &labelRect, dtLeft|dtVCenter|dtSingleLine|dtNoPrefix|dtEndEllipsis)
+	if oldFont != 0 {
+		selectObject.Call(dis.HDC, oldFont)
+	}
 }
 
 func (a *app) drawButtonBadge(hdc uintptr, content rect, count int, disabled bool) {

@@ -18,12 +18,12 @@ import (
 )
 
 type app struct {
-	hwnd                                             uintptr
-	engine                                           *api.Engine
-	version                                          string
-	font, titleFont, smallFont, iconFont, scriptFont uintptr
-	dpi                                              uint32
-	brush, panelBrush                                uintptr
+	hwnd                                                          uintptr
+	engine                                                        *api.Engine
+	version                                                       string
+	font, titleFont, sectionFont, smallFont, iconFont, scriptFont uintptr
+	dpi                                                           uint32
+	brush, panelBrush                                             uintptr
 
 	brandTitle, brandFTP, brandSubtitle, connectionBadge, sectionLocal, sectionRemote, sectionTransfers               uintptr
 	profilesCombo, languageCombo, saveProfile, removeProfile, settingsBtn, aboutBtn                                   uintptr
@@ -138,12 +138,16 @@ func Run(engine *api.Engine, version string) error {
 		brush: brush, panelBrush: panelBrush, buttons: make(map[uintptr]buttonVisual),
 		settings: startupSettings,
 	}
+	initialWidth, initialHeight := 1200, 780
+	if referenceCaptureMode() {
+		initialWidth, initialHeight = referenceMainCaptureWidth, referenceMainCaptureHeight
+	}
 	hwnd, _, err := createWindowExW.Call(
 		0,
 		uintptr(unsafe.Pointer(className)),
 		uintptr(unsafe.Pointer(wstr(brand.ProductName))),
 		ghostWindowStyle,
-		40, 30, 1200, 780,
+		40, 30, uintptr(initialWidth), uintptr(initialHeight),
 		0, 0, hinst, 0,
 	)
 	if hwnd == 0 {
@@ -164,7 +168,7 @@ func Run(engine *api.Engine, version string) error {
 	if err := a.createControls(hinst); err != nil {
 		apps.Delete(hwnd)
 		destroyWindow.Call(hwnd)
-		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
+		for _, f := range []uintptr{a.font, a.titleFont, a.sectionFont, a.smallFont, a.iconFont, a.scriptFont} {
 			if f != 0 {
 				deleteObject.Call(f)
 			}
@@ -235,7 +239,7 @@ func Run(engine *api.Engine, version string) error {
 		dispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
 	apps.Delete(hwnd)
-	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
+	for _, f := range []uintptr{a.font, a.titleFont, a.sectionFont, a.smallFont, a.iconFont, a.scriptFont} {
 		if f != 0 {
 			deleteObject.Call(f)
 		}
@@ -275,6 +279,10 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 	switch message {
 	case wmPaint:
 		a.paintReferenceWorkspace()
+		return 0
+	case wmNcCalcSize:
+		// The application owns the complete visual canvas. Resize hit testing is
+		// implemented explicitly in chromeHitTestWindow.
 		return 0
 	case wmNcHitTest:
 		return a.chromeHitTest(lParam)

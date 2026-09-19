@@ -117,9 +117,9 @@ func (a *app) createControls(hinst uintptr) error {
 	a.sectionLocal = mk("STATIC", a.tr("section.local"), 0, 0)
 	a.sectionRemote = mk("STATIC", a.tr("section.remote"), 0, 0)
 	a.sectionTransfers = mk("STATIC", a.tr("section.transfers"), 0, 0)
-	setFont(a.sectionLocal, a.smallFont)
-	setFont(a.sectionRemote, a.smallFont)
-	setFont(a.sectionTransfers, a.smallFont)
+	setFont(a.sectionLocal, a.sectionFont)
+	setFont(a.sectionRemote, a.sectionFont)
+	setFont(a.sectionTransfers, a.sectionFont)
 
 	// Local panel.
 	a.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, idLocalPath)
@@ -144,8 +144,8 @@ func (a *app) createControls(hinst uintptr) error {
 	storeRemoteEditButton(a, mkButton(remoteEditWords(a.languageCode()).Edit, iconRename, buttonDefault, idRemoteEdit))
 	a.remoteList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
 
-	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonAccent, idUpload)
-	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonAccent, idDownload)
+	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonSubtle, idUpload)
+	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonSubtle, idDownload)
 
 	// Transfer queue.
 	a.pauseQueue = mkButton(a.tr("transfer.pause"), iconPause, buttonDefault, idPauseQueue)
@@ -240,6 +240,7 @@ func (a *app) preferredWindowBounds() (x, y, width, height int) {
 func (a *app) createFonts() {
 	a.font = createUIFont(int32(-a.scale(15)), 400)
 	a.titleFont = createUIFont(int32(-a.scale(27)), 700)
+	a.sectionFont = createUIFont(int32(-a.scale(18)), 600)
 	a.smallFont = createUIFont(int32(-a.scale(13)), 400)
 	a.iconFont = createIconFont(int32(-a.scale(16)))
 	a.scriptFont = createNamedUIFont("Segoe Script", int32(-a.scale(24)), 400, true)
@@ -252,7 +253,7 @@ func (a *app) applyDPI(dpi uint32) {
 	if a.dpi == dpi {
 		return
 	}
-	oldFonts := []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont}
+	oldFonts := []uintptr{a.font, a.titleFont, a.sectionFont, a.smallFont, a.iconFont, a.scriptFont}
 	a.dpi = dpi
 	a.createFonts()
 	for _, h := range a.defaultFontControls() {
@@ -260,9 +261,14 @@ func (a *app) applyDPI(dpi uint32) {
 			sendMessageW.Call(h, wmSetFont, a.font, 1)
 		}
 	}
-	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.sectionLocal, a.sectionRemote, a.sectionTransfers, a.status, a.statusVersion, a.transferSummary} {
+	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.status, a.statusVersion, a.transferSummary} {
 		if h != 0 && a.smallFont != 0 {
 			sendMessageW.Call(h, wmSetFont, a.smallFont, 1)
+		}
+	}
+	for _, h := range []uintptr{a.sectionLocal, a.sectionRemote, a.sectionTransfers} {
+		if h != 0 && a.sectionFont != 0 {
+			sendMessageW.Call(h, wmSetFont, a.sectionFont, 1)
 		}
 	}
 	if a.titleFont != 0 {

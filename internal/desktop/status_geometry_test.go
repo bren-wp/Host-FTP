@@ -25,8 +25,8 @@ func TestStatusBandGeometryUsesActualConstrainedClientHeight(t *testing.T) {
 	const clientHeight = 640
 	statusY, contentBottom := statusBandGeometry(clientHeight)
 
-	if statusY != 606 || contentBottom != 599 {
-		t.Fatalf("constrained geometry = (%d, %d), want (606, 599)", statusY, contentBottom)
+	if statusY != 581 || contentBottom != 574 {
+		t.Fatalf("constrained geometry = (%d, %d), want (581, 574)", statusY, contentBottom)
 	}
 	if statusY+statusBandHeight+statusBandBottomInset != clientHeight {
 		t.Fatalf("footer does not terminate inside actual client height %d", clientHeight)

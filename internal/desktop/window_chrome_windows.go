@@ -14,9 +14,18 @@ const (
 	idTitleMaximize = 9902
 	idTitleClose    = 9903
 
+	wmNcCalcSize     = 0x0083
 	wmNcHitTest      = 0x0084
 	htClient         = 1
 	htCaption        = 2
+	htLeft           = 10
+	htRight          = 11
+	htTop            = 12
+	htTopLeft        = 13
+	htTopRight       = 14
+	htBottom         = 15
+	htBottomLeft     = 16
+	htBottomRight    = 17
 	chromeSWMinimize = 6
 	chromeSWMaximize = 3
 	chromeSWRestore  = 9
@@ -60,9 +69,9 @@ func (a *app) ensureWindowChrome() {
 		applyDarkControl(hwnd, "BUTTON")
 		return a.registerButton(hwnd, "", label, variant)
 	}
-	a.titleMinimize = create(idTitleMinimize, "—", buttonSubtle)
-	a.titleMaximize = create(idTitleMaximize, "□", buttonSubtle)
-	a.titleClose = create(idTitleClose, "×", buttonSubtle)
+	a.titleMinimize = create(idTitleMinimize, "—", buttonChrome)
+	a.titleMaximize = create(idTitleMaximize, "□", buttonChrome)
+	a.titleClose = create(idTitleClose, "×", buttonChrome)
 }
 
 func (a *app) layoutWindowChrome(width int) {
@@ -106,20 +115,50 @@ func (a *app) windowChromeCommand(id int) bool {
 // chromeHitTest preserves the standard resize border returned by DefWindowProc
 // and turns only the empty top-left product band into a draggable caption. The
 // search field and command buttons remain normal client controls.
-func (a *app) chromeHitTest(lParam uintptr) uintptr {
-	if a == nil || a.hwnd == 0 {
+func (a *app) chromeHitTestWindow(hwnd uintptr, lParam uintptr, captionWidth int) uintptr {
+	if a == nil || hwnd == 0 {
 		return htClient
 	}
-	result, _, _ := defWindowProcW.Call(a.hwnd, wmNcHitTest, 0, lParam)
-	if result != htClient {
-		return result
-	}
 	point := chromePoint{X: signedWord(lParam), Y: signedHighWord(lParam)}
-	chromeScreenToClient.Call(a.hwnd, uintptr(unsafe.Pointer(&point)))
-	if point.Y >= 0 && point.Y < int32(a.scale(40)) && point.X >= 0 && point.X < int32(a.scale(applicationContentLeft)) {
+	chromeScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&point)))
+	var client rect
+	if ok, _, _ := getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&client))); ok == 0 {
+		return htClient
+	}
+	edge := int32(a.scale(7))
+	left := point.X >= 0 && point.X < edge
+	right := point.X < client.Right && point.X >= client.Right-edge
+	top := point.Y >= 0 && point.Y < edge
+	bottom := point.Y < client.Bottom && point.Y >= client.Bottom-edge
+	switch {
+	case top && left:
+		return htTopLeft
+	case top && right:
+		return htTopRight
+	case bottom && left:
+		return htBottomLeft
+	case bottom && right:
+		return htBottomRight
+	case left:
+		return htLeft
+	case right:
+		return htRight
+	case top:
+		return htTop
+	case bottom:
+		return htBottom
+	}
+	if point.Y >= 0 && point.Y < int32(a.scale(40)) && point.X >= 0 && point.X < int32(a.scale(captionWidth)) {
 		return htCaption
 	}
 	return htClient
+}
+
+func (a *app) chromeHitTest(lParam uintptr) uintptr {
+	if a == nil {
+		return htClient
+	}
+	return a.chromeHitTestWindow(a.hwnd, lParam, applicationContentLeft)
 }
 
 func (a *app) cleanupWindowChrome() {

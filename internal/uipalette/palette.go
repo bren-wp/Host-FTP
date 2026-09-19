@@ -31,19 +31,21 @@ type Theme struct {
 // reference UI: deep blue-black surfaces, cyan primary actions, electric-blue
 // interaction states and a subtle violet-tinted selection layer.
 var Dark = Theme{
-	Window:       RGB{0x07, 0x0D, 0x14},
-	Panel:        RGB{0x0B, 0x15, 0x22},
-	List:         RGB{0x09, 0x13, 0x20},
-	Border:       RGB{0x20, 0x3A, 0x55},
-	Text:         RGB{0xE5, 0xE7, 0xEB},
-	Muted:        RGB{0x8E, 0xA2, 0xB7},
+	// Tuned directly against the approved 1672×941 Ghost FTP reference boards:
+	// blue-black window, slightly lifted cards/lists and a restrained cool border.
+	Window:       RGB{0x07, 0x11, 0x1B},
+	Panel:        RGB{0x0A, 0x13, 0x1E},
+	List:         RGB{0x0B, 0x14, 0x1F},
+	Border:       RGB{0x1A, 0x34, 0x4B},
+	Text:         RGB{0xE8, 0xED, 0xF4},
+	Muted:        RGB{0x8F, 0xA4, 0xBA},
 	Accent:       RGB{0x00, 0xE5, 0xFF},
 	AccentStrong: RGB{0x3B, 0x82, 0xF6},
 	OnAccent:     RGB{0x05, 0x10, 0x18},
 	Success:      RGB{0x22, 0xE6, 0xA5},
 	Warn:         RGB{0xF2, 0xBA, 0x55},
 	Danger:       RGB{0xFF, 0x5D, 0x7A},
-	Selection:    RGB{0x12, 0x30, 0x55},
+	Selection:    RGB{0x12, 0x3A, 0x63},
 }
 
 // Light keeps the same blue/cyan product identity while remaining comfortable

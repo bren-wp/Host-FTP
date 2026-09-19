@@ -2,7 +2,7 @@ package desktop
 
 const (
 	statusBandHeight      = 24
-	statusBandBottomInset = 10
+	statusBandBottomInset = 35
 	statusBandContentGap  = 7
 )
 

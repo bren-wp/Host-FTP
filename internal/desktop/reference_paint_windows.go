@@ -31,6 +31,23 @@ func (a *app) drawReferenceCard(hdc uintptr, x, y, width, height, radius int, fi
 	}
 }
 
+func (a *app) drawReferenceDivider(hdc uintptr, x, y, width int, color uintptr) {
+	if a == nil || hdc == 0 || width <= 0 {
+		return
+	}
+	line := rect{
+		Left:   int32(a.scale(x)),
+		Top:    int32(a.scale(y)),
+		Right:  int32(a.scale(x + width)),
+		Bottom: int32(a.scale(y + 1)),
+	}
+	brush, _, _ := createSolidBrush.Call(color)
+	fillRectW.Call(hdc, uintptr(unsafe.Pointer(&line)), brush)
+	if brush != 0 {
+		deleteObject.Call(brush)
+	}
+}
+
 func (a *app) paintReferenceWorkspace() {
 	if a == nil || a.hwnd == 0 {
 		return
@@ -63,11 +80,12 @@ func (a *app) paintReferenceWorkspace() {
 		hdc,
 		14, 10,
 		applicationSidebarWidth+18,
-		height-20,
+		height-35,
 		18,
 		panelColor(),
 		borderColor(),
 	)
+	a.drawReferenceDivider(hdc, applicationSidebarControlX, 392, applicationSidebarControlW, borderColor())
 
 	contentLeft := applicationContentLeft
 	contentRight := width - premiumOuterGap
@@ -77,27 +95,26 @@ func (a *app) paintReferenceWorkspace() {
 	}
 
 	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 126, 16, panelColor(), borderColor())
+	a.drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132, 16, panelColor(), borderColor())
 
-	paneGap := 14
+	paneGap := 32
 	paneW := (contentWidth - paneGap) / 2
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/6, 132, 152)
-	queueY := statusY - queueH - 10
-	queueButtonsY := queueY - 38
-	queueLabelY := queueButtonsY - 25
-	paneTop := 144
+	queueH := clampInt(height/7, 124, 136)
+	queueY := statusY - queueH - 14
+	queueLabelY := queueY - 42
+	paneTop := 148
 	paneBottom := queueLabelY - 9
 	paneH := paneBottom - paneTop
 	if paneH > 120 {
-		a.drawReferenceCard(hdc, contentLeft-8, paneTop, paneW+8, paneH, 16, panelColor(), borderColor())
-		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-8, paneTop, paneW+8, paneH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 	}
 
 	queueCardY := queueLabelY - 10
 	queueCardH := statusY - queueCardY - 6
 	if queueCardH > 80 {
-		a.drawReferenceCard(hdc, contentLeft-8, queueCardY, contentWidth+8, queueCardH, 16, panelColor(), borderColor())
+		a.drawReferenceCard(hdc, contentLeft-2, queueCardY, contentWidth+2, queueCardH, 16, panelColor(), borderColor())
 	}
 }
 
@@ -137,15 +154,15 @@ func (state *siteManagerState) paintReferenceConnections() {
 	if editorHeight < 620 {
 		editorHeight = 620
 	}
-	state.parent.drawReferenceCard(hdc, 12, 12, 220, railHeight, 18, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 244, 44, 654, editorHeight, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 16, 12, 220, railHeight, 18, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 248, 44, 660, editorHeight, 16, panelColor(), borderColor())
 
 	if !compact {
-		state.parent.drawReferenceCard(hdc, 908, 44, 300, 510, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 908, 564, 300, 250, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 1222, 44, 354, 462, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 1222, 516, 354, 298, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 918, 44, 306, 510, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 918, 564, 306, 250, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1236, 44, 352, 462, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1236, 516, 352, 298, 16, panelColor(), borderColor())
 		footerY := logicalHeight - 54
-		state.parent.drawReferenceCard(hdc, 244, footerY, 1332, 42, 12, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 248, footerY, 1340, 42, 12, panelColor(), borderColor())
 	}
 }

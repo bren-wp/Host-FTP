@@ -185,6 +185,7 @@ var (
 	postMessageW            = user32.NewProc("PostMessageW")
 	sendMessageW            = user32.NewProc("SendMessageW")
 	moveWindow              = user32.NewProc("MoveWindow")
+	setWindowRgn            = user32.NewProc("SetWindowRgn")
 	setWindowTextW          = user32.NewProc("SetWindowTextW")
 	getWindowTextW          = user32.NewProc("GetWindowTextW")
 	getWindowTextLengthW    = user32.NewProc("GetWindowTextLengthW")
