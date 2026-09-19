@@ -93,6 +93,20 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList', ui)
         self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList', ui)
 
+    def test_reference_workspace_has_real_file_pane_footers_and_open_header(self):
+        windows = self.read("internal/desktop/windows.go")
+        ui = self.read("internal/desktop/ui_windows.go")
+        workspace = self.read("internal/desktop/master_workspace_windows.go")
+        paint = self.read("internal/desktop/reference_paint_windows.go")
+        self.assertIn("localPaneSummary", windows)
+        self.assertIn("remotePanePath", windows)
+        self.assertIn('a.localPaneSummary = mk("STATIC", "", 0, 0)', ui)
+        self.assertIn("func (a *app) refreshPaneFooters()", workspace)
+        self.assertIn("paneFooterText(a.localItems)", workspace)
+        self.assertNotIn("drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132", paint)
+        self.assertIn("drawReferenceDivider(hdc, contentLeft, 78, contentWidth", paint)
+        self.assertIn("footerLineY := paneBottom - 34", paint)
+
     def test_disconnected_remote_list_keeps_dark_enabled_surface(self):
         source = self.read("internal/desktop/chrome_windows.go")
         self.assertIn("setControlEnabled(a.remoteList, true)", source)
