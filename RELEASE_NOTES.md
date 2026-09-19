@@ -7,6 +7,8 @@ Ghost FTP 0.6.2 is a further reference-UI production pass built directly against
 - Standardized application and modal typography on the stable **Segoe UI** face so Windows Server/CI font substitution cannot distort captures or production spacing.
 - Retuned the reference body/metadata font metrics and kept title/section weights aligned to the supplied board.
 - Added real painted cyan pane glyphs for **Local Files** and **Remote Files** while leaving the underlying file lists fully functional native controls.
+- Corrected ListView selection rendering to query the real selected-row state, preventing full-table blue selection artifacts in PrintWindow/remote-session captures.
+- Replaced the temporary remote-pane arrow glyph with the native Windows cloud glyph used by the supplied reference.
 - Shifted pane headings and the top search/command row to the supplied reference offsets.
 
 - Adopted the supplied **1672×941** application canvas as the exact Windows visual target for Main and Connections captures.
