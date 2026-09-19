@@ -60,9 +60,9 @@ func (a *app) ensureWindowChrome() {
 		applyDarkControl(hwnd, "BUTTON")
 		return a.registerButton(hwnd, "", label, variant)
 	}
-	a.titleMinimize = create(idTitleMinimize, "—", buttonSubtle)
-	a.titleMaximize = create(idTitleMaximize, "□", buttonSubtle)
-	a.titleClose = create(idTitleClose, "×", buttonSubtle)
+	a.titleMinimize = create(idTitleMinimize, "—", buttonChrome)
+	a.titleMaximize = create(idTitleMaximize, "□", buttonChrome)
+	a.titleClose = create(idTitleClose, "×", buttonChrome)
 }
 
 func (a *app) layoutWindowChrome(width int) {
