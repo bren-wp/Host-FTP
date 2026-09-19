@@ -16,6 +16,7 @@ const (
 	cddsSubItemPrepaint = cddsItemPrepaint | cddsSubItem
 	lvmGetSubItemRect   = lvmFirst + 56
 	lvirBounds          = 0
+	dtRightText         = 0x00000002
 )
 
 // nmListViewCustomDraw is the Win32 NMLVCUSTOMDRAW prefix used by the report
@@ -203,7 +204,7 @@ func (a *app) drawTransferProgressCell(hdc uintptr, item int, rowState uint32, f
 		uintptr(unsafe.Pointer(text)),
 		uintptr(len([]rune(label))),
 		uintptr(unsafe.Pointer(&textRect)),
-		dtRight|dtVCenter|dtSingleLine|dtNoPrefix,
+		dtRightText|dtVCenter|dtSingleLine|dtNoPrefix,
 	)
 	if oldFont != 0 {
 		selectObject.Call(hdc, oldFont)
