@@ -90,6 +90,50 @@ func styleWorkspaceCombos(combos ...uintptr) {
 	}
 }
 
+func (a *app) roundWorkspaceControl(hwnd uintptr, radius int) {
+	if a == nil || hwnd == 0 || radius <= 0 {
+		return
+	}
+	var bounds rect
+	if ok, _, _ := getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&bounds))); ok == 0 {
+		return
+	}
+	width := bounds.Right - bounds.Left
+	height := bounds.Bottom - bounds.Top
+	if width <= 1 || height <= 1 {
+		return
+	}
+	r := a.scale(radius)
+	region, _, _ := createRoundRectRgn.Call(
+		0, 0,
+		uintptr(width+1), uintptr(height+1),
+		uintptr(r), uintptr(r),
+	)
+	if region == 0 {
+		return
+	}
+	// SetWindowRgn owns the region after a successful call.
+	if ok, _, _ := setWindowRgn.Call(hwnd, region, 1); ok == 0 {
+		deleteObject.Call(region)
+	}
+}
+
+func (a *app) roundReferenceWorkspaceControls() {
+	if a == nil {
+		return
+	}
+	for _, hwnd := range []uintptr{
+		a.localPath, a.remotePath,
+		a.profilesCombo, a.protocol, a.host, a.port, a.user, a.pass,
+		a.keyPath, a.passphrase,
+	} {
+		a.roundWorkspaceControl(hwnd, 9)
+	}
+	for _, hwnd := range []uintptr{a.localList, a.remoteList, a.transferList} {
+		a.roundWorkspaceControl(hwnd, 10)
+	}
+}
+
 // stabilizeWorkspaceChrome is intentionally idempotent because state changes
 // and resizes both flow through refineWorkspaceLayout. It keeps native child
 // controls aligned with the active Ghost FTP appearance on both light and dark
@@ -110,4 +154,5 @@ func (a *app) stabilizeWorkspaceChrome() {
 	// stays enabled so Windows does not substitute its disabled-control palette.
 	setControlEnabled(a.remoteList, true)
 	a.refineBrandHeader()
+	a.roundReferenceWorkspaceControls()
 }
