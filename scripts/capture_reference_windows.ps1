@@ -124,7 +124,7 @@ try {
 }
 try {
     $main = Wait-MainWindow $process
-    Set-ReferenceWindowBounds $main 1664 960 "Main workspace"
+    Set-ReferenceWindowBounds $main 1672 941 "Main workspace"
     Start-Sleep -Milliseconds 550
     Save-Window $main (Join-Path $OutputDirectory "Ghost-FTP-main-reference.png")
 
@@ -132,7 +132,7 @@ try {
         throw "Could not open Connections."
     }
     $connections = Find-Window $process.Id "Connections"
-    Set-ReferenceWindowBounds $connections 1664 960 "Connections"
+    Set-ReferenceWindowBounds $connections 1672 941 "Connections"
     Start-Sleep -Milliseconds 500
     Save-Window $connections (Join-Path $OutputDirectory "Ghost-FTP-connections-reference.png")
     [GhostReferenceCapture]::PostMessage($connections, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
