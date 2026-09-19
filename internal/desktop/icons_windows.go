@@ -47,6 +47,7 @@ const (
 	buttonNav
 	buttonNavActive
 	buttonToggle
+	buttonChrome
 )
 
 type buttonVisual struct {
