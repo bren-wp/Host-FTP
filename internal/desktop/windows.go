@@ -38,6 +38,7 @@ type app struct {
 	transferList, pauseQueue, resumeQueue, cancelJob, retryJob, clearQueue                                            uintptr
 	queueTabAll, queueTabUploading, queueTabDownloading, queueTabCompleted                                            uintptr
 	status, statusVersion, transferSummary                                                                            uintptr
+	localPaneSummary, localPanePath, remotePaneSummary, remotePanePath                                                  uintptr
 	masterBack, masterForward, remoteBack, remoteForward, masterRefresh, masterNewFolder, masterBookmarks, masterMore uintptr
 	titleMinimize, titleMaximize, titleClose                                                                          uintptr
 	buttons                                                                                                           map[uintptr]buttonVisual
@@ -409,7 +410,8 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			color = textColor()
 		} else if lParam == a.brandFTP {
 			color = accentStrongColor()
-		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status {
+		} else if lParam == a.sidebarMotto || lParam == a.brandSubtitle || lParam == a.sidebarBookmarkHeading || lParam == a.sectionLocal || lParam == a.sectionRemote || lParam == a.sectionTransfers || lParam == a.status ||
+			lParam == a.localPaneSummary || lParam == a.localPanePath || lParam == a.remotePaneSummary || lParam == a.remotePanePath {
 			color = mutedColor()
 		} else if lParam == a.sidebarConnectionStatus {
 			if a.connected {
