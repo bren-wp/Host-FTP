@@ -1339,7 +1339,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 			}
 		}
 		state.parent.move(state.testConnection, 262, actionY, 166, 42)
-		state.parent.move(state.save, 742, 90, 138, 38)
+		state.parent.move(state.save, 742, 104, 138, 38)
 		showControls(false, state.close)
 		state.parent.move(state.connect, 646, actionY, 234, 42)
 		invalidateRect.Call(state.hwnd, 0, 1)
@@ -1359,7 +1359,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 790, 264, 42)
 	state.parent.move(state.testConnection, 262, 790, 166, 42)
-	state.parent.move(state.save, 742, 50, 138, 38)
+	state.parent.move(state.save, 742, 104, 138, 38)
 	showControls(false, state.close)
 	state.parent.move(state.connect, 646, 790, 234, 42)
 	footerY := height - 60
