@@ -77,16 +77,16 @@ func (a *app) paintReferenceWorkspace() {
 	}
 
 	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 100, 16, panelColor(), borderColor())
+	a.drawReferenceCard(hdc, contentLeft-8, 10, contentWidth+8, 126, 16, panelColor(), borderColor())
 
 	paneGap := 14
 	paneW := (contentWidth - paneGap) / 2
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 128, 184)
+	queueH := clampInt(height/6, 132, 152)
 	queueY := statusY - queueH - 10
 	queueButtonsY := queueY - 38
 	queueLabelY := queueButtonsY - 25
-	paneTop := 118
+	paneTop := 144
 	paneBottom := queueLabelY - 9
 	paneH := paneBottom - paneTop
 	if paneH > 120 {

@@ -324,7 +324,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
-	toolbarY, toolbarH := 70, 40
+	toolbarY, toolbarH := 84, 42
 	gap := 8
 	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 146, 140, 132, 110, 120, 108
 	if contentWidth < 1050 {
@@ -367,7 +367,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	paneW := (contentWidth - paneGap) / 2
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
-	sectionY, pathY := 132, 162
+	sectionY, pathY := 150, 180
 	a.move(a.sectionLocal, leftX+8, sectionY, paneW-16, 22)
 	a.move(a.sectionRemote, rightX+8, sectionY, paneW-16, 22)
 
@@ -398,7 +398,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	a.move(a.remotePath, rx, pathY, remotePathW, 34)
 
 	statusY, _ := statusBandGeometry(height)
-	queueH := clampInt(height/5, 132, 184)
+	queueH := clampInt(height/6, 132, 152)
 	queueY := statusY - queueH - 10
 	queueToolbarY := queueY - 38
 	queueLabelY := queueToolbarY - 25
