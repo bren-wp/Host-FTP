@@ -22,11 +22,11 @@ func createNamedUIFont(name string, height int32, weight uint32, italic bool) ui
 }
 
 func createUIFont(height int32, weight uint32) uintptr {
-	name := "Segoe UI"
-	if windowsBuildNumber() >= 22000 {
-		name = "Segoe UI Variable Text"
-	}
-	return createNamedUIFont(name, height, weight, false)
+	// Use the stable Segoe UI face on every supported Windows build. Some
+	// Windows Server/GitHub runner images do not install Segoe UI Variable Text,
+	// which allowed GDI font substitution to make reference captures drift from
+	// the supplied Ghost FTP boards.
+	return createNamedUIFont("Segoe UI", height, weight, false)
 }
 
 func (a *app) createControls(hinst uintptr) error {
@@ -251,11 +251,15 @@ func (a *app) preferredWindowBounds() (x, y, width, height int) {
 }
 
 func (a *app) createFonts() {
-	a.font = createUIFont(int32(-a.scale(15)), 400)
-	a.titleFont = createUIFont(int32(-a.scale(27)), 700)
+	// Reference typography is deliberately compact: 14 px body text with
+	// 17–18 px section headings, a 26 px product wordmark and 12 px metadata.
+	// These metrics also keep translated labels inside the supplied 1672×941
+	// geometry without relying on ellipsis for ordinary English UI.
+	a.font = createUIFont(int32(-a.scale(14)), 400)
+	a.titleFont = createUIFont(int32(-a.scale(26)), 700)
 	a.sectionFont = createUIFont(int32(-a.scale(18)), 600)
-	a.smallFont = createUIFont(int32(-a.scale(13)), 400)
-	a.iconFont = createIconFont(int32(-a.scale(16)))
+	a.smallFont = createUIFont(int32(-a.scale(12)), 400)
+	a.iconFont = createIconFont(int32(-a.scale(17)))
 	a.scriptFont = createNamedUIFont("Segoe Script", int32(-a.scale(24)), 400, true)
 }
 
