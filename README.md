@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Secure transfers. Without a trace.</strong><br>
-  A modern Windows FTP, FTPS and SFTP client built around a fast dual-pane workflow, clear security decisions and a premium dark interface.
+  A modern Windows FTP, FTPS and SFTP client built around a fast dual-pane workflow, clear security decisions and the approved Ghost FTP dark interface.
 </p>
 
 <p align="center">
@@ -71,7 +71,7 @@ The Connections workspace keeps quick access, saved sites and transfer behavior 
 
 ## A workspace built around your files
 
-Ghost FTP 0.5.0 uses a premium charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
+Ghost FTP 0.5.0 uses the approved charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
 
 The main workspace includes:
 
@@ -98,7 +98,7 @@ Ghost FTP keeps frequently changed preferences in one branded Windows surface: l
   <img src="docs/screenshots/Ghost-FTP-settings-reference.png" alt="Ghost FTP Settings" width="82%">
 </p>
 
-The Settings UI contains only working product actions. There is no subscription upsell, demo account or development-only control in the production build.
+The Settings UI contains only working product actions. There is no subscription upsell, demo account or development-only control in the production build. English is the default language, with Croatian and 22 additional maintained desktop languages available from Settings.
 
 ## Privacy without marketing theatre
 
@@ -149,7 +149,7 @@ This keeps the published binaries, source package, update manifest and repositor
 | **Tagline** | Secure transfers. Without a trace. |
 | **Primary language** | English |
 | **Protocols** | FTP, FTPS, SFTP |
-| **Platform** | Windows 10 / 11 |
+| **Platform** | Windows 10 / 11 (the retired macOS application source is not shipped) |
 | **Website** | https://ghostftp.com/ |
 | **Update service** | https://update.ghostftp.com/ |
 | **Repository** | `bren-wp/Host-FTP` |
