@@ -144,6 +144,16 @@ func (a *app) createControls(hinst uintptr) error {
 	storeRemoteEditButton(a, mkButton(remoteEditWords(a.languageCode()).Edit, iconRename, buttonDefault, idRemoteEdit))
 	a.remoteList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
 
+	// Functional pane footers mirror the approved reference board and are
+	// populated from the real file models, never from sample/demo rows.
+	a.localPaneSummary = mk("STATIC", "", 0, 0)
+	a.localPanePath = mk("STATIC", "", 0, 0)
+	a.remotePaneSummary = mk("STATIC", "", 0, 0)
+	a.remotePanePath = mk("STATIC", "", 0, 0)
+	for _, h := range []uintptr{a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath} {
+		setFont(h, a.smallFont)
+	}
+
 	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonSubtle, idUpload)
 	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonSubtle, idDownload)
 
@@ -686,6 +696,8 @@ func (a *app) validateControls() error {
 		{"upload", a.upload}, {"download", a.download}, {"transfer list", a.transferList}, {"pause", a.pauseQueue}, {"resume", a.resumeQueue},
 		{"cancel transfer", a.cancelJob}, {"retry transfer", a.retryJob}, {"clear transfers", a.clearQueue},
 		{"status", a.status}, {"version", a.statusVersion}, {"transfer summary", a.transferSummary},
+		{"local pane summary", a.localPaneSummary}, {"local pane path", a.localPanePath},
+		{"remote pane summary", a.remotePaneSummary}, {"remote pane path", a.remotePanePath},
 	}
 	for _, control := range controls {
 		if control.h == 0 {
