@@ -81,6 +81,7 @@ func (a *app) refineWorkspaceLayout() {
 	// places the remote-search affordance in the command bar.
 	a.ensureFileFilterControls()
 	a.layoutMasterWorkspaceChrome()
+	a.roundReferenceWorkspaceControls()
 	a.updateFileFilterControls()
 
 	// Recursive search is intentionally contextual. Its native controls appear
