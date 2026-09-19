@@ -1,8 +1,13 @@
-# Ghost FTP 0.5.1
+# Ghost FTP 0.6.0
 
-Ghost FTP 0.5.1 is a focused visual, workflow and release-quality pass built against the approved Ghost FTP reference boards.
+Ghost FTP 0.6.0 is the next reference-UI production pass built directly against the supplied 1672×941 Ghost FTP workspace and Connections boards.
 
 ## Reference UI
+
+- Adopted the supplied **1672×941** application canvas as the exact Windows visual target for Main and Connections captures.
+- Converted the top-level Windows frame to a full-client custom surface so title-bar spacing, search, status and window controls align with the reference instead of reserving stock non-client chrome.
+- Added application-owned dark ListView headers and row-state drawing so file panes and the transfer queue no longer depend on the host Windows Explorer theme.
+- Removed stock report-view borders from the core file and queue tables; the surrounding Ghost FTP cards now own those edges as in the reference.
 
 - Refined the main Windows layout around the approved Sites / Transfers / Queue / Sync / Settings rail.
 - Added the handwritten **Move More / Do More** rail signature and kept the secure-transfer tagline below it.
@@ -15,7 +20,7 @@ Ghost FTP 0.5.1 is a focused visual, workflow and release-quality pass built aga
 
 ## Connections
 
-- Matched the Connections workspace to the supplied 1664×960 reference canvas and retained distinct Transfer & Sync, Sync Options, Saved Sites and Recent Connections regions.
+- Matched the Connections workspace to the supplied 1672×941 reference canvas and retained distinct Transfer & Sync, Sync Options, Saved Sites and Recent Connections regions.
 - Added a large Ghost brand mark and the **FILES MOVE FREELY / YOU STAY IN CONTROL** rail composition.
 - Recent Connections now reflects real successful sessions in memory only; passwords and passphrases are never recorded in recent history.
 - Quick Connect, Site Manager, Presets, Sync and Automation controls remain connected to maintained application functions.
@@ -45,10 +50,10 @@ Ghost FTP 0.5.1 is a focused visual, workflow and release-quality pass built aga
 
 ## Windows downloads
 
-- `Ghost-FTP-0.5.1-Setup.exe`
-- `Ghost-FTP-0.5.1-Portable.exe`
-- `Ghost-FTP-0.5.1-Update.exe`
-- `Ghost-FTP-0.5.1-Source.zip`
+- `Ghost-FTP-0.6.0-Setup.exe`
+- `Ghost-FTP-0.6.0-Portable.exe`
+- `Ghost-FTP-0.6.0-Update.exe`
+- `Ghost-FTP-0.6.0-Source.zip`
 - `SHA256.txt`
 - `latest.json`
 
