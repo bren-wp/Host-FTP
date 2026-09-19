@@ -107,6 +107,16 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("drawReferenceDivider(hdc, contentLeft, 78, contentWidth", paint)
         self.assertIn("footerLineY := paneBottom - 34", paint)
 
+    def test_connections_cards_start_below_the_top_search_band(self):
+        paint = self.read("internal/desktop/reference_paint_windows.go")
+        site = self.read("internal/desktop/site_manager_windows.go")
+        self.assertIn("const contentTop = 90", paint)
+        self.assertIn("railHeight := logicalHeight - 91", paint)
+        self.assertIn("footerY := logicalHeight - 77", paint)
+        self.assertIn("drawReferenceCard(hdc, 16, footerY, 1572, 42", paint)
+        self.assertIn("footerY := height - 60", site)
+        self.assertIn("state.parent.move(state.footerReady, 32, footerY", site)
+
     def test_disconnected_remote_list_keeps_dark_enabled_surface(self):
         source = self.read("internal/desktop/chrome_windows.go")
         self.assertIn("setControlEnabled(a.remoteList, true)", source)
