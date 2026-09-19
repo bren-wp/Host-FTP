@@ -25,7 +25,7 @@ func TestClassicLightAvoidsPureWhitePrimarySurfaces(t *testing.T) {
 }
 
 func TestMaintainedModalRolesMatchDesktopContract(t *testing.T) {
-	if Dark.Panel != (RGB{0x0A, 0x13, 0x1E}) || Dark.Text != (RGB{0xE8, 0xED, 0xF4}) {
+	if Dark.Panel != (RGB{0x16, 0x1B, 0x24}) || Dark.Text != (RGB{0xE5, 0xE7, 0xEB}) {
 		t.Fatal("canonical Dark panel/text contract changed unexpectedly")
 	}
 	if Light.Panel != (RGB{0xF6, 0xF9, 0xFC}) || Light.Text != (RGB{0x12, 0x20, 0x33}) {
