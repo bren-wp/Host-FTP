@@ -94,8 +94,11 @@ func (a *app) paintReferenceWorkspace() {
 		return
 	}
 
-	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132, 16, panelColor(), borderColor())
+	// The approved main board keeps the title/search band open rather than
+	// wrapping the whole header and toolbar in a large card. Two restrained
+	// dividers preserve structure without introducing a legacy container.
+	a.drawReferenceDivider(hdc, contentLeft, 78, contentWidth, borderColor())
+	a.drawReferenceDivider(hdc, contentLeft, 142, contentWidth, borderColor())
 
 	paneGap := 32
 	paneW := (contentWidth - paneGap) / 2
@@ -109,6 +112,11 @@ func (a *app) paintReferenceWorkspace() {
 	if paneH > 120 {
 		a.drawReferenceCard(hdc, contentLeft-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
+	}
+	if paneH > 180 {
+		footerLineY := paneBottom - 34
+		a.drawReferenceDivider(hdc, contentLeft+4, footerLineY, paneW-8, borderColor())
+		a.drawReferenceDivider(hdc, contentLeft+paneW+paneGap+4, footerLineY, paneW-8, borderColor())
 	}
 
 	queueCardY := queueLabelY - 10
