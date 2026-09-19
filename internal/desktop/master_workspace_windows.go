@@ -310,8 +310,8 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	}
 
 	// Global search / command field.
-	searchY, searchH := 18, 40
-	badgeW := 214
+	searchY, searchH := 14, 48
+	badgeW := 224
 	searchW := contentWidth - badgeW - 18
 	if searchW > 640 {
 		searchW = 640
@@ -324,7 +324,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Primary command row. At desktop widths the right side becomes the remote
 	// file search field exactly where it appears in the approved layout.
-	toolbarY, toolbarH := 84, 42
+	toolbarY, toolbarH := 80, 48
 	gap := 8
 	connectW, disconnectW, folderW, uploadW, downloadW, refreshW := 146, 140, 132, 110, 120, 108
 	if contentWidth < 1050 {
@@ -367,35 +367,35 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	paneW := (contentWidth - paneGap) / 2
 	leftX := contentLeft
 	rightX := leftX + paneW + paneGap
-	sectionY, pathY := 150, 180
-	a.move(a.sectionLocal, leftX+8, sectionY, paneW-16, 22)
-	a.move(a.sectionRemote, rightX+8, sectionY, paneW-16, 22)
+	sectionY, pathY := 156, 191
+	a.move(a.sectionLocal, leftX+12, sectionY, paneW-24, 26)
+	a.move(a.sectionRemote, rightX+12, sectionY, paneW-24, 26)
 
 	// Breadcrumb-style local path row.
-	miniW, miniGap := 38, 6
+	miniW, miniGap := 40, 6
 	lx := leftX + 8
 	for _, control := range []uintptr{a.masterBack, a.masterForward, a.localUp} {
-		a.move(control, lx, pathY, miniW, 34)
+		a.move(control, lx, pathY, miniW, 38)
 		lx += miniW + miniGap
 	}
 	localPathW := leftX + paneW - 8 - lx
 	if localPathW < 120 {
 		localPathW = 120
 	}
-	a.move(a.localPath, lx, pathY, localPathW, 34)
+	a.move(a.localPath, lx, pathY, localPathW, 38)
 
 	// Independent remote visual navigation controls use the same maintained
 	// cross-pane history stack, so both reference arrows remain functional.
 	rx := rightX + 8
 	for _, control := range []uintptr{a.remoteBack, a.remoteForward, a.remoteUp} {
-		a.move(control, rx, pathY, miniW, 34)
+		a.move(control, rx, pathY, miniW, 38)
 		rx += miniW + miniGap
 	}
 	remotePathW := rightX + paneW - 8 - rx
 	if remotePathW < 120 {
 		remotePathW = 120
 	}
-	a.move(a.remotePath, rx, pathY, remotePathW, 34)
+	a.move(a.remotePath, rx, pathY, remotePathW, 38)
 
 	statusY, _ := statusBandGeometry(height)
 	queueH := clampInt(height/6, 132, 152)
@@ -403,7 +403,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	queueToolbarY := queueY - 38
 	queueLabelY := queueToolbarY - 25
 
-	listY := pathY + 42
+	listY := pathY + 46
 	listBottom := queueLabelY - 12
 	listH := listBottom - listY
 	if listH < 150 {
@@ -414,9 +414,9 @@ func (a *app) layoutMasterWorkspaceChrome() {
 
 	// Persistent transfer queue. Filter tabs mirror the approved All /
 	// Uploading / Downloading / Completed row and filter the real queue model.
-	a.move(a.sectionTransfers, contentLeft+8, queueLabelY, 150, 20)
+	a.move(a.sectionTransfers, contentLeft+12, queueLabelY-2, 180, 26)
 	tabY := queueLabelY - 5
-	tabX := contentLeft + 158
+	tabX := contentLeft + 194
 	tabGap := 4
 	tabWidths := []int{82, 112, 128, 118}
 	for index, control := range []uintptr{a.queueTabAll, a.queueTabUploading, a.queueTabDownloading, a.queueTabCompleted} {
@@ -431,7 +431,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	if summaryW < 80 {
 		summaryW = 80
 	}
-	a.move(a.transferSummary, summaryX, queueLabelY, summaryW, 20)
+	a.move(a.transferSummary, summaryX, queueLabelY+1, summaryW, 22)
 
 	queueControls := []struct {
 		control uintptr
@@ -450,8 +450,8 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		qx -= 6
 	}
 	a.move(a.transferList, contentLeft+8, queueY, contentWidth-16, queueH)
-	a.move(a.status, contentLeft+8, statusY, contentWidth-310, statusBandHeight)
-	a.move(a.statusVersion, contentRight-288, statusY, 280, statusBandHeight)
+	a.move(a.status, contentLeft+12, statusY, contentWidth-318, statusBandHeight)
+	a.move(a.statusVersion, contentRight-296, statusY, 288, statusBandHeight)
 
 	a.updateMasterToolbarState()
 }
