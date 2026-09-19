@@ -129,7 +129,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.localMkdir = mkButton(a.tr("common.new_folder"), iconNewFolder, buttonDefault, idLocalMkdir)
 	a.localRename = mkButton(a.tr("common.rename"), iconRename, buttonDefault, idLocalRename)
 	a.localDelete = mkButton(a.tr("common.delete"), iconDelete, buttonDanger, idLocalDelete)
-	a.localList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idLocalList)
+	a.localList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idLocalList)
 
 	// Remote panel.
 	a.remotePath = mk("EDIT", "/", wsBorder|wsTabStop|esAutoHScroll, idRemotePath)
@@ -142,7 +142,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.remoteDelete = mkButton(a.tr("common.delete"), iconDelete, buttonDanger, idRemoteDelete)
 	a.remoteChmod = mkButton(a.tr("common.permissions"), iconPermissions, buttonDefault, idRemoteChmod)
 	storeRemoteEditButton(a, mkButton(remoteEditWords(a.languageCode()).Edit, iconRename, buttonDefault, idRemoteEdit))
-	a.remoteList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
+	a.remoteList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
 
 	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonSubtle, idUpload)
 	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonSubtle, idDownload)
@@ -153,7 +153,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.cancelJob = mkButton(a.tr("common.cancel"), iconCancel, buttonDanger, idCancelJob)
 	a.retryJob = mkButton(a.tr("transfer.retry"), iconSync, buttonDefault, idRetryJob)
 	a.clearQueue = mkButton(a.tr("transfer.clear"), iconClear, buttonSubtle, idClearQueue)
-	a.transferList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
+	a.transferList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
 	a.status = mk("STATIC", "", 0, idStatus)
 	a.statusVersion = mk("STATIC", "∞  MORE ACCESS. A BRIGHTER TOMORROW.", 0, 0)
 	a.transferSummary = mk("STATIC", a.tr("transfer.summary", 0, 0, 0), 0, 0)
