@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	monitorDefaultToNearest = 2
-	referenceCaptureWidth   = 1672
-	referenceCaptureHeight  = 941
+	monitorDefaultToNearest           = 2
+	referenceMainCaptureWidth         = premiumStartWidth
+	referenceMainCaptureHeight        = premiumStartHeight
+	referenceConnectionsCaptureWidth  = 1590
+	referenceConnectionsCaptureHeight = 880
 )
 
 func referenceCaptureMode() bool {
@@ -60,7 +62,7 @@ func (a *app) monitorWorkAreaLogical() (x, y, width, height int, ok bool) {
 
 func (a *app) responsiveWindowBounds() (x, y, width, height int) {
 	if referenceCaptureMode() {
-		return 0, 0, referenceCaptureWidth, referenceCaptureHeight
+		return 0, 0, referenceMainCaptureWidth, referenceMainCaptureHeight
 	}
 	workX, workY, workWidth, workHeight, ok := a.monitorWorkAreaLogical()
 	if !ok {

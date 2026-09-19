@@ -207,7 +207,7 @@ func Run(engine *api.Engine, version string) error {
 	if referenceCaptureMode() {
 		// Reference captures must exercise the real local file manager without
 		// leaking the hosted runner account or its temporary working directory.
-		initialLocalPath = `C:\\`
+		initialLocalPath = `C:\Users\Public\Documents`
 	}
 	a.refreshLocal(initialLocalPath)
 	if settingsErr == nil {
@@ -285,8 +285,8 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 			info.MinTrackSize.X = int32(a.scale(minWidth))
 			info.MinTrackSize.Y = int32(a.scale(minHeight))
 			if referenceCaptureMode() {
-				info.MaxTrackSize.X = int32(a.scale(referenceCaptureWidth))
-				info.MaxTrackSize.Y = int32(a.scale(referenceCaptureHeight))
+				info.MaxTrackSize.X = int32(a.scale(referenceMainCaptureWidth))
+				info.MaxTrackSize.Y = int32(a.scale(referenceMainCaptureHeight))
 			}
 			minMaxInfoToLParam(lParam, info)
 		}
