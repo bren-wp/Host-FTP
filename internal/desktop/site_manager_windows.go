@@ -1353,15 +1353,16 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		return
 	}
 	showControls(true,
-		state.privacyLabel, state.brandHero, state.settings,
+		state.privacyLabel, state.brandHero,
 		state.transferHeading, state.syncHeading, state.savedHeading, state.recentHeading,
-		state.activeLabel, state.securityLabel, state.savedLabel, state.recentLabel,
+		state.savedLabel, state.recentLabel,
 		state.presetsTab, state.syncTab, state.automationTab,
 		state.presetStandard, state.presetWebsite, state.presetBackup, state.presetMedia,
 		state.syncBackup, state.syncSkip, state.syncConfirm,
-		state.options, state.securityInfo, state.newSite, state.savedSearch, state.recentClear,
+		state.newSite, state.savedSearch, state.recentClear,
 		state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 	)
+	showControls(false, state.settings, state.activeLabel, state.securityLabel, state.options, state.securityInfo)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
 	state.parent.move(state.settings, 926, 790, 264, 42)
 	state.parent.move(state.testConnection, 262, 790, 166, 42)
@@ -1420,8 +1421,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	}
 	heading := func(text string, x, y, width int) uintptr {
 		hwnd := mk("STATIC", text, 0, x, y, width, 28, 0)
-		if hwnd != 0 && parent.titleFont != 0 {
-			sendMessageW.Call(hwnd, wmSetFont, parent.titleFont, 1)
+		if hwnd != 0 && parent.sectionFont != 0 {
+			sendMessageW.Call(hwnd, wmSetFont, parent.sectionFont, 1)
 		}
 		return hwnd
 	}
@@ -1451,9 +1452,9 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 		mk("BUTTON", "Search sites, history, or files…    Ctrl+K", wsTabStop|bsOwnerDraw, 560, 18, 494, 38, siteIDGlobalSearch),
 		iconSearch, "Search sites, history, or files…    Ctrl+K", buttonSubtle,
 	)
-	state.titleMinimize = parent.registerButton(mk("BUTTON", "—", bsOwnerDraw, 1448, 4, 38, 32, siteIDTitleMinimize), "", "—", buttonSubtle)
-	state.titleMaximize = parent.registerButton(mk("BUTTON", "□", bsOwnerDraw, 1488, 4, 38, 32, siteIDTitleMaximize), "", "□", buttonSubtle)
-	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonSubtle)
+	state.titleMinimize = parent.registerButton(mk("BUTTON", "—", bsOwnerDraw, 1448, 4, 38, 32, siteIDTitleMinimize), "", "—", buttonChrome)
+	state.titleMaximize = parent.registerButton(mk("BUTTON", "□", bsOwnerDraw, 1488, 4, 38, 32, siteIDTitleMaximize), "", "□", buttonChrome)
+	state.titleClose = parent.registerButton(mk("BUTTON", "×", bsOwnerDraw, 1528, 4, 38, 32, siteIDTitleClose), "", "×", buttonChrome)
 	state.privacyLabel = mk("STATIC", "Private desktop · No account required", 0, 1280, 24, 280, 22, 0)
 	state.navConnections = nav(siteIDNavConnections, "Connections", iconConnect, true)
 	state.navTransfers = nav(siteIDNavTransfers, "Transfers", iconUpload, false)
@@ -1544,10 +1545,10 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.presetWebsite = parent.registerButtonWithSubtitle(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 254, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", "Backup before overwrite · retry twice", buttonNav)
 	state.presetBackup = parent.registerButtonWithSubtitle(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 320, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", "Skip existing · preserve current files", buttonNav)
 	state.presetMedia = parent.registerButtonWithSubtitle(mk("BUTTON", "Media Transfer", wsTabStop|bsOwnerDraw, 926, 386, 264, 56, siteIDPresetMedia), iconUpload, "Media Transfer", "2 parallel · replace existing", buttonNav)
-	state.syncHeading = heading("Sync Options", 926, 460, 264)
-	state.syncBackup = parent.registerButton(mk("BUTTON", "Backup before overwrite", wsTabStop|bsOwnerDraw, 926, 496, 264, 30, siteIDSyncBackup), "", "Backup before overwrite", buttonToggle)
-	state.syncSkip = parent.registerButton(mk("BUTTON", "Skip existing files", wsTabStop|bsOwnerDraw, 926, 532, 264, 30, siteIDSyncSkip), "", "Skip existing files", buttonToggle)
-	state.syncConfirm = parent.registerButton(mk("BUTTON", "Confirm destructive actions", wsTabStop|bsOwnerDraw, 926, 568, 264, 30, siteIDSyncConfirm), "", "Confirm destructive actions", buttonToggle)
+	state.syncHeading = heading("Sync Options", 926, 582, 264)
+	state.syncBackup = parent.registerButton(mk("BUTTON", "Backup before overwrite", wsTabStop|bsOwnerDraw, 926, 626, 264, 32, siteIDSyncBackup), "", "Backup before overwrite", buttonToggle)
+	state.syncSkip = parent.registerButton(mk("BUTTON", "Skip existing files", wsTabStop|bsOwnerDraw, 926, 666, 264, 32, siteIDSyncSkip), "", "Skip existing files", buttonToggle)
+	state.syncConfirm = parent.registerButton(mk("BUTTON", "Confirm destructive actions", wsTabStop|bsOwnerDraw, 926, 706, 264, 32, siteIDSyncConfirm), "", "Confirm destructive actions", buttonToggle)
 	state.activeLabel = label("ACTIVE TRANSFER SETTINGS", 926, 606, 262)
 	state.options = mk("STATIC", "", wsBorder, 926, 630, 264, 76, 0)
 	state.securityLabel = label("SECURITY", 926, 720, 264)
