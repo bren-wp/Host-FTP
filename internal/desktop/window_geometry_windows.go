@@ -11,8 +11,8 @@ const (
 	monitorDefaultToNearest           = 2
 	referenceMainCaptureWidth         = premiumStartWidth
 	referenceMainCaptureHeight        = premiumStartHeight
-	referenceConnectionsCaptureWidth  = 1590
-	referenceConnectionsCaptureHeight = 880
+	referenceConnectionsCaptureWidth  = 1664
+	referenceConnectionsCaptureHeight = 960
 )
 
 func referenceCaptureMode() bool {
