@@ -21,7 +21,7 @@ type app struct {
 	hwnd                                             uintptr
 	engine                                           *api.Engine
 	version                                          string
-	font, titleFont, smallFont, iconFont, scriptFont uintptr
+	font, titleFont, sectionFont, smallFont, iconFont, scriptFont uintptr
 	dpi                                              uint32
 	brush, panelBrush                                uintptr
 
@@ -164,7 +164,7 @@ func Run(engine *api.Engine, version string) error {
 	if err := a.createControls(hinst); err != nil {
 		apps.Delete(hwnd)
 		destroyWindow.Call(hwnd)
-		for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
+		for _, f := range []uintptr{a.font, a.titleFont, a.sectionFont, a.smallFont, a.iconFont, a.scriptFont} {
 			if f != 0 {
 				deleteObject.Call(f)
 			}
@@ -235,7 +235,7 @@ func Run(engine *api.Engine, version string) error {
 		dispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
 	apps.Delete(hwnd)
-	for _, f := range []uintptr{a.font, a.titleFont, a.smallFont, a.iconFont, a.scriptFont} {
+	for _, f := range []uintptr{a.font, a.titleFont, a.sectionFont, a.smallFont, a.iconFont, a.scriptFont} {
 		if f != 0 {
 			deleteObject.Call(f)
 		}
