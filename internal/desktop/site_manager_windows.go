@@ -1362,12 +1362,12 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	state.parent.move(state.save, 742, 50, 138, 38)
 	showControls(false, state.close)
 	state.parent.move(state.connect, 646, 790, 234, 42)
-	footerY := height - 38
-	if footerY < 895 {
-		footerY = 895
+	footerY := height - 60
+	if footerY < 872 {
+		footerY = 872
 	}
-	state.parent.move(state.footerReady, 250, footerY, 410, 28)
-	state.parent.move(state.footerStats, 892, footerY, 672, 28)
+	state.parent.move(state.footerReady, 32, footerY, 520, 28)
+	state.parent.move(state.footerStats, 1090, footerY, 474, 28)
 	state.refreshFooter()
 	state.roundReferenceControls()
 	invalidateRect.Call(state.hwnd, 0, 1)
