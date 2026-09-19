@@ -85,6 +85,14 @@ func (a *app) updateActionControls() {
 	setControlEnabled(a.cancelJob, transferState.Cancel)
 	setControlEnabled(a.retryJob, transferState.Retry)
 	setControlEnabled(a.clearQueue, transferState.Clear && !a.connectionBusy)
+	// The approved queue keeps only applicable commands visible. This removes
+	// disabled placeholder-looking buttons while retaining the same real actions
+	// as soon as the selected transfer state supports them.
+	showControls(transferState.Pause, a.pauseQueue)
+	showControls(transferState.Resume, a.resumeQueue)
+	showControls(transferState.Cancel, a.cancelJob)
+	showControls(transferState.Retry, a.retryJob)
+	showControls(true, a.clearQueue)
 	a.updateQueuePriorityControls(priorityState)
 
 	a.refineWorkspaceLayout()

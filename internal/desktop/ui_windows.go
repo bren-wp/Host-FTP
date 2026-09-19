@@ -129,7 +129,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.localMkdir = mkButton(a.tr("common.new_folder"), iconNewFolder, buttonDefault, idLocalMkdir)
 	a.localRename = mkButton(a.tr("common.rename"), iconRename, buttonDefault, idLocalRename)
 	a.localDelete = mkButton(a.tr("common.delete"), iconDelete, buttonDanger, idLocalDelete)
-	a.localList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idLocalList)
+	a.localList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idLocalList)
 
 	// Remote panel.
 	a.remotePath = mk("EDIT", "/", wsBorder|wsTabStop|esAutoHScroll, idRemotePath)
@@ -142,7 +142,20 @@ func (a *app) createControls(hinst uintptr) error {
 	a.remoteDelete = mkButton(a.tr("common.delete"), iconDelete, buttonDanger, idRemoteDelete)
 	a.remoteChmod = mkButton(a.tr("common.permissions"), iconPermissions, buttonDefault, idRemoteChmod)
 	storeRemoteEditButton(a, mkButton(remoteEditWords(a.languageCode()).Edit, iconRename, buttonDefault, idRemoteEdit))
-	a.remoteList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
+	a.remoteList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList)
+
+	// Functional pane footers mirror the approved reference board and are
+	// populated from the real file models, never from sample/demo rows.
+	a.localPaneSummary = mk("STATIC", "", 0, 0)
+	// SS_RIGHT keeps the current paths anchored to the pane edge like the
+	// supplied reference while summaries remain left-aligned.
+	const ssRight = 0x00000002
+	a.localPanePath = mk("STATIC", "", ssRight, 0)
+	a.remotePaneSummary = mk("STATIC", "", 0, 0)
+	a.remotePanePath = mk("STATIC", "", ssRight, 0)
+	for _, h := range []uintptr{a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath} {
+		setFont(h, a.smallFont)
+	}
 
 	a.upload = mkButton(a.tr("transfer.upload"), iconUpload, buttonSubtle, idUpload)
 	a.download = mkButton(a.tr("transfer.download"), iconDownload, buttonSubtle, idDownload)
@@ -153,7 +166,7 @@ func (a *app) createControls(hinst uintptr) error {
 	a.cancelJob = mkButton(a.tr("common.cancel"), iconCancel, buttonDanger, idCancelJob)
 	a.retryJob = mkButton(a.tr("transfer.retry"), iconSync, buttonDefault, idRetryJob)
 	a.clearQueue = mkButton(a.tr("transfer.clear"), iconClear, buttonSubtle, idClearQueue)
-	a.transferList = mk("SysListView32", "", wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
+	a.transferList = mk("SysListView32", "", wsTabStop|lvsReport|lvsShowSelAlways, idTransferList)
 	a.status = mk("STATIC", "", 0, idStatus)
 	a.statusVersion = mk("STATIC", "∞  MORE ACCESS. A BRIGHTER TOMORROW.", 0, 0)
 	a.transferSummary = mk("STATIC", a.tr("transfer.summary", 0, 0, 0), 0, 0)
@@ -261,7 +274,7 @@ func (a *app) applyDPI(dpi uint32) {
 			sendMessageW.Call(h, wmSetFont, a.font, 1)
 		}
 	}
-	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.status, a.statusVersion, a.transferSummary} {
+	for _, h := range []uintptr{a.brandSubtitle, a.connectionBadge, a.status, a.statusVersion, a.transferSummary, a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath} {
 		if h != 0 && a.smallFont != 0 {
 			sendMessageW.Call(h, wmSetFont, a.smallFont, 1)
 		}
@@ -686,6 +699,8 @@ func (a *app) validateControls() error {
 		{"upload", a.upload}, {"download", a.download}, {"transfer list", a.transferList}, {"pause", a.pauseQueue}, {"resume", a.resumeQueue},
 		{"cancel transfer", a.cancelJob}, {"retry transfer", a.retryJob}, {"clear transfers", a.clearQueue},
 		{"status", a.status}, {"version", a.statusVersion}, {"transfer summary", a.transferSummary},
+		{"local pane summary", a.localPaneSummary}, {"local pane path", a.localPanePath},
+		{"remote pane summary", a.remotePaneSummary}, {"remote pane path", a.remotePanePath},
 	}
 	for _, control := range controls {
 		if control.h == 0 {

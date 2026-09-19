@@ -19,20 +19,19 @@ class WindowsVisualRegressionTests(unittest.TestCase):
     def test_workspace_uses_real_pe_brand_icon_and_full_title_gutter(self):
         chrome = self.read("internal/desktop/chrome_windows.go")
         ui = self.read("internal/desktop/ui_windows.go")
-        self.assertIn('loadImageW.Call(hinst, 1, imageIcon', chrome)
+        self.assertIn('loadImageW.Call(hinst, 2, imageIcon', chrome)
         self.assertIn("stmSetImage", chrome)
-        self.assertNotIn("a.move(a.brandTitle, 54, 10, 106, 35)", chrome)
-        self.assertIn("a.move(a.brandTitle, 54, headerY, 126, 35)", ui)
-        self.assertIn("subtitleX := 188", ui)
+        self.assertIn("const titleX, ghostWidth, ftpWidth, wordmarkGap, subtitleX = 72, 92, 54, 2, 230", chrome)
+        self.assertIn("a.move(a.brandTitle, titleX, 10, ghostWidth, 35)", chrome)
+        self.assertIn("a.move(a.brandFTP, titleX+ghostWidth+wordmarkGap, 10, ftpWidth, 35)", chrome)
 
     def test_sidebar_brand_and_connection_status_cannot_overlap_profile_actions(self):
         sidebar = self.read("internal/desktop/sidebar_windows.go")
-        self.assertIn("sendMessageW.Call(a.brandTitle, wmSetFont, a.font, 1)", sidebar)
-        self.assertIn("badgeW, buttonW, gap := 118, 116, 8", sidebar)
-        self.assertIn("a.move(a.connectionBadge, badgeX, 18, badgeW, 21)", sidebar)
-        self.assertIn("saveX := badgeX + badgeW + gap", sidebar)
-        self.assertIn("a.move(a.saveProfile, saveX, 13, buttonW, 31)", sidebar)
-        self.assertIn("a.move(a.removeProfile, saveX+buttonW+gap, 13, buttonW, 31)", sidebar)
+        self.assertIn("sendMessageW.Call(a.brandTitle, wmSetFont, a.titleFont, 1)", sidebar)
+        self.assertIn("connectionY := height - applicationSidebarBottomInset - 28", sidebar)
+        self.assertIn("footerY := connectionY - 68", sidebar)
+        self.assertIn("mottoY := footerY - 112", sidebar)
+        self.assertIn("a.move(a.sidebarConnectionStatus", sidebar)
 
     def test_native_dark_chrome_and_site_manager_use_premium_controls(self):
         dark = self.read("internal/desktop/dark_mode_windows.go")
@@ -59,7 +58,7 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         sidebar = self.read("internal/desktop/sidebar_windows.go")
         navigation = self.read("internal/desktop/navigation_labels.go")
         wnd = self.read("internal/desktop/windows.go")
-        self.assertIn("titleWidth, subtitleX = 54, 168, 230", chrome)
+        self.assertIn("const titleX, ghostWidth, ftpWidth, wordmarkGap, subtitleX = 72, 92, 54, 2, 230", chrome)
         self.assertIn("installWorkspaceHeaderDraw(a, list)", chrome)
         self.assertIn("SetWindowSubclass", header)
         self.assertIn("workspaceListSubclass", header)
@@ -80,6 +79,60 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertFalse((ROOT / "internal/desktop/menu_windows.go").exists())
         self.assertNotIn("a.measureMenuItem(lParam)", wnd)
         self.assertNotIn("a.drawMenuItem(&d)", wnd)
+
+    def test_workspace_list_rows_use_reference_palette_without_stock_borders(self):
+        ui = self.read("internal/desktop/ui_windows.go")
+        rows = self.read("internal/desktop/list_draw_windows.go")
+        wnd = self.read("internal/desktop/windows.go")
+        self.assertIn("drawWorkspaceList", wnd)
+        self.assertIn("selectionColor()", rows)
+        self.assertIn("workspaceListHotColor()", rows)
+        self.assertIn("cdrfNotifyItemDraw", rows)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idLocalList', ui)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList', ui)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList', ui)
+
+    def test_reference_workspace_has_real_file_pane_footers_and_open_header(self):
+        windows = self.read("internal/desktop/windows.go")
+        ui = self.read("internal/desktop/ui_windows.go")
+        workspace = self.read("internal/desktop/master_workspace_windows.go")
+        paint = self.read("internal/desktop/reference_paint_windows.go")
+        self.assertIn("localPaneSummary", windows)
+        self.assertIn("remotePanePath", windows)
+        self.assertIn('a.localPaneSummary = mk("STATIC", "", 0, 0)', ui)
+        self.assertIn('a.localPanePath = mk("STATIC", "", ssRight, 0)', ui)
+        self.assertIn('a.remotePanePath = mk("STATIC", "", ssRight, 0)', ui)
+        self.assertIn("func (a *app) refreshPaneFooters()", workspace)
+        self.assertIn("paneFooterText(a.localItems)", workspace)
+        self.assertNotIn("drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132", paint)
+        self.assertIn("drawReferenceDivider(hdc, contentLeft, 78, contentWidth", paint)
+        self.assertIn("footerLineY := paneBottom - 34", paint)
+
+    def test_dark_theme_uses_the_supplied_brand_board_palette(self):
+        palette = self.read("internal/uipalette/palette.go")
+        self.assertIn("Window:       RGB{0x0B, 0x0E, 0x14}", palette)
+        self.assertIn("Panel:        RGB{0x16, 0x1B, 0x24}", palette)
+        self.assertIn("Accent:       RGB{0x00, 0xE5, 0xFF}", palette)
+        self.assertIn("AccentStrong: RGB{0x3B, 0x82, 0xF6}", palette)
+        self.assertIn("Text:         RGB{0xE5, 0xE7, 0xEB}", palette)
+
+    def test_idle_queue_hides_non_actionable_controls(self):
+        state = self.read("internal/desktop/action_state_windows.go")
+        self.assertIn("showControls(transferState.Pause, a.pauseQueue)", state)
+        self.assertIn("showControls(transferState.Resume, a.resumeQueue)", state)
+        self.assertIn("showControls(transferState.Cancel, a.cancelJob)", state)
+        self.assertIn("showControls(transferState.Retry, a.retryJob)", state)
+        self.assertIn("showControls(true, a.clearQueue)", state)
+
+    def test_connections_cards_start_below_the_top_search_band(self):
+        paint = self.read("internal/desktop/reference_paint_windows.go")
+        site = self.read("internal/desktop/site_manager_windows.go")
+        self.assertIn("const contentTop = 90", paint)
+        self.assertIn("railHeight := logicalHeight - 91", paint)
+        self.assertIn("footerY := logicalHeight - 77", paint)
+        self.assertIn("drawReferenceCard(hdc, 16, footerY, 1572, 42", paint)
+        self.assertIn("footerY := height - 60", site)
+        self.assertIn("state.parent.move(state.footerReady, 32, footerY", site)
 
     def test_disconnected_remote_list_keeps_dark_enabled_surface(self):
         source = self.read("internal/desktop/chrome_windows.go")
@@ -106,22 +159,19 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("windowsOpenSSHCandidates", sftp)
         self.assertIn('"Sysnative", "OpenSSH", name', sftp)
 
-    def test_release_prep_version_and_localization_changes_capture_authentic_ui(self):
-        workflow = self.read(".github/workflows/ui-screenshots.yml")
-        self.assertIn("- 'release-prep/**'", workflow)
-        self.assertIn("- 'VERSION'", workflow)
-        self.assertIn("- 'internal/i18n/**'", workflow)
-        self.assertIn("Capture authentic main, Site Manager, Bookmarks, Settings and About windows", workflow)
-        self.assertIn("Ghost-FTP-$version-Portable-x64.exe", workflow)
-        evidence = workflow.split("  evidence:", 1)[1]
-        self.assertIn("SOURCE_SHA:", evidence)
-        self.assertIn("github.event_name == 'pull_request'", evidence)
-        self.assertIn("ref: ${{ env.SOURCE_SHA }}", evidence)
-        self.assertIn("ghostftp-authentic-ui-verified-bundle", evidence)
-        self.assertNotIn("git push", workflow)
-        self.assertNotIn("git commit", workflow)
-        self.assertNotIn("github-actions[bot]", workflow)
-        self.assertNotIn("[skip ci]", workflow)
+    def test_windows_build_captures_and_packages_authentic_reference_ui(self):
+        workflow = self.read(".github/workflows/windows-build.yml")
+        self.assertIn("- 'work/**'", workflow)
+        self.assertIn("- name: Capture authentic reference UI", workflow)
+        self.assertIn("capture_reference_windows.ps1", workflow)
+        self.assertIn("- name: Refresh README screenshots from the real Windows build", workflow)
+        self.assertIn("ui-screenshots/*.png", workflow)
+        self.assertIn("- name: Upload Windows deliverables", workflow)
+        self.assertIn("Ghost-FTP-*-Setup.exe", workflow)
+        self.assertIn("Ghost-FTP-*-Portable.exe", workflow)
+        self.assertIn("Ghost-FTP-*-Update.exe", workflow)
+        self.assertIn("SHA256.txt", workflow)
+        self.assertIn("latest.json", workflow)
 
 
 if __name__ == "__main__":

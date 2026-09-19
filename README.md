@@ -12,7 +12,7 @@
   <img alt="Protocols" src="https://img.shields.io/badge/Protocols-FTP%20%7C%20FTPS%20%7C%20SFTP-00e5ff">
   <img alt="Telemetry" src="https://img.shields.io/badge/Telemetry-None-16c784">
   <img alt="License" src="https://img.shields.io/badge/License-GPL--3.0-8b5cf6">
-  <img alt="Version" src="https://img.shields.io/badge/Version-0.5.1-e5e7eb">
+  <img alt="Version" src="https://img.shields.io/badge/Version-0.6.1-e5e7eb">
 </p>
 
 ---
@@ -71,15 +71,16 @@ The Connections workspace keeps quick access, saved sites and transfer behavior 
 
 ## A workspace built around your files
 
-Ghost FTP 0.5.1 uses the approved charcoal/slate interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
+Ghost FTP 0.6.1 uses the approved 1672×941 charcoal/slate reference interface with cyan → electric-blue → violet accents and an integrated Ghost FTP wordmark.
 
-The main workspace includes:
+The main workspace is rendered on the same 1672×941 reference canvas used by the supplied Ghost FTP boards and includes:
 
 - Sites / Transfers / Queue / Sync / Settings navigation
 - saved-site shortcuts directly in the application rail
 - global **Ctrl+K** search entry point
 - Connect / Disconnect / New Folder / Upload / Download / Refresh actions
 - Local Files and Remote Files panes
+- live pane footers with folder/file counts, aggregate sizes and current Local/Remote paths
 - Name / Size / Type / Modified / Permissions file metadata
 - independent local and remote navigation
 - directory comparison and synchronization bridge
@@ -126,10 +127,10 @@ Every production GitHub release publishes the same release set used by the updat
 
 | Artifact | Purpose |
 | --- | --- |
-| `Ghost-FTP-0.5.1-Setup.exe` | Standard Windows installation; uninstall is integrated into GhostFTP.exe via Windows Installed Apps, with no permanent Uninstall.exe |
-| `Ghost-FTP-0.5.1-Portable.exe` | Portable build with no installer |
-| `Ghost-FTP-0.5.1-Update.exe` | Verified first-party update helper |
-| `Ghost-FTP-0.5.1-Source.zip` | Exact source package for the release |
+| `Ghost-FTP-0.6.1-Setup.exe` | Standard Windows installation; uninstall is integrated into GhostFTP.exe via Windows Installed Apps, with no permanent Uninstall.exe |
+| `Ghost-FTP-0.6.1-Portable.exe` | Portable build with no installer |
+| `Ghost-FTP-0.6.1-Update.exe` | Verified first-party update helper |
+| `Ghost-FTP-0.6.1-Source.zip` | Exact source package for the release |
 | `SHA256.txt` | Release integrity manifest |
 | `latest.json` | `update.ghostftp.com` client manifest |
 
@@ -137,7 +138,7 @@ Every production GitHub release publishes the same release set used by the updat
 
 A Windows release is not considered complete merely because the executable compiles. The GitHub Actions pipeline runs:
 
-`gofmt` → `go vet` → full Go tests → deterministic brand assets → Portable/Setup/Update builds → PE metadata/resources → real Windows UI capture → source packaging → SHA-256 manifest → release publication.
+`gofmt` → `go vet` → full Go tests → production-copy audit → Windows reference-UI regression contracts → deterministic brand assets → Portable/Setup/Update builds → integrated-uninstall verification → real Windows UI capture → source packaging → SHA-256 manifest → release publication.
 
 This keeps the published binaries, source package, update manifest and repository version aligned.
 

@@ -94,8 +94,11 @@ func (a *app) paintReferenceWorkspace() {
 		return
 	}
 
-	// Global search + action strip.
-	a.drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132, 16, panelColor(), borderColor())
+	// The approved main board keeps the title/search band open rather than
+	// wrapping the whole header and toolbar in a large card. Two restrained
+	// dividers preserve structure without introducing a legacy container.
+	a.drawReferenceDivider(hdc, contentLeft, 78, contentWidth, borderColor())
+	a.drawReferenceDivider(hdc, contentLeft, 142, contentWidth, borderColor())
 
 	paneGap := 32
 	paneW := (contentWidth - paneGap) / 2
@@ -109,6 +112,11 @@ func (a *app) paintReferenceWorkspace() {
 	if paneH > 120 {
 		a.drawReferenceCard(hdc, contentLeft-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
 		a.drawReferenceCard(hdc, contentLeft+paneW+paneGap-2, paneTop, paneW+2, paneH, 16, panelColor(), borderColor())
+	}
+	if paneH > 180 {
+		footerLineY := paneBottom - 34
+		a.drawReferenceDivider(hdc, contentLeft+4, footerLineY, paneW-8, borderColor())
+		a.drawReferenceDivider(hdc, contentLeft+paneW+paneGap+4, footerLineY, paneW-8, borderColor())
 	}
 
 	queueCardY := queueLabelY - 10
@@ -146,23 +154,25 @@ func (state *siteManagerState) paintReferenceConnections() {
 	logicalHeight := state.parent.unscale(int(client.Bottom - client.Top))
 	compact := logicalWidth < 1580 || logicalHeight < 820
 
-	railHeight := logicalHeight - 24
-	editorHeight := logicalHeight - 92
+	railHeight := logicalHeight - 91
 	if railHeight < 620 {
 		railHeight = 620
 	}
+	const contentTop = 90
+	contentBottom := logicalHeight - 92
+	editorHeight := contentBottom - contentTop
 	if editorHeight < 620 {
 		editorHeight = 620
 	}
 	state.parent.drawReferenceCard(hdc, 16, 12, 220, railHeight, 18, panelColor(), borderColor())
-	state.parent.drawReferenceCard(hdc, 248, 44, 660, editorHeight, 16, panelColor(), borderColor())
+	state.parent.drawReferenceCard(hdc, 248, contentTop, 660, editorHeight, 16, panelColor(), borderColor())
 
 	if !compact {
-		state.parent.drawReferenceCard(hdc, 918, 44, 306, 510, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 918, 564, 306, 250, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 1236, 44, 352, 462, 16, panelColor(), borderColor())
-		state.parent.drawReferenceCard(hdc, 1236, 516, 352, 298, 16, panelColor(), borderColor())
-		footerY := logicalHeight - 54
-		state.parent.drawReferenceCard(hdc, 248, footerY, 1340, 42, 12, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 918, contentTop, 306, 464, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 918, 564, 306, 285, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1236, contentTop, 352, 464, 16, panelColor(), borderColor())
+		state.parent.drawReferenceCard(hdc, 1236, 564, 352, 285, 16, panelColor(), borderColor())
+		footerY := logicalHeight - 77
+		state.parent.drawReferenceCard(hdc, 16, footerY, 1572, 42, 12, panelColor(), borderColor())
 	}
 }

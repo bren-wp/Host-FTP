@@ -3,9 +3,12 @@
 package desktop
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"unsafe"
+
+	"github.com/bren-wp/Host-FTP/internal/model"
 )
 
 type workspaceHistoryEntry struct {
@@ -263,6 +266,37 @@ func (a *app) updateMasterToolbarState() {
 	a.updateMasterConnectVisual()
 }
 
+func paneFooterText(items []model.Item) string {
+	folders, files := 0, 0
+	var bytes int64
+	for _, item := range items {
+		if item.IsDirectory {
+			folders++
+			continue
+		}
+		files++
+		if item.Size > 0 {
+			bytes += item.Size
+		}
+	}
+	return fmt.Sprintf("%d folders, %d files (%s)", folders, files, formatSize(bytes, false))
+}
+
+func (a *app) refreshPaneFooters() {
+	if a == nil {
+		return
+	}
+	setText(a.localPaneSummary, paneFooterText(a.localItems))
+	setText(a.localPanePath, a.localCurrent)
+	if a.connected {
+		setText(a.remotePaneSummary, paneFooterText(a.remoteItems))
+		setText(a.remotePanePath, a.remoteCurrent)
+	} else {
+		setText(a.remotePaneSummary, "Not connected")
+		setText(a.remotePanePath, "")
+	}
+}
+
 func (a *app) layoutMasterWorkspaceChrome() {
 	if a == nil || a.hwnd == 0 {
 		return
@@ -300,6 +334,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		a.masterBack, a.masterForward, a.remoteBack, a.remoteForward,
 		a.localUp, a.remoteUp, a.localPath, a.remotePath,
 		a.localList, a.remoteList, a.transferList,
+		a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath,
 		a.queueTabAll, a.queueTabUploading, a.queueTabDownloading, a.queueTabCompleted,
 	)
 
@@ -416,8 +451,23 @@ func (a *app) layoutMasterWorkspaceChrome() {
 	if listH < 150 {
 		listH = 150
 	}
-	a.move(a.localList, leftX+4, listY, paneW-8, listH)
-	a.move(a.remoteList, rightX+4, listY, paneW-8, listH)
+	footerH := 34
+	listBodyH := listH - footerH
+	if listBodyH < 120 {
+		listBodyH = 120
+	}
+	a.move(a.localList, leftX+4, listY, paneW-8, listBodyH)
+	a.move(a.remoteList, rightX+4, listY, paneW-8, listBodyH)
+
+	footerY := listY + listBodyH
+	footerPad := 12
+	footerSummaryW := paneW * 44 / 100
+	footerPathW := paneW - footerSummaryW - footerPad*2
+	a.move(a.localPaneSummary, leftX+footerPad, footerY+7, footerSummaryW, 20)
+	a.move(a.localPanePath, leftX+footerSummaryW+footerPad, footerY+7, footerPathW, 20)
+	a.move(a.remotePaneSummary, rightX+footerPad, footerY+7, footerSummaryW, 20)
+	a.move(a.remotePanePath, rightX+footerSummaryW+footerPad, footerY+7, footerPathW, 20)
+	a.refreshPaneFooters()
 
 	// Persistent transfer queue. Filter tabs mirror the approved All /
 	// Uploading / Downloading / Completed row and filter the real queue model.
