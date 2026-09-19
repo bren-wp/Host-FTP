@@ -147,9 +147,12 @@ func (a *app) createControls(hinst uintptr) error {
 	// Functional pane footers mirror the approved reference board and are
 	// populated from the real file models, never from sample/demo rows.
 	a.localPaneSummary = mk("STATIC", "", 0, 0)
-	a.localPanePath = mk("STATIC", "", 0, 0)
+	// SS_RIGHT keeps the current paths anchored to the pane edge like the
+	// supplied reference while summaries remain left-aligned.
+	const ssRight = 0x00000002
+	a.localPanePath = mk("STATIC", "", ssRight, 0)
 	a.remotePaneSummary = mk("STATIC", "", 0, 0)
-	a.remotePanePath = mk("STATIC", "", 0, 0)
+	a.remotePanePath = mk("STATIC", "", ssRight, 0)
 	for _, h := range []uintptr{a.localPaneSummary, a.localPanePath, a.remotePaneSummary, a.remotePanePath} {
 		setFont(h, a.smallFont)
 	}
