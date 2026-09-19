@@ -9,6 +9,12 @@ Ghost FTP 0.6.1 is the next reference-UI production pass built directly against 
 - Added application-owned dark ListView headers and row-state drawing so file panes and the transfer queue no longer depend on the host Windows Explorer theme.
 - Removed stock report-view borders from the core file and queue tables; the surrounding Ghost FTP cards now own those edges as in the reference.
 - Added real data-driven transfer progress bars inside the queue Progress column, including completed-state green and live cyan → blue → violet progress.
+- Added real Local/Remote pane footer bars driven by the live file models, with folder/file counts, byte totals and current paths instead of sample text.
+- Opened the main header/toolbar composition to match the supplied board instead of enclosing it in one oversized card.
+- Moved Connections cards and the live status footer onto the supplied reference grid while keeping account/subscription sample UI out of the production client.
+- Bound the dark theme to the supplied Ghost FTP brand-board colors: Charcoal `#0B0E14`, Slate `#161B24`, Cyan `#00E5FF`, Electric Blue `#3B82F6` and Mist `#E5E7EB`.
+- Non-applicable queue commands now disappear instead of rendering as disabled placeholder controls; they reappear only when the selected real transfer state supports them.
+- Added Windows reference-UI regression contracts to the production CI workflow so layout/palette regressions fail before release packaging.
 
 - Refined the main Windows layout around the approved Sites / Transfers / Queue / Sync / Settings rail.
 - Added the handwritten **Move More / Do More** rail signature and kept the secure-transfer tagline below it.
