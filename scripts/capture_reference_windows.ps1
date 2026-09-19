@@ -26,6 +26,7 @@ public static class GhostReferenceCapture
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+    [DllImport("user32.dll")] public static extern bool RedrawWindow(IntPtr hWnd, IntPtr updateRect, IntPtr updateRegion, uint flags);
 }
 "@
 
@@ -73,6 +74,7 @@ function Set-ReferenceWindowBounds {
     if (-not [GhostReferenceCapture]::MoveWindow($Window, 0, 0, $Width, $Height, $true)) {
         throw "MoveWindow failed for $Name."
     }
+    [GhostReferenceCapture]::RedrawWindow($Window, [IntPtr]::Zero, [IntPtr]::Zero, 0x0185) | Out-Null
     Start-Sleep -Milliseconds 350
     $rect = New-Object GhostReferenceCapture+RECT
     if (-not [GhostReferenceCapture]::GetWindowRect($Window, [ref]$rect)) {
