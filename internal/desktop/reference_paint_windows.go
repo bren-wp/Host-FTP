@@ -36,9 +36,9 @@ func (a *app) drawReferenceDivider(hdc uintptr, x, y, width int, color uintptr) 
 		return
 	}
 	line := rect{
-		Left: int32(a.scale(x)),
-		Top: int32(a.scale(y)),
-		Right: int32(a.scale(x + width)),
+		Left:   int32(a.scale(x)),
+		Top:    int32(a.scale(y)),
+		Right:  int32(a.scale(x + width)),
 		Bottom: int32(a.scale(y + 1)),
 	}
 	brush, _, _ := createSolidBrush.Call(color)

@@ -218,8 +218,12 @@ func (a *app) drawToggleButton(dis *drawItemStruct, visual buttonVisual, disable
 	roundRect.Call(dis.HDC, uintptr(track.Left), uintptr(track.Top), uintptr(track.Right), uintptr(track.Bottom), uintptr(a.scale(18)), uintptr(a.scale(18)))
 	selectObject.Call(dis.HDC, oldBrush)
 	selectObject.Call(dis.HDC, oldPen)
-	if trackBrush != 0 { deleteObject.Call(trackBrush) }
-	if trackPen != 0 { deleteObject.Call(trackPen) }
+	if trackBrush != 0 {
+		deleteObject.Call(trackBrush)
+	}
+	if trackPen != 0 {
+		deleteObject.Call(trackPen)
+	}
 
 	knob := track
 	knob.Top += int32(a.scale(3))
@@ -232,7 +236,9 @@ func (a *app) drawToggleButton(dis *drawItemStruct, visual buttonVisual, disable
 	}
 	knob.Right = knob.Left + knobW
 	knobColor := textColor()
-	if disabled { knobColor = mutedColor() }
+	if disabled {
+		knobColor = mutedColor()
+	}
 	knobBrush, _, _ := createSolidBrush.Call(knobColor)
 	knobPen, _, _ := createPen.Call(psSolid, 1, knobColor)
 	oldBrush, _, _ = selectObject.Call(dis.HDC, knobBrush)
@@ -240,21 +246,29 @@ func (a *app) drawToggleButton(dis *drawItemStruct, visual buttonVisual, disable
 	roundRect.Call(dis.HDC, uintptr(knob.Left), uintptr(knob.Top), uintptr(knob.Right), uintptr(knob.Bottom), uintptr(a.scale(14)), uintptr(a.scale(14)))
 	selectObject.Call(dis.HDC, oldBrush)
 	selectObject.Call(dis.HDC, oldPen)
-	if knobBrush != 0 { deleteObject.Call(knobBrush) }
-	if knobPen != 0 { deleteObject.Call(knobPen) }
+	if knobBrush != 0 {
+		deleteObject.Call(knobBrush)
+	}
+	if knobPen != 0 {
+		deleteObject.Call(knobPen)
+	}
 
 	labelRect := r
 	labelRect.Left += int32(a.scale(54))
 	labelRect.Right -= int32(a.scale(4))
 	fg := textColor()
-	if disabled { fg = mutedColor() }
+	if disabled {
+		fg = mutedColor()
+	}
 	setTextColor.Call(dis.HDC, fg)
 	oldFont := uintptr(0)
 	if a.font != 0 {
 		oldFont, _, _ = selectObject.Call(dis.HDC, a.font)
 	}
 	drawText(dis.HDC, visual.Label, &labelRect, dtLeft|dtVCenter|dtSingleLine|dtNoPrefix|dtEndEllipsis)
-	if oldFont != 0 { selectObject.Call(dis.HDC, oldFont) }
+	if oldFont != 0 {
+		selectObject.Call(dis.HDC, oldFont)
+	}
 }
 
 func (a *app) drawButtonBadge(hdc uintptr, content rect, count int, disabled bool) {
