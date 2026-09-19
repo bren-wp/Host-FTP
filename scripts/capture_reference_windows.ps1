@@ -132,7 +132,7 @@ try {
         throw "Could not open Connections."
     }
     $connections = Find-Window $process.Id "Connections"
-    Set-ReferenceWindowBounds $connections 1590 880 "Connections"
+    Set-ReferenceWindowBounds $connections 1664 960 "Connections"
     Start-Sleep -Milliseconds 500
     Save-Window $connections (Join-Path $OutputDirectory "Ghost-FTP-connections-reference.png")
     [GhostReferenceCapture]::PostMessage($connections, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) | Out-Null
