@@ -9,8 +9,8 @@ import (
 
 const (
 	monitorDefaultToNearest = 2
-	referenceCaptureWidth    = 1672
-	referenceCaptureHeight   = 941
+	referenceCaptureWidth   = 1672
+	referenceCaptureHeight  = 941
 )
 
 func referenceCaptureMode() bool {
