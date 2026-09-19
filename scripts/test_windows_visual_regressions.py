@@ -100,6 +100,8 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("localPaneSummary", windows)
         self.assertIn("remotePanePath", windows)
         self.assertIn('a.localPaneSummary = mk("STATIC", "", 0, 0)', ui)
+        self.assertIn('a.localPanePath = mk("STATIC", "", ssRight, 0)', ui)
+        self.assertIn('a.remotePanePath = mk("STATIC", "", ssRight, 0)', ui)
         self.assertIn("func (a *app) refreshPaneFooters()", workspace)
         self.assertIn("paneFooterText(a.localItems)", workspace)
         self.assertNotIn("drawReferenceCard(hdc, contentLeft-2, 10, contentWidth+2, 132", paint)
