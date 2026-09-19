@@ -441,7 +441,7 @@ func (a *app) layoutMasterWorkspaceChrome() {
 		{a.resumeQueue, 94},
 		{a.cancelJob, 90},
 		{a.retryJob, 86},
-		{a.clearQueue, 136},
+		{a.clearQueue, 156},
 	}
 	qx := contentRight - 8
 	for i := len(queueControls) - 1; i >= 0; i-- {
