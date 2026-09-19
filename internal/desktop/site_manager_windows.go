@@ -1468,8 +1468,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.siteManagerTab = parent.registerButton(mk("BUTTON", "Site Manager", wsTabStop|bsOwnerDraw, 420, 136, 150, 40, siteIDSiteManagerTab), iconOpenLocal, "Site Manager", buttonNav)
 	state.importExportTab = parent.registerButton(mk("BUTTON", "Import / Export", wsTabStop|bsOwnerDraw, 578, 136, 164, 40, siteIDImportExport), iconUpload, "Import / Export", buttonNav)
 
-	label("Connection Name", 262, 690, 220)
-	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 712, 618, 34, siteIDName)
+	label("Connection Name", 262, 712, 220)
+	state.name = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 734, 618, 34, siteIDName)
 
 	label(parent.tr("terminal.protocol"), 262, 196, 150)
 	label("Host / Address", 502, 196, 190)
@@ -1486,8 +1486,8 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.user = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 292, 300, 34, siteIDUser)
 	state.password = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll|esPassword, 578, 292, 302, 34, siteIDPassword)
 
-	label("Advanced Settings", 262, 354, 618)
-	label(sitePathLabel(parent.languageCode(), true), 578, 390, 260)
+	label("Advanced Settings", 262, 350, 618)
+	label(sitePathLabel(parent.languageCode(), false), 262, 384, 260)\n\tlabel(sitePathLabel(parent.languageCode(), true), 578, 384, 260)
 	state.localPath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 262, 412, 300, 34, siteIDLocal)
 	state.remotePath = mk("EDIT", "", wsBorder|wsTabStop|esAutoHScroll, 578, 412, 302, 34, siteIDRemote)
 
@@ -1510,10 +1510,10 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	showControls(false, state.close)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
-	state.transferHeading = heading("Transfer & Sync Options", 924, 94, 270)
-	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 136, 86, 38, siteIDPresetsTab), iconSave, "Presets", buttonNavActive)
-	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 136, 82, 38, siteIDSyncTab), iconSync, "Sync", buttonNav)
-	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 136, 84, 38, siteIDAutomationTab), iconSettings, "Automation", buttonNav)
+	state.transferHeading = heading("Transfer && Sync Options", 924, 94, 292)
+	state.presetsTab = parent.registerButton(mk("BUTTON", "Presets", wsTabStop|bsOwnerDraw, 926, 136, 86, 38, siteIDPresetsTab), "", "Presets", buttonNavActive)
+	state.syncTab = parent.registerButton(mk("BUTTON", "Sync", wsTabStop|bsOwnerDraw, 1018, 136, 82, 38, siteIDSyncTab), "", "Sync", buttonNav)
+	state.automationTab = parent.registerButton(mk("BUTTON", "Automation", wsTabStop|bsOwnerDraw, 1106, 136, 84, 38, siteIDAutomationTab), "", "Automation", buttonNav)
 	state.presetStandard = parent.registerButtonWithSubtitle(mk("BUTTON", "Standard Upload", wsTabStop|bsOwnerDraw, 926, 188, 264, 56, siteIDPresetStandard), iconUpload, "Standard Upload", "3 parallel · replace existing", buttonNavActive)
 	state.presetWebsite = parent.registerButtonWithSubtitle(mk("BUTTON", "Website Deployment", wsTabStop|bsOwnerDraw, 926, 254, 264, 56, siteIDPresetWebsite), iconSync, "Website Deployment", "Backup before overwrite · retry twice", buttonNav)
 	state.presetBackup = parent.registerButtonWithSubtitle(mk("BUTTON", "Backup (Incremental)", wsTabStop|bsOwnerDraw, 926, 320, 264, 56, siteIDPresetBackup), iconSave, "Backup (Incremental)", "Skip existing · preserve current files", buttonNav)
