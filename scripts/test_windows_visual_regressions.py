@@ -106,6 +106,22 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertIn("drawReferenceDivider(hdc, contentLeft, 78, contentWidth", paint)
         self.assertIn("footerLineY := paneBottom - 34", paint)
 
+    def test_dark_theme_uses_the_supplied_brand_board_palette(self):
+        palette = self.read("internal/uipalette/palette.go")
+        self.assertIn("Window:       RGB{0x0B, 0x0E, 0x14}", palette)
+        self.assertIn("Panel:        RGB{0x16, 0x1B, 0x24}", palette)
+        self.assertIn("Accent:       RGB{0x00, 0xE5, 0xFF}", palette)
+        self.assertIn("AccentStrong: RGB{0x3B, 0x82, 0xF6}", palette)
+        self.assertIn("Text:         RGB{0xE5, 0xE7, 0xEB}", palette)
+
+    def test_idle_queue_hides_non_actionable_controls(self):
+        state = self.read("internal/desktop/action_state_windows.go")
+        self.assertIn("showControls(transferState.Pause, a.pauseQueue)", state)
+        self.assertIn("showControls(transferState.Resume, a.resumeQueue)", state)
+        self.assertIn("showControls(transferState.Cancel, a.cancelJob)", state)
+        self.assertIn("showControls(transferState.Retry, a.retryJob)", state)
+        self.assertIn("showControls(true, a.clearQueue)", state)
+
     def test_connections_cards_start_below_the_top_search_band(self):
         paint = self.read("internal/desktop/reference_paint_windows.go")
         site = self.read("internal/desktop/site_manager_windows.go")
