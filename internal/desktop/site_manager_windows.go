@@ -1305,7 +1305,7 @@ func (state *siteManagerState) layoutResponsive(width int) {
 	}
 
 	const (
-		fullReferenceWidth  = 1580
+		fullReferenceWidth  = 1540
 		fullReferenceHeight = 840
 	)
 	compact := (width > 0 && width < fullReferenceWidth) || (height > 0 && height < fullReferenceHeight)
