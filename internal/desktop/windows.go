@@ -276,6 +276,10 @@ func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) (result uintp
 	case wmPaint:
 		a.paintReferenceWorkspace()
 		return 0
+	case wmNcCalcSize:
+		// The application owns the complete visual canvas. Resize hit testing is
+		// implemented explicitly in chromeHitTestWindow.
+		return 0
 	case wmNcHitTest:
 		return a.chromeHitTest(lParam)
 	case wmGetMinMaxInfo:
