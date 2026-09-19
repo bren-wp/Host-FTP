@@ -1363,19 +1363,33 @@ func (state *siteManagerState) layoutResponsive(width int) {
 		state.list, state.recentList, state.duplicate, state.delete, state.footerReady, state.footerStats,
 	)
 	state.parent.move(state.globalSearch, 560, 18, 494, 38)
-	state.parent.move(state.settings, 926, 824, 264, 42)
-	state.parent.move(state.testConnection, 262, 824, 166, 42)
+	state.parent.move(state.settings, 926, 790, 264, 42)
+	state.parent.move(state.testConnection, 262, 790, 166, 42)
 	state.parent.move(state.save, 742, 50, 138, 38)
 	showControls(false, state.close)
-	state.parent.move(state.connect, 646, 824, 234, 42)
+	state.parent.move(state.connect, 646, 790, 234, 42)
 	footerY := height - 38
-	if footerY < 904 {
-		footerY = 904
+	if footerY < 895 {
+		footerY = 895
 	}
 	state.parent.move(state.footerReady, 250, footerY, 410, 28)
 	state.parent.move(state.footerStats, 892, footerY, 672, 28)
 	state.refreshFooter()
+	state.roundReferenceControls()
 	invalidateRect.Call(state.hwnd, 0, 1)
+}
+
+func (state *siteManagerState) roundReferenceControls() {
+	if state == nil || state.parent == nil {
+		return
+	}
+	for _, hwnd := range []uintptr{
+		state.name, state.protocol, state.host, state.port, state.user, state.password,
+		state.localPath, state.remotePath, state.keyPath, state.passphrase,
+		state.security, state.options, state.securityInfo, state.list, state.recentList,
+	} {
+		state.parent.roundWorkspaceControl(hwnd, 9)
+	}
 }
 
 func (state *siteManagerState) createControls(hinst uintptr) error {
@@ -1516,9 +1530,9 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	mk("STATIC", profileNote, 0, 262, 666, 618, 40, 0)
 
 	state.save = parent.registerButton(mk("BUTTON", "Save as Profile", wsTabStop|bsOwnerDraw, 742, 90, 138, 38, siteIDSave), iconSave, "Save as Profile", buttonDefault)
-	state.testConnection = parent.registerButton(mk("BUTTON", "Test Connection", wsTabStop|bsOwnerDraw, 262, 824, 166, 42, siteIDTestConnection), iconConnect, "Test Connection", buttonDefault)
-	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 824, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
-	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 824, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
+	state.testConnection = parent.registerButton(mk("BUTTON", "Test Connection", wsTabStop|bsOwnerDraw, 262, 790, 166, 42, siteIDTestConnection), iconConnect, "Test Connection", buttonDefault)
+	state.connect = parent.registerButton(mk("BUTTON", "Connect to Server", wsTabStop|siteBSDefPushButton|bsOwnerDraw, 646, 790, 234, 42, siteIDConnect), iconConnect, "Connect to Server", buttonAccent)
+	state.close = parent.registerButton(mk("BUTTON", parent.tr("common.cancel"), wsTabStop|bsOwnerDraw, 500, 790, 132, 42, siteIDClose), iconCancel, parent.tr("common.cancel"), buttonSubtle)
 	showControls(false, state.close)
 
 	// Transfer & Sync settings card uses real persisted settings and real presets.
@@ -1539,7 +1553,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.securityLabel = label("SECURITY", 926, 720, 264)
 	securityText := "Host-key and certificate verification stay enabled. Saved secrets remain protected by Windows."
 	state.securityInfo = mk("STATIC", securityText, wsBorder, 926, 744, 264, 42, 0)
-	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 824, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
+	state.settings = parent.registerButton(mk("BUTTON", "Open Transfer Settings", wsTabStop|bsOwnerDraw, 926, 790, 264, 42, siteIDSettings), iconSettings, "Open Transfer Settings", buttonDefault)
 
 	// Saved Sites and private session history share the right reference column.
 	state.savedHeading = heading("Saved Sites", 1240, 94, 190)
@@ -1608,6 +1622,7 @@ func (state *siteManagerState) createControls(hinst uintptr) error {
 	state.refreshSyncOptions()
 	state.refillRecentConnections()
 	state.refreshFooter()
+	state.roundReferenceControls()
 	return nil
 }
 
@@ -1632,7 +1647,7 @@ func (a *app) openSiteManager() {
 		registerClassExW.Call(uintptr(unsafe.Pointer(&class)))
 	})
 
-	logicalW, logicalH := 1664, 960
+	logicalW, logicalH := 1672, 941
 	if referenceCaptureMode() {
 		logicalW, logicalH = referenceConnectionsCaptureWidth, referenceConnectionsCaptureHeight
 	}
