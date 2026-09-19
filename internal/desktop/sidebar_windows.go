@@ -18,7 +18,7 @@ const (
 	applicationSidebarCardGap     = 8
 	applicationSidebarUtilityH    = 38
 	applicationSidebarUtilityGap  = 7
-	applicationSidebarPrimaryTop  = 86
+	applicationSidebarPrimaryTop  = 99
 	applicationSidebarBrandIcon   = 54
 	applicationSidebarBrandGap    = 8
 	applicationSidebarBottomInset = 16
@@ -456,7 +456,7 @@ func (a *app) layoutSidebarRail(height int) {
 		y += 52
 	}
 
-	bookmarkY := y + 12
+	bookmarkY := y + 28
 	if a.sidebarBookmarkHeading != 0 {
 		a.move(a.sidebarBookmarkHeading, applicationSidebarControlX+10, bookmarkY, applicationSidebarControlW-20, 22)
 		showControls(true, a.sidebarBookmarkHeading)

@@ -159,15 +159,14 @@ def _sample_reference_pixel(x: float, y: float) -> tuple[int, int, int, int]:
 def _sample_brandmark_pixel(x: float, y: float) -> tuple[int, int, int, int]:
     """Transparent in-app Ghost mark used beside the Ghost FTP wordmark."""
     ghost = _inside_ghost(x, y)
-    if ghost:
-        color = _gradient(x, y)
-        if (
-            _inside_rotated_ellipse(x, y, 151.0, 92.0, 7.0, 12.0, 0.18)
-            or _inside_rotated_ellipse(x, y, 176.0, 99.0, 6.5, 11.0, 0.18)
-        ):
-            return TRANSPARENT
-        return color
+    if ghost and (
+        _inside_rotated_ellipse(x, y, 151.0, 92.0, 7.0, 12.0, 0.18)
+        or _inside_rotated_ellipse(x, y, 176.0, 99.0, 6.5, 11.0, 0.18)
+    ):
+        return TRANSPARENT
 
+    # The transfer arrows are the defining motif and must render over the body,
+    # matching the layering used by the application-tile renderer.
     if _inside_arrow(x, y, 139.0, 102.0, 10.0):
         return _mix(CYAN, BLUE, min(1.0, max(0.0, (x - 54.0) / 102.0)))
     if _inside_arrow(x, y, 164.0, 82.0, 8.0):
@@ -180,8 +179,10 @@ def _sample_brandmark_pixel(x: float, y: float) -> tuple[int, int, int, int]:
     ):
         if _inside_ellipse(x, y, cx, cy, r, r):
             return color
-    return TRANSPARENT
 
+    if ghost:
+        return _gradient(x, y)
+    return TRANSPARENT
 
 def _render_rgba(size: int, sampler=_sample_reference_pixel) -> bytes:
     scale = CANVAS / float(size)
