@@ -10,8 +10,8 @@ import (
 // Keeping them outside a platform build tag prevents Win/Linux UI drift and
 // ensures the Linux GUI can be compiled independently in CI.
 const (
-	premiumStartWidth  = 1664
-	premiumStartHeight = 960
+	premiumStartWidth  = 1672
+	premiumStartHeight = 941
 	premiumMinWidth    = 1180
 	premiumMinHeight   = 720
 	premiumOuterGap    = 14
