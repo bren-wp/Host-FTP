@@ -81,6 +81,18 @@ class WindowsVisualRegressionTests(unittest.TestCase):
         self.assertNotIn("a.measureMenuItem(lParam)", wnd)
         self.assertNotIn("a.drawMenuItem(&d)", wnd)
 
+    def test_workspace_list_rows_use_reference_palette_without_stock_borders(self):
+        ui = self.read("internal/desktop/ui_windows.go")
+        rows = self.read("internal/desktop/list_draw_windows.go")
+        wnd = self.read("internal/desktop/windows.go")
+        self.assertIn("drawWorkspaceList", wnd)
+        self.assertIn("selectionColor()", rows)
+        self.assertIn("workspaceListHotColor()", rows)
+        self.assertIn("cdrfNotifyItemDraw", rows)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idLocalList', ui)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idRemoteList', ui)
+        self.assertNotIn('wsBorder|wsTabStop|lvsReport|lvsShowSelAlways, idTransferList', ui)
+
     def test_disconnected_remote_list_keeps_dark_enabled_surface(self):
         source = self.read("internal/desktop/chrome_windows.go")
         self.assertIn("setControlEnabled(a.remoteList, true)", source)
