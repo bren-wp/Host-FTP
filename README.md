@@ -80,6 +80,7 @@ The main workspace is rendered on the same 1672×941 reference canvas used by th
 - global **Ctrl+K** search entry point
 - Connect / Disconnect / New Folder / Upload / Download / Refresh actions
 - Local Files and Remote Files panes
+- live pane footers with folder/file counts, aggregate sizes and current Local/Remote paths
 - Name / Size / Type / Modified / Permissions file metadata
 - independent local and remote navigation
 - directory comparison and synchronization bridge
@@ -137,7 +138,7 @@ Every production GitHub release publishes the same release set used by the updat
 
 A Windows release is not considered complete merely because the executable compiles. The GitHub Actions pipeline runs:
 
-`gofmt` → `go vet` → full Go tests → deterministic brand assets → Portable/Setup/Update builds → PE metadata/resources → real Windows UI capture → source packaging → SHA-256 manifest → release publication.
+`gofmt` → `go vet` → full Go tests → production-copy audit → Windows reference-UI regression contracts → deterministic brand assets → Portable/Setup/Update builds → integrated-uninstall verification → real Windows UI capture → source packaging → SHA-256 manifest → release publication.
 
 This keeps the published binaries, source package, update manifest and repository version aligned.
 
